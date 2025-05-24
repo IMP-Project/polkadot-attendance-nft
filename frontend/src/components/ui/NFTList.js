@@ -16,7 +16,7 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import NFTStatisticsCharts from './NFTStatisticsCharts';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 

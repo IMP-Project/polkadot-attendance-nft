@@ -10,7 +10,7 @@ import {
   Event, Share, Search, ContentCopy
 } from '@mui/icons-material';
 import { api } from '../services/api';
-import PublicNFTGallery from '../components/PublicNFTGallery';
+import PublicNFTGallery from '../components/layout/PublicNFTGallery';
 
 function Gallery() {
   const theme = useTheme();

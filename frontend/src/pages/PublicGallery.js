@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Container, CircularProgress, Typography, useTheme } from '@mui/material';
 import { useParams } from 'react-router-dom';
-import PublicNFTGallery from '../components/PublicNFTGallery';
+import PublicNFTGallery from '../components/layout/PublicNFTGallery';
 import { api } from '../services/api';
 
 function PublicGallery() {

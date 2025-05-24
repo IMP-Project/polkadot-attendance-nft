@@ -11,10 +11,10 @@ import {
   Event, Room, Webhook, Close, MoreVert, QrCode, Edit, Delete, LocationOn, People,
   Add, Title, CalendarMonth
 } from '@mui/icons-material';
-import WebhookSetup from './WebhookSetup';
+import WebhookSetup from '../admin/WebhookSetup';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 import { QRCodeCanvas } from 'qrcode.react';
 import { format } from 'date-fns';
 

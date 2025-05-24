@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import EventForm from '../components/EventForm';
-import EventList from '../components/EventList';
-import NFTList from '../components/NFTList';
-import MockCheckInSimulator from '../components/MockCheckInSimulator';
+import EventForm from '../components/ui/EventForm';
+import EventList from '../components/ui/EventList';
+import NFTList from '../components/ui/NFTList';
+import MockCheckInSimulator from '../components/admin/MockCheckInSimulator';
 import { api } from '../services/api';
 import { 
   Box, Tabs, Tab, Typography, Paper, Divider, CircularProgress, 

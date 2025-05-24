@@ -17,7 +17,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 
 /**
  * MockCheckInSimulator component to trigger simulated Luma check-in events

@@ -24,11 +24,11 @@ import Home from './pages/Home';
 import Admin from './pages/Admin';
 import Gallery from './pages/Gallery';
 import PublicGallery from './pages/PublicGallery';
-import PolkadotBackground from './components/PolkadotBackground';
+import PolkadotBackground from './components/layout/PolkadotBackground';
 import { FontSizeProvider, useFontSize, SCALE_OPTIONS } from './contexts/FontSizeContext';
 import Login from './pages/Login';
 import { api } from './services/api';
-import MockCheckInSimulator from './components/MockCheckInSimulator';
+import MockCheckInSimulator from './components/admin/MockCheckInSimulator';
 
 // CheckIn page component
 const CheckInPage = () => {
