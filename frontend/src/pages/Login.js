@@ -79,7 +79,7 @@ const Login = () => {
       <Box
         sx={{
           flex: 1,
-          backgroundImage: `url('/path-to-your-conference-image.jpg')`, // Replace with your image path
+          backgroundImage: `url('/images/conference-image.png')`, 
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
@@ -136,7 +136,7 @@ const Login = () => {
             {/* Replace with your first icon */}
             <Box
               component="img"
-              src="/path-to-your-first-icon.svg" // Replace with your icon path
+              src="/images/bulbicon.png" // Replace with your icon path
               alt="Settings"
               sx={{ width: 20, height: 20 }}
             />
@@ -152,7 +152,7 @@ const Login = () => {
             {/* Replace with your second icon */}
             <Box
               component="img"
-              src="/path-to-your-second-icon.svg" // Replace with your icon path
+              src="/images/moonicon.png" // Replace with your icon path
               alt="Theme"
               sx={{ width: 20, height: 20 }}
             />
@@ -183,7 +183,7 @@ const Login = () => {
           >
             <Box
               component="img"
-              src="/path-to-polkadot-logo.svg" // Replace with your Polkadot logo path
+              src="/images/Polkadot_Logo.png" 
               alt="Polkadot"
               sx={{ height: 32 }}
             />
@@ -195,7 +195,6 @@ const Login = () => {
                 color: '#18171C',
               }}
             >
-              Polkadot
             </Typography>
           </Box>
 
