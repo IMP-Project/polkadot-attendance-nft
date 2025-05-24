@@ -149,11 +149,34 @@ const ProtectedRoute = ({ element }) => {
   const location = useLocation();
   
   if (!api.isAuthenticated()) {
-    // Redirect to login if not authenticated
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Redirect to root if not authenticated (which will show login)
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
   
   return element;
+};
+
+// Main landing page component that shows login or home based on auth
+const LandingPage = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(api.isAuthenticated());
+  
+  // Listen for authentication changes
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsAuthenticated(api.isAuthenticated());
+    };
+    
+    // Check authentication status every second
+    const interval = setInterval(checkAuth, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+  
+  return <Home />;
 };
 
 function MainContent() {
@@ -289,8 +312,11 @@ function MainContent() {
   
   // Check if we're on a public page route
   const isPublicPage = location.pathname.startsWith('/public');
+  
+  // Check if we're showing the login page (when user is not authenticated and on root)
+  const isLoginPage = location.pathname === '/' && !api.isAuthenticated();
 
-  // Don't show the drawer and app bar on public pages
+  // Don't show the drawer and app bar on public pages OR login page
   if (isPublicPage) {
     return (
       <ThemeProvider theme={theme}>
@@ -298,6 +324,18 @@ function MainContent() {
         <PolkadotBackground />
         <Routes>
           <Route path="/public/gallery/:eventId" element={<PublicGallery />} />
+        </Routes>
+      </ThemeProvider>
+    );
+  }
+
+  // If it's the login page, show full-screen login without sidebar/header
+  if (isLoginPage) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
         </Routes>
       </ThemeProvider>
     );
@@ -445,11 +483,10 @@ function MainContent() {
           <Toolbar />
           <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/admin/*" element={<ProtectedRoute element={<Admin />} />} />
-              <Route path="/gallery" element={<Gallery />} />
-              <Route path="/check-in/:eventId" element={<CheckInPage />} />
+              <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
+              <Route path="/check-in/:eventId" element={<ProtectedRoute element={<CheckInPage />} />} />
             </Routes>
           </Container>
         </Box>
