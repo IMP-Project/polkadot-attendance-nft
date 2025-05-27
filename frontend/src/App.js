@@ -1,31 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate, useParams } from 'react-router-dom';
 import { 
-  AppBar, Box, CssBaseline, Drawer, IconButton, List, ListItem, 
-  ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography,
-  ThemeProvider, createTheme, Container, Divider, Tooltip, useMediaQuery,
-  Menu, MenuItem, Button, Grid
+  Box, CssBaseline, Typography, Container, ThemeProvider, createTheme, useMediaQuery
 } from '@mui/material';
-import { 
-  Menu as MenuIcon, 
-  Home as HomeIcon, 
-  Dashboard as DashboardIcon,
-  Style as StyleIcon,
-  LightMode as LightModeIcon,
-  DarkMode as DarkModeIcon,
-  Collections as CollectionsIcon,
-  TextFields as TextFieldsIcon,
-  ArrowDropDown as ArrowDropDownIcon,
-  Brightness4 as Brightness4Icon,
-  Brightness7 as Brightness7Icon,
-  Logout as LogoutIcon
-} from '@mui/icons-material';
-import Home from './pages/Home';
+
 import Admin from './pages/Admin';
 import Gallery from './pages/Gallery';
 import PublicGallery from './pages/PublicGallery';
 import PolkadotBackground from './components/layout/PolkadotBackground';
-import { FontSizeProvider, useFontSize, SCALE_OPTIONS } from './contexts/FontSizeContext';
+import { FontSizeProvider, useFontSize } from './contexts/FontSizeContext';
 import Login from './pages/Login';
 import { api } from './services/api';
 import MockCheckInSimulator from './components/admin/MockCheckInSimulator';
@@ -78,72 +61,6 @@ const CheckInPage = () => {
   );
 };
 
-function FontSizeSelector() {
-  const { scale, setScale, scaleLabel } = useFontSize();
-  const [anchorEl, setAnchorEl] = useState(null);
-  
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-  
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-  
-  const handleSelect = (newScale) => {
-    setScale(newScale);
-    handleClose();
-  };
-  
-  return (
-    <>
-      <Tooltip title="Adjust font size">
-        <Button 
-          color="inherit" 
-          onClick={handleClick}
-          startIcon={<TextFieldsIcon />}
-          endIcon={<ArrowDropDownIcon />}
-          sx={{ 
-            ml: 1,
-            backdropFilter: 'blur(8px)',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            '&:hover': {
-              backgroundColor: 'rgba(255,255,255,0.2)',
-            },
-            borderRadius: 2,
-          }}
-        >
-          {scaleLabel}
-        </Button>
-      </Tooltip>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleClose}
-      >
-        <MenuItem 
-          onClick={() => handleSelect(SCALE_OPTIONS.DEFAULT)}
-          selected={scale === SCALE_OPTIONS.DEFAULT}
-        >
-          Default
-        </MenuItem>
-        <MenuItem 
-          onClick={() => handleSelect(SCALE_OPTIONS.MEDIUM)}
-          selected={scale === SCALE_OPTIONS.MEDIUM}
-        >
-          Medium
-        </MenuItem>
-        <MenuItem 
-          onClick={() => handleSelect(SCALE_OPTIONS.LARGE)}
-          selected={scale === SCALE_OPTIONS.LARGE}
-        >
-          Large
-        </MenuItem>
-      </Menu>
-    </>
-  );
-}
-
 // Protected route wrapper
 const ProtectedRoute = ({ element }) => {
   const location = useLocation();
@@ -156,7 +73,7 @@ const ProtectedRoute = ({ element }) => {
   return element;
 };
 
-// Main landing page component that shows login or home based on auth
+// Main landing page component that shows login or redirects to admin
 const LandingPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(api.isAuthenticated());
   
@@ -176,7 +93,8 @@ const LandingPage = () => {
     return <Login />;
   }
   
-  return <Home />;
+  // Redirect authenticated users directly to admin
+  return <Navigate to="/admin" replace />;
 };
 
 function MainContent() {
@@ -184,24 +102,8 @@ function MainContent() {
   const [mode, setMode] = useState(
     localStorage.getItem('themeMode') || (prefersDarkMode ? 'dark' : 'light')
   );
-  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { scale } = useFontSize();
-  const [isMockMode, setIsMockMode] = useState(api.isMockModeEnabled());
-
-  // Monitor mock mode changes
-  useEffect(() => {
-    const checkMockMode = () => {
-      setIsMockMode(api.isMockModeEnabled());
-    };
-    
-    checkMockMode();
-    
-    // Check periodically in case it changes
-    const interval = setInterval(checkMockMode, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   // Create a theme with Polkadot colors and font scaling
   const theme = useMemo(() => createTheme({
@@ -226,7 +128,7 @@ function MainContent() {
       fontSize: 14 * scale, // Base font size scaled
       h1: {
         fontWeight: 700,
-        fontSize: `${2.5 * scale}rem`, // Scale headings
+        fontSize: `${2.5 * scale}rem`,
       },
       h2: {
         fontWeight: 600,
@@ -272,7 +174,6 @@ function MainContent() {
           },
         },
       },
-      // Scale other components
       MuiButton: {
         styleOverrides: {
           root: {
@@ -288,7 +189,7 @@ function MainContent() {
         },
       },
     },
-    spacing: (factor) => `${0.5 * scale * factor}rem`, // Scale spacing
+    spacing: (factor) => `${0.5 * scale * factor}rem`,
   }), [mode, scale]);
 
   // Save theme preference to localStorage
@@ -296,27 +197,16 @@ function MainContent() {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const toggleColorMode = () => {
-    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
-  };
-
-  const menuItems = [
-    { text: 'Home', icon: <HomeIcon />, path: '/' },
-    { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/admin', requiresAuth: true },
-    { text: 'NFT Gallery', icon: <CollectionsIcon />, path: '/gallery' },
-  ];
-  
   // Check if we're on a public page route
   const isPublicPage = location.pathname.startsWith('/public');
   
   // Check if we're showing the login page (when user is not authenticated and on root)
   const isLoginPage = location.pathname === '/' && !api.isAuthenticated();
 
-  // Don't show the drawer and app bar on public pages OR login page
+  // Check if we're on admin page
+  const isAdminPage = location.pathname.startsWith('/admin');
+
+  // Don't show any wrapper for public pages
   if (isPublicPage) {
     return (
       <ThemeProvider theme={theme}>
@@ -329,7 +219,7 @@ function MainContent() {
     );
   }
 
-  // If it's the login page, show full-screen login without sidebar/header
+  // Show full-screen login without any wrapper
   if (isLoginPage) {
     return (
       <ThemeProvider theme={theme}>
@@ -341,155 +231,31 @@ function MainContent() {
     );
   }
 
-  const drawer = (
-    <div>
-      <Toolbar sx={{ justifyContent: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <StyleIcon sx={{ mr: 1, color: 'primary.main' }} />
-          <Typography variant="h6" noWrap component="div" fontWeight="bold">
-            Polkadot NFT
-          </Typography>
-        </Box>
-      </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          (!item.requiresAuth || api.isAuthenticated()) && (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton 
-                component={Link} 
-                to={item.path}
-                selected={location.pathname === item.path}
-              >
-                <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
-            </ListItem>
-          )
-        ))}
-        {api.isAuthenticated() && (
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => {
-              api.logout();
-              window.location.href = '/';
-            }}>
-              <ListItemIcon>
-                <LogoutIcon />
-              </ListItemIcon>
-              <ListItemText primary="Logout" />
-            </ListItemButton>
-          </ListItem>
-        )}
-      </List>
-    </div>
-  );
+  // Show admin without any wrapper
+  if (isAdminPage) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Routes>
+          <Route path="/admin/*" element={<ProtectedRoute element={<Admin />} />} />
+        </Routes>
+      </ThemeProvider>
+    );
+  }
 
-  const drawerWidth = 240 * scale; // Scale drawer width
-
+  // For other pages (Home, Gallery), show simple layout without old sidebar
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ display: 'flex' }}>
-        <CssBaseline />
-        <PolkadotBackground />
-        <AppBar
-          position="fixed"
-          sx={{
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-            ml: { sm: `${drawerWidth}px` },
-            boxShadow: 1,
-          }}
-        >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: 'none' } }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-              {location.pathname === '/' ? 'Polkadot Attendance NFT System' : 
-               location.pathname === '/admin' ? 'Admin Dashboard' : 
-               location.pathname === '/gallery' ? 'NFT Gallery' : 'Polkadot NFT'}
-            </Typography>
-            
-            <FontSizeSelector />
-            
-            <Tooltip title={mode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-              <IconButton 
-                color="inherit" 
-                onClick={toggleColorMode}
-                sx={{ 
-                  p: 1,
-                  ml: 1,
-                  backdropFilter: 'blur(8px)',
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                  },
-                  borderRadius: '50%',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
-            </Tooltip>
-          </Toolbar>
-        </AppBar>
-        
-        <Box
-          component="nav"
-          sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-          aria-label="menu items"
-        >
-          <Drawer
-            variant="temporary"
-            open={mobileOpen}
-            onClose={handleDrawerToggle}
-            ModalProps={{ keepMounted: true }}
-            sx={{
-              display: { xs: 'block', sm: 'none' },
-              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-            }}
-          >
-            {drawer}
-          </Drawer>
-          <Drawer
-            variant="permanent"
-            sx={{
-              display: { xs: 'none', sm: 'block' },
-              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-            }}
-            open
-          >
-            {drawer}
-          </Drawer>
-        </Box>
-        
-        <Box
-          component="main"
-          sx={{ 
-            flexGrow: 1, 
-            p: 3, 
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-            minHeight: '100vh',
-            backgroundColor: 'background.default'
-          }}
-        >
-          <Toolbar />
-          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/admin/*" element={<ProtectedRoute element={<Admin />} />} />
-              <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
-              <Route path="/check-in/:eventId" element={<ProtectedRoute element={<CheckInPage />} />} />
-            </Routes>
-          </Container>
-        </Box>
+      <CssBaseline />
+      <PolkadotBackground />
+      <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+        <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
+            <Route path="/check-in/:eventId" element={<ProtectedRoute element={<CheckInPage />} />} />
+          </Routes>
+        </Container>
       </Box>
     </ThemeProvider>
   );

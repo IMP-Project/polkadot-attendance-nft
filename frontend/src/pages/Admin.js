@@ -1,71 +1,248 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import EventForm from '../components/ui/EventForm';
+import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Dialog, AppBar, Toolbar, IconButton, Button } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import EventList from '../components/ui/EventList';
 import NFTList from '../components/ui/NFTList';
 import MockCheckInSimulator from '../components/admin/MockCheckInSimulator';
 import { api } from '../services/api';
-import { 
-  Box, Tabs, Tab, Typography, Paper, Divider, CircularProgress, 
-  Alert, AlertTitle, Button, Grid, Card, CardContent, useTheme, Fade 
-} from '@mui/material';
-import { ArrowBack, EventNote, Style, QrCode2 } from '@mui/icons-material';
+import ConnectToLumaModal from '../components/ui/ConnectToLumaModal';
 
-function TabPanel(props) {
-  const { children, value, index, ...other } = props;
-  const theme = useTheme();
-
+// Dashboard component matching Image 2 exactly
+const Dashboard = ({ onCreateEvent }) => {
   return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
-      {value === index && (
-        <Box 
-          sx={{ 
-            py: 3,
-            animation: 'fadeIn 0.3s ease-in-out',
-            '@keyframes fadeIn': {
-              '0%': {
-                opacity: 0,
-                transform: 'translateY(10px)'
-              },
-              '100%': {
-                opacity: 1,
-                transform: 'translateY(0)'
-              }
-            }
+      {/* Top Bar */}
+      <Box
+        sx={{
+          px: 4,
+          py: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '20px',
+              lineHeight: '33.6px',
+              color: '#18171C',
+              mb: 0.5,
+            }}
+          >
+            Dashboard
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 400,
+              fontSize: '14px',
+              lineHeight: '19.6px',
+              letterSpacing: '1.4%',
+              color: '#77738C',
+            }}
+          >
+            Your personalized overview
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {/* Search icon */}
+          <Box
+            component="img"
+            src="/images/search-icon.png"
+            alt="Search"
+            sx={{ width: 20, height: 20, cursor: 'pointer' }}
+          />
+          
+          {/* Bell icon */}
+          <Box
+            component="img"
+            src="/images/bell-icon.png"
+            alt="Notifications"
+            sx={{ width: 20, height: 20, cursor: 'pointer' }}
+          />
+                   
+
+<Button
+  onClick={onCreateEvent}
+  sx={{
+    backgroundColor: '#FF2670',
+    color: 'white',
+    borderRadius: '8px',
+    padding: '12px',
+    textTransform: 'none',
+    fontFamily: 'Manrope, sans-serif',
+    fontWeight: 500,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    '&:hover': {
+      backgroundColor: '#E91E63',
+    },
+  }}
+>
+    <Box sx={{ width: 7 }} /> 
+    <Box
+      component="img"
+      src="/images/plus-icon.png"
+      alt="Create"
+      sx={{ width: 16, height: 16 }}
+    />
+    Connect to Luma
+    <Box sx={{ width: 13 }} /> 
+  </Button>
+
+        </Box>
+      </Box>
+
+      {/* Main Content */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          px: 4,
+        }}
+      >
+        <Box
+          sx={{
+            textAlign: 'center',
+            maxWidth: '600px',
           }}
         >
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
+          {/* Calendar Image */}
+          <Box
+            sx={{
+              mb: 4,
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <Box
+              component="img"
+              src="/images/calender-icon.png"
+              alt="Calendar"
+              sx={{
+                width: 120,
+                height: 120,
+              }}
+            />
+          </Box>
 
+          {/* Main Heading */}
+          <Typography
+            sx={{
+              fontFamily: 'Unbounded, sans-serif',
+              fontWeight: 400,
+              fontSize: '39px',
+              lineHeight: '114.9%',
+              letterSpacing: '0%',
+              textAlign: 'center',
+              color: '#18171C',
+              mb: 3,
+            }}
+          >
+            Ready to make your mark on the chain?
+          </Typography>
+
+          {/* Description */}
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 400,
+              fontSize: '18px',
+              lineHeight: '24px',
+              letterSpacing: '0.9%',
+              textAlign: 'center',
+              color: '#484554',
+              mb: 4,
+              maxWidth: '500px',
+              mx: 'auto',
+            }}
+          >
+            Create your first event and start minting on-chain attendance NFTs — scan, check-in, and reward your attendees the Web3 way.
+          </Typography>
+
+          {/* Create Event Button */}
+          <Button
+            onClick={onCreateEvent}
+            sx={{
+              backgroundColor: '#FF2670',
+              color: 'white',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              textTransform: 'none',
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+              boxShadow: '0 4px 12px rgba(255, 38, 112, 0.3)',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: '#E91E63',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(255, 38, 112, 0.4)',
+              },
+            }}
+          >
+            <Box
+              component="img"
+              src="/images/plus-icon.png"
+              alt="Create"
+              sx={{ width: 16, height: 16 }}
+            />
+            Connect to luma
+          </Button>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+// Main Admin Component
 function Admin() {
-  const theme = useTheme();
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [nfts, setNFTs] = useState([]);
-  const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [connectToLumaModalOpen, setConnectToLumaModalOpen] = useState(false);
 
-  // Function to fetch all data - made reusable so it can be called after NFT minting
+  // Sidebar menu items
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: '/images/dashboard-icon.png' },
+    { id: 'events', label: 'Events', icon: '/images/events-icon.png' },
+    { id: 'nft-design', label: 'NFT Design', icon: '/images/nft-icon.png' },
+    { id: 'check-ins', label: 'Check-ins', icon: '/images/check-ins-icon.png' },
+  ];
+
+  const bottomMenuItems = [
+    { id: 'settings', label: 'Settings', icon: '/images/settings-icon.png' },
+    { id: 'Log out', label: 'Log out', icon: '/images/Logout-icon.png' },
+  ];
+
+  // Function to fetch all data
   const fetchData = useCallback(async () => {
     setLoading(true);
-    
     try {
       const [eventsData, nftsData] = await Promise.all([
         api.getEvents(),
         api.getNFTs()
       ]);
-      
-      // Process data
       setEvents(eventsData);
       setNFTs(nftsData);
     } catch (error) {
@@ -78,300 +255,220 @@ function Admin() {
 
   useEffect(() => {
     fetchData();
-
-    // Listen for NFT minting events
     window.addEventListener('nft_minted', fetchData);
-    
     return () => {
       window.removeEventListener('nft_minted', fetchData);
     };
   }, [fetchData]);
-
-  // Function to handle NFT minting from MockCheckInSimulator
+  
   const handleNFTMinted = useCallback(() => {
-    console.log('NFT minted, refreshing data...');
     fetchData();
   }, [fetchData]);
 
-  const handleEventCreated = (newEvent) => {
-    // Check if the event already exists in our state to prevent duplicates
-    const eventExists = events.some(e => e.id === newEvent.id);
-    if (!eventExists) {
-      console.log('Adding new event to state:', newEvent.id);
-      setEvents(prevEvents => [...prevEvents, newEvent]);
-    } else {
-      console.log('Event already exists in state, not adding duplicate:', newEvent.id);
+  const renderPageContent = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard onCreateEvent={() => setConnectToLumaModalOpen(true)} />;
+      case 'events':
+        return (
+          <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100vh' }}>
+            <EventList events={events} />
+          </Box>
+        );
+      case 'nft-design':
+        return (
+          <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100vh' }}>
+            <NFTList nfts={nfts} events={events} />
+          </Box>
+        );
+      case 'check-ins':
+        return (
+          <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100vh' }}>
+            <Typography variant="h5" sx={{ mb: 3, color: '#18171C', fontWeight: 600 }}>
+              Check-in Management
+            </Typography>
+            <MockCheckInSimulator onNFTMinted={handleNFTMinted} />
+          </Box>
+        );
+      default:
+        return <Dashboard onCreateEvent={() => setConnectToLumaModalOpen(true)} />;
     }
   };
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress color="primary" />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        <AlertTitle>Error</AlertTitle>
-        {error}
-      </Alert>
-    );
-  }
-
   return (
-    <Fade in={true} timeout={500}>
-      <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Button
-            component={Link}
-            to="/"
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            sx={{ borderRadius: 2 }}
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Sidebar */}
+      <Box
+        sx={{
+          width: '272px',
+          maxWidth: '272px',
+          height: '100vh',
+          backgroundColor: '#FAFAFA',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Logo Section */}
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Box
+              component="img"
+              src="/images/pol-logo.png"
+              alt="Polkadot"
+              sx={{ width: 24, height: 24, mr: 2 }}
+            />
+            <Typography
+              sx={{
+                width: '172px',
+                height: '20px',
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                lineHeight: '20px',
+                letterSpacing: '0.6%',
+                color: '#18171C',
+              }}
+            >
+              Polkadot Attendance Sys
+            </Typography>
+          </Box>
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 400,
+              fontSize: '12px',
+              lineHeight: '16.8px',
+              letterSpacing: '2%',
+              color: '#77738C',
+            }}
           >
-            Back to Home
-          </Button>
+            Management
+          </Typography>
         </Box>
 
-        <Paper sx={{ 
-          borderRadius: 2, 
-          mb: 4,
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? 'rgba(45, 45, 45, 0.85)' 
-            : 'rgba(255, 255, 255, 0.85)',
-          border: '1px solid rgba(229, 229, 229, 0.5)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
-          overflow: 'hidden',
-        }} elevation={2}>
-          <Box sx={{ 
-            borderBottom: 1, 
-            borderColor: 'divider', 
-            borderBottomWidth: '3px',
-            px: 1
-          }}>
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange} 
-              variant="fullWidth"
-              textColor="primary"
-              indicatorColor="primary"
-              aria-label="admin tabs"
-              TabIndicatorProps={{
-                style: {
-                  height: 3,
-                  borderRadius: '3px 3px 0 0',
-                  backgroundColor: theme.palette.primary.main,
-                }
-              }}
-              sx={{
-                '& .MuiTab-root': {
-                  color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.7)',
-                  opacity: 1,
-                  py: 2.5,
-                  minHeight: 64,
+        {/* Divider */}
+        <Divider sx={{ mx: 3, borderColor: '#E5E5E5' }} />
+
+        {/* Main Menu */}
+        <Box sx={{ px: 3, py: 2, flex: 1 }}>
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '12px',
+              lineHeight: '16px',
+              letterSpacing: '4%',
+              textTransform: 'uppercase',
+              color: '#928FA3',
+              mb: 2,
+            }}
+          >
+            MAIN
+          </Typography>
+          
+          <Box
+            sx={{
+              width: '232px',
+              height: '374px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            {menuItems.map((item) => (
+              <ListItemButton
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
+                selected={currentPage === item.id}
+                sx={{
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  backgroundColor: currentPage === item.id ? '#FFEBF1' : 'transparent',
+                  '&:hover': {
+                    backgroundColor: currentPage === item.id ? '#FFEBF1' : 'rgba(0, 0, 0, 0.04)',
+                  },
                   '&.Mui-selected': {
-                    color: theme.palette.primary.main,
-                    fontWeight: 'bold',
+                    backgroundColor: '#FFEBF1',
+                    '&:hover': {
+                      backgroundColor: '#FFEBF1',
+                    },
                   },
-                  '& .MuiSvgIcon-root': {
-                    fontSize: 22,
-                    mr: 1,
-                  },
-                  textTransform: 'none',
-                  fontSize: '0.95rem',
-                },
-                '& .MuiTabs-indicator': {
-                  height: 3,
-                  borderRadius: '2px 2px 0 0',
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 32, mr: 1 }}>
+                  <Box
+                    component="img"
+                    src={item.icon}
+                    alt={item.label}
+                    sx={{ width: 20, height: 20 }}
+                  />
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontFamily: 'Manrope, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#18171C',
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Bottom Menu */}
+        <Box sx={{ px: 3, pb: 3 }}>
+          {bottomMenuItems.map((item) => (
+            <ListItemButton
+              key={item.id}
+              onClick={item.id === 'Log out' ? () => {
+                api.logout();
+                  window.location.href = '/';
+                  } : undefined}
+              sx={{
+                borderRadius: '8px',
+                padding: '12px 16px',
+                mb: 1,
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
                 },
               }}
             >
-              <Tab 
-                icon={<EventNote />} 
-                label="Events" 
-                iconPosition="start" 
-                disableRipple
-                sx={{ 
-                  borderBottom: activeTab === 0 ? `3px solid ${theme.palette.primary.main}` : 'none',
-                }} 
-              />
-              <Tab 
-                icon={<Style />} 
-                label="NFTs" 
-                iconPosition="start"
-                disableRipple
-                sx={{ 
-                  borderBottom: activeTab === 1 ? `3px solid ${theme.palette.primary.main}` : 'none',
+              <ListItemIcon sx={{ minWidth: 32, mr: 1 }}>
+                <Box
+                  component="img"
+                  src={item.icon}
+                  alt={item.label}
+                  sx={{ width: 20, height: 20 }}
+                />
+              </ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                primaryTypographyProps={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#18171C',
                 }}
               />
-              <Tab 
-                icon={<QrCode2 />} 
-                label="Demo Tools" 
-                iconPosition="start"
-                disableRipple
-                sx={{ 
-                  borderBottom: activeTab === 2 ? `3px solid ${theme.palette.primary.main}` : 'none',
-                }}
-              />
-            </Tabs>
-          </Box>
-        </Paper>
-
-        <TabPanel value={activeTab} index={0}>
-          <Grid container spacing={4}>
-            <Grid item xs={12}>
-              <Card sx={{ 
-                mb: 4, 
-                borderRadius: 2,
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(30, 30, 30, 0.85)' 
-                  : 'rgba(255, 255, 255, 0.85)',
-                border: theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.05)'
-                  : '1px solid rgba(0, 0, 0, 0.03)',
-              }} elevation={2}>
-                <CardContent sx={{ 
-                  p: 3,
-                  ...(theme.palette.mode === 'dark' && {
-                    '& .MuiTypography-root.MuiTypography-h5': {
-                      color: theme.palette.primary.light
-                    }
-                  })
-                }}>
-                  <Typography variant="h5" component="h2" gutterBottom color="primary">
-                    Create New Event
-                  </Typography>
-                  <Divider sx={{ mb: 3 }} />
-                  <EventForm onEventCreated={handleEventCreated} />
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Card sx={{ 
-                borderRadius: 2,
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(30, 30, 30, 0.85)' 
-                  : 'rgba(255, 255, 255, 0.85)',
-                border: theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.05)'
-                  : '1px solid rgba(0, 0, 0, 0.03)',
-              }} elevation={2}>
-                <CardContent sx={{ 
-                  p: 3,
-                  ...(theme.palette.mode === 'dark' && {
-                    '& .MuiTypography-root.MuiTypography-h5': {
-                      color: theme.palette.primary.light
-                    }
-                  })
-                }}>
-                  <Typography variant="h5" component="h2" gutterBottom color="primary">
-                    Manage Events
-                  </Typography>
-                  <Divider sx={{ mb: 3 }} />
-                  <EventList events={events} />
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={1}>
-          <Card sx={{ 
-            borderRadius: 2,
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            backgroundColor: theme.palette.mode === 'dark' 
-              ? 'rgba(30, 30, 30, 0.85)' 
-              : 'rgba(255, 255, 255, 0.85)',
-            border: theme.palette.mode === 'dark'
-              ? '1px solid rgba(255, 255, 255, 0.05)'
-              : '1px solid rgba(0, 0, 0, 0.03)',
-          }} elevation={2}>
-            <CardContent sx={{ 
-              p: 3,
-              ...(theme.palette.mode === 'dark' && {
-                '& .MuiTypography-root.MuiTypography-h5': {
-                  color: theme.palette.primary.light
-                }
-              })
-            }}>
-              <Typography variant="h5" component="h2" gutterBottom color="primary">
-                Issued NFTs
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <NFTList nfts={nfts} />
-            </CardContent>
-          </Card>
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={2}>
-          <Card sx={{ 
-            borderRadius: 2,
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            backgroundColor: theme.palette.mode === 'dark' 
-              ? 'rgba(30, 30, 30, 0.85)' 
-              : 'rgba(255, 255, 255, 0.85)',
-            border: theme.palette.mode === 'dark'
-              ? '1px solid rgba(255, 255, 255, 0.05)'
-              : '1px solid rgba(0, 0, 0, 0.03)',
-          }} elevation={2}>
-            <CardContent sx={{ 
-              p: 3,
-              ...(theme.palette.mode === 'dark' && {
-                '& .MuiTypography-root.MuiTypography-h5': {
-                  color: theme.palette.primary.light
-                }
-              })
-            }}>
-              <Typography variant="h5" component="h2" gutterBottom color="primary">
-                Demonstration Tools
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              
-              <Alert severity="info" sx={{ mb: 3 }}>
-                <AlertTitle>Demo Mode Active</AlertTitle>
-                The following tools simulate what would normally happen in a production environment with real Luma API integration.
-                Since the application is currently running in demo mode (using mock data), you can use these tools to test the full workflow.
-              </Alert>
-              
-              <MockCheckInSimulator onNFTMinted={handleNFTMinted} />
-
-              <Button
-                variant="contained"
-                startIcon={<QrCode2 />}
-                onClick={() => {/* Import functionality would go here */}}
-                sx={{ 
-                  mt: 3,
-                  borderRadius: 2,
-                  backgroundColor: theme.palette.mode === 'dark' ? '#E6007A' : '#8B00BF',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? '#D0006A' : '#7A00AF',
-                  }
-                }}
-              >
-                Import from Luma
-              </Button>
-            </CardContent>
-          </Card>
-        </TabPanel>
+            </ListItemButton>
+          ))}
+        </Box>
       </Box>
-    </Fade>
+
+      {/* Main Content */}
+      <Box component="main" sx={{ flexGrow: 1 }}>
+        {renderPageContent()}
+      </Box>
+
+      {/* Connect to Luma Modal */}
+      <ConnectToLumaModal 
+        open={connectToLumaModalOpen}
+        onClose={() => setConnectToLumaModalOpen(false)}
+      />
+     
+    </Box>
   );
 }
 
