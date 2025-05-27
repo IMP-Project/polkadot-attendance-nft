@@ -155,7 +155,7 @@ func (h *LumaHandler) ValidateSignature(c *gin.Context, webhookKey string) bool 
 // ImportEvents allows external orgs to fetch their Luma events using their own API key
 func (h *LumaHandler) ImportEvents(c *gin.Context) {
 	var request struct {
-		APIKey string `json:"api_key"`
+		APIKey string `json:"apikey"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil || request.APIKey == "" {
