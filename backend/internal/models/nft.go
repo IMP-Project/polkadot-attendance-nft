@@ -3,7 +3,7 @@ package models
 // NFT represents an attendance NFT
 type NFT struct {
 	ID       uint64                 `json:"id"`
-	EventID  uint64                 `json:"event_id"`
+	EventID  string                 `json:"event_id"`
 	Owner    string                 `json:"owner"`
 	Metadata map[string]interface{} `json:"metadata"`
 }

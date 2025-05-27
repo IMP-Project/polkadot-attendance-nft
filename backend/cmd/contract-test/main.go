@@ -85,7 +85,7 @@ func main() {
 	log.Println("Test 3: Storing the event in the database...")
 	eventRepo := database.NewEventRepository(db)
 	dbEvent := &models.Event{
-		ID:        eventID,
+		ID: fmt.Sprintf("%d", eventID), // converts uint64 to string
 		Name:      event.Name,
 		Date:      event.Date,
 		Location:  event.Location,
@@ -125,7 +125,7 @@ func main() {
 		"timestamp":  "2025-05-20T10:00:00Z",
 	}
 	
-	success, err := client.MintNFT(eventID, recipient, metadata)
+	success, err := client.MintNFT(fmt.Sprintf("%d", eventID), recipient, metadata)
 	if err != nil {
 		log.Fatalf("Failed to mint NFT: %v", err)
 	}

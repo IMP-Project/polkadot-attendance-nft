@@ -76,7 +76,7 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 	// If in development mode without API key, use mock data
 	if c.apiKey == "" {
 		return &models.Event{
-			ID:       1,
+			ID:       "1",
 			Name:     "Polkadot Meetup",
 			Date:     "2023-06-01",
 			Location: "Berlin",
@@ -88,12 +88,45 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 
 	// For now, return mock data
 	return &models.Event{
-		ID:       1,
+		ID:       "1",
 		Name:     "Polkadot Meetup",
 		Date:     "2023-06-01",
 		Location: "Berlin",
 	}, nil
 }
+
+// FetchEvents fetches events from Luma using a provided API key (external user)
+func (c *Client) FetchEvents(externalAPIKey string) ([]models.Event, error) {
+	url := "https://api.lu.ma/public/v1/events"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("x-luma-api-key", externalAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Luma API returned status: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Events []models.Event `json:"events"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result.Events, nil
+}
+
+
 
 // Actual Luma API integration would look something like this:
 

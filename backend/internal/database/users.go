@@ -27,7 +27,7 @@ const (
 // EventPermission represents a user's permission for an event
 type EventPermission struct {
 	ID        uint64    `json:"id"`
-	EventID   uint64    `json:"event_id"`
+	EventID   string    `json:"event_id"`
 	UserID    uint64    `json:"user_id"`
 	Role      Role      `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
@@ -307,7 +307,7 @@ func (r *PermissionRepository) GetEventsForUser(userID uint64) ([]EventPermissio
 }
 
 // Delete deletes a permission
-func (r *PermissionRepository) Delete(userID, eventID uint64) error {
+func (r *PermissionRepository) Delete(userID uint64, eventID string) error{
 	query := `
 		DELETE FROM event_permissions
 		WHERE user_id = $1 AND event_id = $2

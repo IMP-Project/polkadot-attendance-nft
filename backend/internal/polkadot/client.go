@@ -9,8 +9,8 @@ import (
 
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
-	"github.com/vedhavyas/go-subkey/v2" // For Substrate address handling
-	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
+	subkey "github.com/vedhavyas/go-subkey/v2"
+ "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
 // Client handles interactions with the Polkadot blockchain
@@ -218,7 +218,7 @@ func (c *Client) ListEvents() ([]models.Event, error) {
 }
 
 // MintNFT mints a new NFT for an attendee
-func (c *Client) MintNFT(eventID uint64, recipient string, metadata map[string]interface{}) (bool, error) {
+func (c *Client) MintNFT(eventID string, recipient string, metadata map[string]interface{}) (bool, error) {
 	log.Printf("Minting NFT for event %d to recipient %s", eventID, recipient)
 	
 	// Validate recipient address
@@ -227,7 +227,7 @@ func (c *Client) MintNFT(eventID uint64, recipient string, metadata map[string]i
 	}
 	
 	// Validate event ID
-	if eventID == 0 {
+	if eventID == "" {
 		return false, fmt.Errorf("invalid event ID")
 	}
 	
@@ -281,7 +281,7 @@ func (c *Client) ListNFTs() ([]models.NFT, error) {
 		return []models.NFT{
 			{
 				ID:      1,
-				EventID: 1,
+				EventID: "1",
 				Owner:   "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
 				Metadata: map[string]interface{}{
 					"name":        "Attendance: Polkadot Meetup",

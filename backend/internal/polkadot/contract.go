@@ -197,7 +197,7 @@ func GetSharedMockContractCaller() *MockContractCaller {
 		// Initialize with default data
 		events := map[uint64]models.Event{
 			1: {
-				ID:        1,
+				ID:        "1",
 				Name:      "Polkadot Meetup",
 				Date:      "2023-06-01",
 				Location:  "Berlin",
@@ -259,7 +259,7 @@ func (c *MockContractCaller) Call(method string, args ...interface{}) ([]byte, e
 		eventID := c.eventCount
 
 		c.events[eventID] = models.Event{
-			ID:        eventID,
+			ID: fmt.Sprintf("%d", eventID),
 			Name:      name,
 			Date:      date,
 			Location:  location,
@@ -366,7 +366,7 @@ func (c *MockContractCaller) Call(method string, args ...interface{}) ([]byte, e
 
 		c.nfts[nftID] = models.NFT{
 			ID:       nftID,
-			EventID:  eventID,
+			EventID: fmt.Sprintf("%d", eventID),
 			Owner:    recipient,
 			Metadata: metadata,
 		}

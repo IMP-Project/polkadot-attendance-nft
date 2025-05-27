@@ -91,18 +91,16 @@ func (h *AdminHandler) CreateEvent(c *gin.Context) {
 		return
 	}
 
-	// Also create the event in the blockchain
 	eventID, err := h.polkadotClient.CreateEvent(req.Name, req.Date, req.Location)
-	if err != nil {
-		// Log the error but continue (we have the event in the database)
-		c.Error(err)
-	} else {
-		// If blockchain creation succeeds, update the event ID if needed
-		if event.ID != eventID && eventID > 0 {
-			// In a production system, we would handle this discrepancy
-			c.Error(err)
-		}
-	}
+if err != nil {
+	c.Error(err)
+} else {
+	// Optional: log or store the blockchain ID
+	// You could store this later if you add a BlockchainEventID field
+	c.Set("blockchain_event_id", eventID)
+}
+
+
 
 	// Get or create the organizer user
 	user, err := h.userRepo.GetOrCreate(organizer)
