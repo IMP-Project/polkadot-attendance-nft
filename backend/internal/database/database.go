@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-
+	 "os"
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
@@ -24,31 +24,27 @@ type DB struct {
 	*sql.DB
 }
 
-// New creates a new database connection
-func New(config Config) (*DB, error) {
-	// Construct connection string
-	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		config.Host, config.Port, config.User, config.Password, config.DBName, config.SSLMode,
-	)
+func New() (*DB, error) {
+	// Use full DATABASE_URL (from Render)
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return nil, fmt.Errorf("DATABASE_URL is not set")
+	}
 
-	// Open database connection
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Test connection
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	// Configure connection pool
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	log.Printf("Connected to database %s at %s:%d", config.DBName, config.Host, config.Port)
+	log.Println("Connected to database using DATABASE_URL")
 
 	return &DB{db}, nil
 }

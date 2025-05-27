@@ -34,14 +34,8 @@ func main() {
 
 	// Initialize database connection
 	log.Printf("Connecting to database...")
-	db, err := database.New(database.Config{
-		Host:     cfg.Database.Host,
-		Port:     cfg.Database.Port,
-		User:     cfg.Database.User,
-		Password: cfg.Database.Password,
-		DBName:   cfg.Database.DBName,
-		SSLMode:  cfg.Database.SSLMode,
-	})
+	db, err := database.New()
+	
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

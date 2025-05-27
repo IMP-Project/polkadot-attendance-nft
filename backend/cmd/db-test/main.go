@@ -17,14 +17,7 @@ func main() {
 	log.Printf("Connecting to database at %s:%d...", cfg.Database.Host, cfg.Database.Port)
 
 	// Initialize database
-	db, err := database.New(database.Config{
-		Host:     cfg.Database.Host,
-		Port:     cfg.Database.Port,
-		User:     cfg.Database.User,
-		Password: cfg.Database.Password,
-		DBName:   cfg.Database.DBName,
-		SSLMode:  cfg.Database.SSLMode,
-	})
+	db, err := database.New()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -50,7 +43,7 @@ func main() {
 	testUser := &database.User{
 		WalletAddress: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", // Test address
 	}
-	
+
 	if err := userRepo.Create(testUser); err != nil {
 		log.Fatalf("Failed to create test user: %v", err)
 	}
@@ -73,7 +66,7 @@ func main() {
 		Location:  "Test Location",
 		Organizer: testUser.WalletAddress,
 	}
-	
+
 	if err := eventRepo.Create(testEvent); err != nil {
 		log.Fatalf("Failed to create test event: %v", err)
 	}
@@ -98,4 +91,4 @@ func main() {
 
 	fmt.Println("\n✅ Database is properly set up and working!\n")
 	os.Exit(0)
-} 
+}
