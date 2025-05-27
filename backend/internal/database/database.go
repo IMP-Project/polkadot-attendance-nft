@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
-	 "os"
+
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
@@ -25,11 +27,14 @@ type DB struct {
 }
 
 func New() (*DB, error) {
-	// Use full DATABASE_URL (from Render)
-	dsn := os.Getenv("DATABASE_URL")
+	// Use full DATABASE_URL (from Render) and trim any whitespace/newlines
+	dsn := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if dsn == "" {
 		return nil, fmt.Errorf("DATABASE_URL is not set")
 	}
+
+	// Debug: Log the cleaned URL (remove this after fixing)
+	log.Printf("Using DATABASE_URL: %q", dsn)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -109,4 +114,4 @@ func (db *DB) MigrateUp() error {
 
 	log.Println("Database migrations completed successfully")
 	return nil
-} 
+}
