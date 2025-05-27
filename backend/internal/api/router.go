@@ -41,6 +41,9 @@ func NewRouter(
 
 		// Webhook endpoint for Luma check-ins
 		api.POST("/webhook/check-in", lumaHandler.CheckInWebhook)
+
+		// NEW: External orgs can import their events using their Luma API key
+        api.POST("/import-luma-events", lumaHandler.ImportEvents)
 	}
 
 	// Admin routes (protected)
