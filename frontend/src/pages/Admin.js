@@ -6,6 +6,7 @@ import NFTList from '../components/ui/NFTList';
 import MockCheckInSimulator from '../components/admin/MockCheckInSimulator';
 import { api } from '../services/api';
 import ConnectToLumaModal from '../components/ui/ConnectToLumaModal';
+import EventsPage from '../pages/EventsPage';
 
 // Dashboard component matching Image 2 exactly
 const Dashboard = ({ onCreateEvent }) => {
@@ -270,11 +271,7 @@ function Admin() {
       case 'dashboard':
         return <Dashboard onCreateEvent={() => setConnectToLumaModalOpen(true)} />;
       case 'events':
-        return (
-          <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100vh' }}>
-            <EventList events={events} />
-          </Box>
-        );
+  return <EventsPage onConnectToLuma={() => setConnectToLumaModalOpen(true)} />;
       case 'nft-design':
         return (
           <Box sx={{ p: 3, backgroundColor: 'white', minHeight: '100vh' }}>
