@@ -152,24 +152,23 @@ func (h *LumaHandler) ValidateSignature(c *gin.Context, webhookKey string) bool 
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
 }
 
-// ImportEvents allows external orgs to fetch their Luma events using their own API key
-func (h *LumaHandler) ImportEvents(c *gin.Context) {
+// ImportSingleEvent allows users to import a specific Luma event by API key and Event ID
+func (h *LumaHandler) ImportSingleEvent(c *gin.Context) {
 	var request struct {
-		APIKey string `json:"apikey"`
+		APIKey  string `json:"apiKey"`
+		EventID string `json:"eventId"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil || request.APIKey == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "API key is required"})
+	if err := c.ShouldBindJSON(&request); err != nil || request.APIKey == "" || request.EventID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "API key and Event ID are required"})
 		return
 	}
 
-	events, err := h.lumaClient.FetchEvents(request.APIKey)
+	event, err := h.lumaClient.FetchSingleEvent(request.APIKey, request.EventID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events from Luma", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event from Luma", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"events": events,
-	})
+	c.JSON(http.StatusOK, gin.H{"event": event})
 }

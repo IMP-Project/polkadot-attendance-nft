@@ -95,40 +95,6 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 	}, nil
 }
 
-// FetchEvents fetches events from Luma using a provided API key (external user)
-func (c *Client) FetchEvents(externalAPIKey string) ([]models.Event, error) {
-	url := "https://api.lu.ma/v1/users/me/events"
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("x-luma-api-key", externalAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Luma API returned status: %d", resp.StatusCode)
-	}
-
-	var result struct {
-		Events []models.Event `json:"events"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-
-	return result.Events, nil
-}
-
-
-
-// Actual Luma API integration would look something like this:
 
 // LumaAPIResponse represents the response structure from Luma API
 type LumaAPIResponse struct {
@@ -169,4 +135,32 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 	}
 
 	return apiResp.Data, nil
+}
+
+func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
+	url := fmt.Sprintf("https://api.lu.ma/public/v1/events/%s", eventID)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("x-luma-api-key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Luma API returned status: %d", resp.StatusCode)
+	}
+
+	var event models.Event
+	if err := json.NewDecoder(resp.Body).Decode(&event); err != nil {
+		return nil, err
+	}
+
+	return &event, nil
 }
