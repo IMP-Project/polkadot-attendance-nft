@@ -101,20 +101,9 @@ func (db *DB) MigrateUp() error {
 	}
 	log.Println("NFTs table created/verified")
 
-	// Add foreign key constraint separately (if it doesn't exist)
-	if _, err := db.Exec(`
-		DO $ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM information_schema.table_constraints 
-				WHERE constraint_name = 'nfts_event_id_fkey' 
-				AND table_name = 'nfts'
-			) THEN
-				ALTER TABLE nfts ADD CONSTRAINT nfts_event_id_fkey 
-				FOREIGN KEY (event_id) REFERENCES events(id);
-			END IF;
-		END $;
-	`); err != nil {
+	// Add foreign key constraint to nfts table (ignore if already exists)
+	_, err := db.Exec(`ALTER TABLE nfts ADD CONSTRAINT nfts_event_id_fkey FOREIGN KEY (event_id) REFERENCES events(id)`)
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to add foreign key constraint to nfts table: %w", err)
 	}
 	log.Println("NFTs foreign key constraint verified")
@@ -133,53 +122,20 @@ func (db *DB) MigrateUp() error {
 	}
 	log.Println("Event permissions table created/verified")
 
-	// Add foreign key constraints separately for event_permissions
-	if _, err := db.Exec(`
-		DO $ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM information_schema.table_constraints 
-				WHERE constraint_name = 'event_permissions_event_id_fkey' 
-				AND table_name = 'event_permissions'
-			) THEN
-				ALTER TABLE event_permissions ADD CONSTRAINT event_permissions_event_id_fkey 
-				FOREIGN KEY (event_id) REFERENCES events(id);
-			END IF;
-		END $;
-	`); err != nil {
+	// Add foreign key constraints to event_permissions table (ignore if already exists)
+	_, err = db.Exec(`ALTER TABLE event_permissions ADD CONSTRAINT event_permissions_event_id_fkey FOREIGN KEY (event_id) REFERENCES events(id)`)
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to add event foreign key constraint to event_permissions table: %w", err)
 	}
 
-	if _, err := db.Exec(`
-		DO $ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM information_schema.table_constraints 
-				WHERE constraint_name = 'event_permissions_user_id_fkey' 
-				AND table_name = 'event_permissions'
-			) THEN
-				ALTER TABLE event_permissions ADD CONSTRAINT event_permissions_user_id_fkey 
-				FOREIGN KEY (user_id) REFERENCES users(id);
-			END IF;
-		END $;
-	`); err != nil {
+	_, err = db.Exec(`ALTER TABLE event_permissions ADD CONSTRAINT event_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id)`)
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to add user foreign key constraint to event_permissions table: %w", err)
 	}
 
-	// Add unique constraint separately
-	if _, err := db.Exec(`
-		DO $ 
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1 FROM information_schema.table_constraints 
-				WHERE constraint_name = 'event_permissions_event_id_user_id_key' 
-				AND table_name = 'event_permissions'
-			) THEN
-				ALTER TABLE event_permissions ADD CONSTRAINT event_permissions_event_id_user_id_key 
-				UNIQUE(event_id, user_id);
-			END IF;
-		END $;
-	`); err != nil {
+	// Add unique constraint (ignore if already exists)
+	_, err = db.Exec(`ALTER TABLE event_permissions ADD CONSTRAINT event_permissions_event_id_user_id_key UNIQUE(event_id, user_id)`)
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to add unique constraint to event_permissions table: %w", err)
 	}
 
