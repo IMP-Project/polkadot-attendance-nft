@@ -97,7 +97,7 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 
 // FetchEvents fetches events from Luma using a provided API key (external user)
 func (c *Client) FetchEvents(externalAPIKey string) ([]models.Event, error) {
-	url := "https://api.lu.ma/public/v1/events"
+	url := "https://api.lu.ma/v1/users/me/events"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

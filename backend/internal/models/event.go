@@ -1,10 +1,10 @@
 package models
 
 type Event struct {
-	ID        string `json:"id"`         // from Luma
-	Name      string `json:"name"`       // from Luma
-	Date      string `json:"date"`       // from Luma
-	Location  string `json:"location"`   // from Luma
-	URL       string `json:"url"`        // optional, from Luma
-	Organizer string `json:"organizer,omitempty"` // your custom field
+	ID        string `json:"id"`       
+	Name      string `json:"name"`     
+	Date      string `json:"start_time"` // ← Fix this
+	Location  string `json:"location"` 
+	URL       string `json:"url"`      
+	Organizer string `json:"organizer,omitempty"` 
 }
