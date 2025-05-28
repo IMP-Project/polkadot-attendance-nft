@@ -138,10 +138,11 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 }
 
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
-	url := fmt.Sprintf("https://api.lu.ma/public/v1/events/%s", eventID)
-	fmt.Printf("Making request to URL: %s\n", url)
+	url := "https://api.lu.ma/public/v1/event/get"
+	fmt.Printf("Making request to URL: %s with event_id: %s\n", url, eventID)
 
-	req, err := http.NewRequest("GET", url, nil)
+	// Create request with event ID as query parameter
+	req, err := http.NewRequest("GET", url+"?event_id="+eventID, nil)
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
 		return nil, err
@@ -156,12 +157,12 @@ func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event,
 	}
 	defer resp.Body.Close()
 
-	// Read the response body for debugging
+	// Read response for debugging
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Error reading response body: %v\n", err)
 		return nil, err
 	}
+	
 	fmt.Printf("Response status: %d\n", resp.StatusCode)
 	fmt.Printf("Response body: %s\n", string(body))
 
@@ -175,6 +176,5 @@ func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event,
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
-	fmt.Printf("Successfully parsed event: %+v\n", event)
 	return &event, nil
 }
