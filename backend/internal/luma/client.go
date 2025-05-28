@@ -139,8 +139,8 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 }
 
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
-	// Based on the API errors we've seen, let's try the working pattern
-	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get?event_api_id=%s", eventID)
+	// Use api_id parameter instead of event_api_id (based on API error messages)
+	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get?api_id=%s", eventID)
 	fmt.Printf("Making request to URL: %s\n", url)
 
 	req, err := http.NewRequest("GET", url, nil)
