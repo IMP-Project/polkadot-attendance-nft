@@ -7,11 +7,14 @@ import {
 import Admin from './pages/Admin';
 import Gallery from './pages/Gallery';
 import PublicGallery from './pages/PublicGallery';
+import EventsPage from './pages/EventsPage';
 import PolkadotBackground from './components/layout/PolkadotBackground';
 import { FontSizeProvider, useFontSize } from './contexts/FontSizeContext';
+import { EventsProvider } from './contexts/EventsContext';
 import Login from './pages/Login';
 import { api } from './services/api';
 import MockCheckInSimulator from './components/admin/MockCheckInSimulator';
+import ConnectToLumaModal from './components/ui/ConnectToLumaModal';
 
 // CheckIn page component
 const CheckInPage = () => {
@@ -95,6 +98,37 @@ const LandingPage = () => {
   
   // Redirect authenticated users directly to admin
   return <Navigate to="/admin" replace />;
+};
+
+// Events Page Wrapper with Luma Modal
+const EventsPageWrapper = () => {
+  const [isLumaModalOpen, setIsLumaModalOpen] = useState(false);
+
+  const handleConnectToLuma = () => {
+    setIsLumaModalOpen(true);
+  };
+
+  const handleCloseLumaModal = () => {
+    setIsLumaModalOpen(false);
+  };
+
+  const handleImportSuccess = () => {
+    // Modal will close automatically, events are already added to context
+    // EventsPage will automatically update to show table view
+    console.log('Event imported successfully!');
+  };
+
+  return (
+    <>
+      <EventsPage onConnectToLuma={handleConnectToLuma} />
+      
+      <ConnectToLumaModal
+        open={isLumaModalOpen}
+        onClose={handleCloseLumaModal}
+        onSuccess={handleImportSuccess}
+      />
+    </>
+  );
 };
 
 function MainContent() {
@@ -206,6 +240,9 @@ function MainContent() {
   // Check if we're on admin page
   const isAdminPage = location.pathname.startsWith('/admin');
 
+  // Check if we're on events page
+  const isEventsPage = location.pathname.startsWith('/events');
+
   // Don't show any wrapper for public pages
   if (isPublicPage) {
     return (
@@ -238,6 +275,18 @@ function MainContent() {
         <CssBaseline />
         <Routes>
           <Route path="/admin/*" element={<ProtectedRoute element={<Admin />} />} />
+        </Routes>
+      </ThemeProvider>
+    );
+  }
+
+  // Show events page without any wrapper (full screen like admin)
+  if (isEventsPage) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Routes>
+          <Route path="/events" element={<ProtectedRoute element={<EventsPageWrapper />} />} />
         </Routes>
       </ThemeProvider>
     );
@@ -277,7 +326,9 @@ function App() {
   return (
     <Router>
       <FontSizeProvider>
-        <MainContent />
+        <EventsProvider>
+          <MainContent />
+        </EventsProvider>
       </FontSizeProvider>
     </Router>
   );

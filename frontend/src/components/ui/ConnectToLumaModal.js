@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { Dialog, Box, Typography, TextField, Button, IconButton } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Dialog, Box, Typography, TextField, Button, IconButton, List, ListItem, ListItemText, Divider, Chip } from '@mui/material';
+import { Close as CloseIcon, ArrowBack as ArrowBackIcon, Event as EventIcon } from '@mui/icons-material';
+import { useEvents } from '../../contexts/EventsContext';
+import ImportProgressModal from './ImportProgressModal';
 
-const ConnectToLumaModal = ({ open, onClose }) => {
+const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [step, setStep] = useState(1); // 1: Enter API Key, 2: Select Event
+  const [importProgress, setImportProgress] = useState({ open: false, eventName: '', progress: 0 });
+  
+  const { addEvent } = useEvents();
 
   const handleImportFromLuma = async () => {
     if (!apiKey.trim()) {
@@ -31,9 +38,8 @@ const ConnectToLumaModal = ({ open, onClose }) => {
       const data = await response.json();
       console.log('Luma events:', data);
       
-      // For now, just log the events and close modal
-      // Later we can pass this data to a parent component
-      onClose();
+      setEvents(data.events || []);
+      setStep(2); // Move to event selection step
       
     } catch (error) {
       console.error('Error importing from Luma:', error);
@@ -43,178 +49,436 @@ const ConnectToLumaModal = ({ open, onClose }) => {
     }
   };
 
+  const handleSelectEvent = async (selectedEvent) => {
+    // Start import progress
+    setImportProgress({
+      open: true,
+      eventName: selectedEvent.name,
+      progress: 0
+    });
+
+    // Simulate progress steps
+    const progressSteps = [20, 40, 60, 80, 100];
+    
+    try {
+      for (let i = 0; i < progressSteps.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setImportProgress(prev => ({
+          ...prev,
+          progress: progressSteps[i]
+        }));
+      }
+
+      // Import the selected event
+      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/import-luma-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiKey: apiKey,
+          eventId: selectedEvent.api_id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to import event');
+      }
+
+      const data = await response.json();
+      console.log('Imported event:', data);
+      
+      // Add event to context
+      addEvent(data.event);
+      
+      // Close progress modal
+      setImportProgress({ open: false, eventName: '', progress: 0 });
+      
+      // Close main modal
+      handleClose();
+      
+      // Call success callback to redirect to events page
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+    } catch (error) {
+      console.error('Error importing event:', error);
+      setImportProgress({ open: false, eventName: '', progress: 0 });
+      alert('Error importing event: ' + error.message);
+    }
+  };
+
   const handleClose = () => {
     setApiKey('');
+    setEvents([]);
+    setStep(1);
+    setImportProgress({ open: false, eventName: '', progress: 0 });
     onClose();
   };
 
+  const handleBackToApiKey = () => {
+    setStep(1);
+    setEvents([]);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: '16px',
-          padding: 0,
-          maxWidth: '480px',
-          margin: '16px',
-        },
-      }}
-    >
-      <Box
-        sx={{
-          padding: '32px',
-          position: 'relative',
+    <>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            padding: 0,
+            maxWidth: '580px',
+            margin: '16px',
+            maxHeight: '90vh',
+          },
         }}
       >
-        {/* Close Button */}
-        <IconButton
-          onClick={handleClose}
+        <Box
           sx={{
-            position: 'absolute',
-            top: '24px',
-            right: '24px',
-            color: '#6B7280',
-            '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.04)',
-            },
+            padding: '32px',
+            position: 'relative',
           }}
         >
-          <CloseIcon />
-        </IconButton>
-
-        {/* Title */}
-        <Typography
-          sx={{
-            fontFamily: 'Manrope, sans-serif',
-            fontWeight: 600,
-            fontSize: '24px',
-            lineHeight: '32px',
-            color: '#18171C',
-            marginBottom: '16px',
-          }}
-        >
-          Connect to Luma
-        </Typography>
-
-        {/* Description */}
-        <Typography
-          sx={{
-            fontFamily: 'Manrope, sans-serif',
-            fontWeight: 400,
-            fontSize: '16px',
-            lineHeight: '24px',
-            color: '#6B7280',
-            marginBottom: '24px',
-          }}
-        >
-          Enter your Luma API key to import your Luma events. If you do not have a LUMA API key, you can get one{' '}
-          <Box
-            component="span"
+          {/* Close Button */}
+          <IconButton
+            onClick={handleClose}
             sx={{
-              color: '#FF2670',
-              textDecoration: 'underline',
-              cursor: 'pointer',
+              position: 'absolute',
+              top: '24px',
+              right: '24px',
+              color: '#6B7280',
               '&:hover': {
-                color: '#E91E63',
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
               },
             }}
-            onClick={() => window.open('https://luma.com/api', '_blank')}
           >
-            here
-          </Box>
-        </Typography>
+            <CloseIcon />
+          </IconButton>
 
-        {/* Input Label */}
-        <Typography
-          sx={{
-            fontFamily: 'Manrope, sans-serif',
-            fontWeight: 500,
-            fontSize: '14px',
-            lineHeight: '20px',
-            color: '#374151',
-            marginBottom: '8px',
-          }}
-        >
-          Enter Luma API key
-        </Typography>
+          {/* Back Button (Step 2 only) */}
+          {step === 2 && (
+            <IconButton
+              onClick={handleBackToApiKey}
+              sx={{
+                position: 'absolute',
+                top: '24px',
+                left: '24px',
+                color: '#6B7280',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          )}
 
-        {/* Input Field */}
-        <TextField
-          fullWidth
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="Enter your API key"
-          variant="outlined"
-          sx={{
-            marginBottom: '24px',
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '8px',
-              backgroundColor: '#FFFFFF',
-              '& fieldset': {
-                borderColor: '#D1D5DB',
-              },
-              '&:hover fieldset': {
-                borderColor: '#9CA3AF',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#FF2670',
-                borderWidth: '2px',
-              },
-            },
-            '& .MuiInputBase-input': {
-              padding: '12px 16px',
-              fontFamily: 'Manrope, sans-serif',
-              fontSize: '16px',
-              color: '#374151',
-              '&::placeholder': {
-                color: '#9CA3AF',
-                opacity: 1,
-              },
-            },
-          }}
-        />
+          {/* Step 1: API Key Input */}
+          {step === 1 && (
+            <>
+              {/* Title */}
+              <Typography
+                sx={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '24px',
+                  lineHeight: '32px',
+                  color: '#18171C',
+                  marginBottom: '16px',
+                }}
+              >
+                Connect to Luma
+              </Typography>
 
-        {/* Import Button */}
-        <Button
-          onClick={handleImportFromLuma}
-          disabled={loading || !apiKey.trim()}
-          sx={{
-            backgroundColor: '#FF2670',
-            color: 'white',
-            borderRadius: '10px',
-            padding: '12px',
-            textTransform: 'none',
-            fontFamily: 'Manrope, sans-serif',
-            fontWeight: 600,
-            fontSize: '16px',
-            width: '200px',
-            height: '44px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            '&:hover': {
-              backgroundColor: '#E91E63',
-            },
-            '&:disabled': {
-              backgroundColor: '#F3F4F6',
-              color: '#9CA3AF',
-            },
-          }}
-        >
-          <Box
-            component="img"
-            src="/images/import-icon.png" 
-            alt="Import"
-            sx={{ width: 16, height: 16 }}
-          />
-          {loading ? 'Importing...' : 'Import from Luma'}
-        </Button>
-      </Box>
-    </Dialog>
+              {/* Description */}
+              <Typography
+                sx={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 400,
+                  fontSize: '16px',
+                  lineHeight: '24px',
+                  color: '#6B7280',
+                  marginBottom: '24px',
+                }}
+              >
+                Enter your Luma API key to import your Luma events. If you do not have a LUMA API key, you can get one{' '}
+                <Box
+                  component="span"
+                  sx={{
+                    color: '#FF2670',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      color: '#E91E63',
+                    },
+                  }}
+                  onClick={() => window.open('https://luma.com/api', '_blank')}
+                >
+                  here
+                </Box>
+              </Typography>
+
+              {/* Input Label */}
+              <Typography
+                sx={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  lineHeight: '20px',
+                  color: '#374151',
+                  marginBottom: '8px',
+                }}
+              >
+                Enter Luma API key
+              </Typography>
+
+              {/* Input Field */}
+              <TextField
+                fullWidth
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter your API key"
+                variant="outlined"
+                sx={{
+                  marginBottom: '24px',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    backgroundColor: '#FFFFFF',
+                    '& fieldset': {
+                      borderColor: '#D1D5DB',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#9CA3AF',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#FF2670',
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: '12px 16px',
+                    fontFamily: 'Manrope, sans-serif',
+                    fontSize: '16px',
+                    color: '#374151',
+                    '&::placeholder': {
+                      color: '#9CA3AF',
+                      opacity: 1,
+                    },
+                  },
+                }}
+              />
+
+              {/* Import Button */}
+              <Button
+                onClick={handleImportFromLuma}
+                disabled={loading || !apiKey.trim()}
+                sx={{
+                  backgroundColor: '#FF2670',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  textTransform: 'none',
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '16px',
+                  width: '200px',
+                  height: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  '&:hover': {
+                    backgroundColor: '#E91E63',
+                  },
+                  '&:disabled': {
+                    backgroundColor: '#F3F4F6',
+                    color: '#9CA3AF',
+                  },
+                }}
+              >
+                <Box
+                  component="img"
+                  src="/images/import-icon.png" 
+                  alt="Import"
+                  sx={{ width: 16, height: 16 }}
+                />
+                {loading ? 'Fetching Events...' : 'Fetch Events'}
+              </Button>
+            </>
+          )}
+
+          {/* Step 2: Event Selection */}
+          {step === 2 && (
+            <>
+              {/* Title */}
+              <Typography
+                sx={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '24px',
+                  lineHeight: '32px',
+                  color: '#18171C',
+                  marginBottom: '16px',
+                  marginLeft: '40px', // Account for back button
+                }}
+              >
+                Select Event to Import
+              </Typography>
+
+              {/* Description */}
+              <Typography
+                sx={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 400,
+                  fontSize: '16px',
+                  lineHeight: '24px',
+                  color: '#6B7280',
+                  marginBottom: '24px',
+                }}
+              >
+                Choose which event you'd like to import from your Luma account.
+              </Typography>
+
+              {events.length === 0 ? (
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    color: '#6B7280',
+                  }}
+                >
+                  <EventIcon sx={{ fontSize: 48, marginBottom: 2, opacity: 0.5 }} />
+                  <Typography
+                    sx={{
+                      fontFamily: 'Manrope, sans-serif',
+                      fontSize: '16px',
+                    }}
+                  >
+                    No events found. Make sure you have events in your Luma account.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '12px',
+                  }}
+                >
+                  <List sx={{ padding: 0 }}>
+                    {events.map((event, index) => (
+                      <React.Fragment key={event.api_id || index}>
+                        <ListItem
+                          button
+                          onClick={() => handleSelectEvent(event)}
+                          sx={{
+                            padding: '20px',
+                            '&:hover': {
+                              backgroundColor: '#F9FAFB',
+                            },
+                          }}
+                        >
+                          <Box sx={{ width: '100%' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                              <Typography
+                                sx={{
+                                  fontFamily: 'Manrope, sans-serif',
+                                  fontWeight: 600,
+                                  fontSize: '18px',
+                                  color: '#18171C',
+                                  flex: 1,
+                                }}
+                              >
+                                {event.name || 'Untitled Event'}
+                              </Typography>
+                              <Chip
+                                label={event.visibility || 'public'}
+                                size="small"
+                                sx={{
+                                  backgroundColor: event.visibility === 'public' ? '#DCFCE7' : '#FEF3C7',
+                                  color: event.visibility === 'public' ? '#15803D' : '#92400E',
+                                  fontFamily: 'Manrope, sans-serif',
+                                  fontWeight: 500,
+                                  textTransform: 'capitalize',
+                                }}
+                              />
+                            </Box>
+                            
+                            <Typography
+                              sx={{
+                                fontFamily: 'Manrope, sans-serif',
+                                fontSize: '14px',
+                                color: '#6B7280',
+                                marginBottom: '8px',
+                              }}
+                            >
+                              {event.start_at ? formatDate(event.start_at) : 'No date set'}
+                            </Typography>
+                            
+                            {event.timezone && (
+                              <Typography
+                                sx={{
+                                  fontFamily: 'Manrope, sans-serif',
+                                  fontSize: '12px',
+                                  color: '#9CA3AF',
+                                  marginBottom: '8px',
+                                }}
+                              >
+                                📍 {event.timezone}
+                              </Typography>
+                            )}
+                            
+                            {event.url && (
+                              <Typography
+                                sx={{
+                                  fontFamily: 'Manrope, sans-serif',
+                                  fontSize: '12px',
+                                  color: '#FF2670',
+                                  textDecoration: 'underline',
+                                }}
+                              >
+                                {event.url}
+                              </Typography>
+                            )}
+                          </Box>
+                        </ListItem>
+                        {index < events.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </>
+          )}
+        </Box>
+      </Dialog>
+
+      {/* Import Progress Modal */}
+      <ImportProgressModal
+        open={importProgress.open}
+        onClose={() => {}}
+        eventName={importProgress.eventName}
+        progress={importProgress.progress}
+      />
+    </>
   );
 };
 
