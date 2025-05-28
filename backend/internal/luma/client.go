@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"io/ioutil" 
-	"bytes"
+	
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
@@ -139,22 +139,11 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 }
 
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
-	url := "https://api.lu.ma/public/v1/event/get"
+	// Try with both parameters in query string
+	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get?api_id=%s&event_api_id=%s", eventID, eventID)
 	fmt.Printf("Making request to URL: %s\n", url)
 
-	// Create JSON payload
-	payload := map[string]string{
-		"api_id":       eventID,
-		"event_api_id": eventID,
-	}
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("Request payload: %s\n", string(jsonPayload))
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
 		return nil, err
