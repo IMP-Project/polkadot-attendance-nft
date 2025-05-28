@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
+	"io/ioutil" 
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
@@ -139,9 +139,11 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
 	url := fmt.Sprintf("https://api.lu.ma/public/v1/events/%s", eventID)
+	fmt.Printf("Making request to URL: %s\n", url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		fmt.Printf("Error creating request: %v\n", err)
 		return nil, err
 	}
 	req.Header.Set("x-luma-api-key", apiKey)
@@ -149,18 +151,30 @@ func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event,
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		fmt.Printf("Error making HTTP request: %v\n", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	// Read the response body for debugging
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error reading response body: %v\n", err)
+		return nil, err
+	}
+	fmt.Printf("Response status: %d\n", resp.StatusCode)
+	fmt.Printf("Response body: %s\n", string(body))
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Luma API returned status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("Luma API returned status: %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	var event models.Event
-	if err := json.NewDecoder(resp.Body).Decode(&event); err != nil {
-		return nil, err
+	if err := json.Unmarshal(body, &event); err != nil {
+		fmt.Printf("Error unmarshaling JSON: %v\n", err)
+		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
+	fmt.Printf("Successfully parsed event: %+v\n", event)
 	return &event, nil
 }
