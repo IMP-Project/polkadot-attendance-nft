@@ -152,7 +152,6 @@ func (h *LumaHandler) ValidateSignature(c *gin.Context, webhookKey string) bool 
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
 }
 
-// ImportSingleEvent allows users to import a specific Luma event by API key and Event ID
 func (h *LumaHandler) ImportSingleEvent(c *gin.Context) {
 	var request struct {
 		APIKey  string `json:"apiKey"`
@@ -169,6 +168,12 @@ func (h *LumaHandler) ImportSingleEvent(c *gin.Context) {
 	if err := h.lumaClient.TestAPIKey(request.APIKey); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "API key test failed", "details": err.Error()})
 		return
+	}
+
+	// List events to see the correct format
+	fmt.Printf("Listing events to find correct API IDs...\n")
+	if err := h.lumaClient.ListEvents(request.APIKey); err != nil {
+		fmt.Printf("Failed to list events: %v\n", err)
 	}
 
 	event, err := h.lumaClient.FetchSingleEvent(request.APIKey, request.EventID)

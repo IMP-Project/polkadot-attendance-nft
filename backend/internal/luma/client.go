@@ -210,3 +210,31 @@ func (c *Client) TestAPIKey(apiKey string) error {
 
 	return nil
 }
+
+func (c *Client) ListEvents(apiKey string) error {
+	url := "https://api.lu.ma/public/v1/calendar/list-events"
+	fmt.Printf("Listing events with URL: %s\n", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-luma-api-key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	
+	fmt.Printf("List events - Status: %d\n", resp.StatusCode)
+	fmt.Printf("List events - Body: %s\n", string(body))
+
+	return nil
+}
