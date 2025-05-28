@@ -8,24 +8,36 @@ const ConnectToLumaModal = ({ open, onClose }) => {
 
   const handleImportFromLuma = async () => {
     if (!apiKey.trim()) {
-      // Handle validation - could add error state here
       return;
     }
 
     setLoading(true);
     
     try {
-      // Add your import logic here
-      console.log('Importing from Luma with API key:', apiKey);
+      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/list-luma-events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiKey: apiKey
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch events from Luma');
+      }
+
+      const data = await response.json();
+      console.log('Luma events:', data);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Close modal on success
+      // For now, just log the events and close modal
+      // Later we can pass this data to a parent component
       onClose();
       
     } catch (error) {
       console.error('Error importing from Luma:', error);
+      alert('Error: ' + error.message);
     } finally {
       setLoading(false);
     }
