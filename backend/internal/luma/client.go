@@ -213,30 +213,40 @@ func (c *Client) TestAPIKey(apiKey string) error {
 	return nil
 }
 
-func (c *Client) ListEvents(apiKey string) error {
+func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 	url := "https://api.lu.ma/public/v1/calendar/list-events"
-	fmt.Printf("Listing events with URL: %s\n", url)
-
+	
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("x-luma-api-key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status: %d", resp.StatusCode)
 	}
-	
-	fmt.Printf("List events - Status: %d\n", resp.StatusCode)
-	fmt.Printf("List events - Body: %s\n", string(body))
 
-	return nil
+	var response struct {
+		Entries []struct {
+			Event map[string]interface{} `json:"event"`
+		} `json:"entries"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, err
+	}
+
+	var events []map[string]interface{}
+	for _, entry := range response.Entries {
+		events = append(events, entry.Event)
+	}
+
+	return events, nil
 }

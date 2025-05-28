@@ -44,6 +44,7 @@ func NewRouter(
 
 		api.POST("/import-luma-event", lumaHandler.ImportSingleEvent)
 
+		api.POST("/list-luma-events", lumaHandler.ListUserEvents)
 	}
 
 	// Admin routes (protected)

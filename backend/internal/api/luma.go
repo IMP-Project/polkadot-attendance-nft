@@ -172,9 +172,9 @@ func (h *LumaHandler) ImportSingleEvent(c *gin.Context) {
 
 	// List events to see the correct format
 	fmt.Printf("Listing events to find correct API IDs...\n")
-	if err := h.lumaClient.ListEvents(request.APIKey); err != nil {
-		fmt.Printf("Failed to list events: %v\n", err)
-	}
+	if _, err := h.lumaClient.ListEvents(request.APIKey); err != nil {
+	fmt.Printf("Failed to list events: %v\n", err)
+}
 
 	event, err := h.lumaClient.FetchSingleEvent(request.APIKey, request.EventID)
 	if err != nil {
@@ -183,4 +183,31 @@ func (h *LumaHandler) ImportSingleEvent(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"event": event})
+}
+
+// ListUserEvents returns all events for the authenticated user
+func (h *LumaHandler) ListUserEvents(c *gin.Context) {
+	var request struct {
+		APIKey string `json:"apiKey"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil || request.APIKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "API key is required"})
+		return
+	}
+
+	// Test API key first
+	if err := h.lumaClient.TestAPIKey(request.APIKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid API key", "details": err.Error()})
+		return
+	}
+
+	// List all events
+	events, err := h.lumaClient.ListEvents(request.APIKey)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"events": events})
 }
