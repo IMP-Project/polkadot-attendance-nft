@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"bytes"  
+	"io/ioutil" 
+	"bytes"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
