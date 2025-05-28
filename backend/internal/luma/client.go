@@ -179,3 +179,35 @@ func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event,
 
 	return &event, nil
 }
+
+func (c *Client) TestAPIKey(apiKey string) error {
+	url := "https://api.lu.ma/public/v1/user/get-self"
+	fmt.Printf("Testing API key with URL: %s\n", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-luma-api-key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	
+	fmt.Printf("API key test - Status: %d\n", resp.StatusCode)
+	fmt.Printf("API key test - Body: %s\n", string(body))
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API key test failed with status: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}

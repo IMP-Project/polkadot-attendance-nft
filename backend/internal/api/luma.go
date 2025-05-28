@@ -164,6 +164,13 @@ func (h *LumaHandler) ImportSingleEvent(c *gin.Context) {
 		return
 	}
 
+	// Test API key first
+	fmt.Printf("Testing API key for user authentication...\n")
+	if err := h.lumaClient.TestAPIKey(request.APIKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "API key test failed", "details": err.Error()})
+		return
+	}
+
 	event, err := h.lumaClient.FetchSingleEvent(request.APIKey, request.EventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event from Luma", "details": err.Error()})
