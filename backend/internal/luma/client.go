@@ -139,10 +139,10 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
 	url := "https://api.lu.ma/public/v1/event/get"
-	fmt.Printf("Making request to URL: %s with event_id: %s\n", url, eventID)
+	fmt.Printf("Making request to URL: %s with api_id: %s\n", url, eventID)
 
-	// Create request with event ID as query parameter
-	req, err := http.NewRequest("GET", url+"?event_id="+eventID, nil)
+	// Use api_id instead of event_id
+	req, err := http.NewRequest("GET", url+"?api_id="+eventID, nil)
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
 		return nil, err
