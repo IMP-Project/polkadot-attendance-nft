@@ -170,13 +170,15 @@ func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event,
 		return nil, fmt.Errorf("Luma API returned status: %d, body: %s", resp.StatusCode, string(body))
 	}
 
-	var event models.Event
-	if err := json.Unmarshal(body, &event); err != nil {
-		fmt.Printf("Error unmarshaling JSON: %v\n", err)
-		return nil, fmt.Errorf("failed to decode response: %v", err)
-	}
+	var response struct {
+	Event models.Event `json:"event"`
+}
+if err := json.Unmarshal(body, &response); err != nil {
+	fmt.Printf("Error unmarshaling JSON: %v\n", err)
+	return nil, fmt.Errorf("failed to decode response: %v", err)
+}
 
-	return &event, nil
+return &response.Event, nil
 }
 
 func (c *Client) TestAPIKey(apiKey string) error {
