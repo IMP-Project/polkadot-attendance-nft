@@ -139,8 +139,8 @@ func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMes
 }
 
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
-	// Try with both parameters in query string
-	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get?api_id=%s&event_api_id=%s", eventID, eventID)
+	// Try the pattern from the .NET SDK documentation
+	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/%s", eventID)
 	fmt.Printf("Making request to URL: %s\n", url)
 
 	req, err := http.NewRequest("GET", url, nil)
