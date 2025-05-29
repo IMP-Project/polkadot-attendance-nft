@@ -69,52 +69,63 @@ const Login = () => {
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        minHeight: '100vh',
-        fontFamily: 'Unbounded, sans-serif',
-      }}
-    >
+  sx={{
+    display: 'flex',
+    minHeight: '100vh',
+    fontFamily: 'Unbounded, sans-serif',
+    flexDirection: {
+      xs: 'column-reverse', // Form on top, image below on mobile
+      lg: 'row',            // Image left, form right on large screens
+    },
+  }}
+>
+
       {/* Left Side - Background Image */}
       <Box
-        sx={{
-          flex: 1,
-          backgroundImage: `url('/images/conference-image.png')`, 
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.3) 2px, transparent 2px),
-              radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.2) 2px, transparent 2px),
-              radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.25) 2px, transparent 2px),
-              radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.2) 2px, transparent 2px),
-              radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.3) 2px, transparent 2px)
-            `,
-            backgroundSize: '60px 60px, 80px 80px, 100px 100px, 90px 90px, 70px 70px',
-            zIndex: 1,
-          }
-        }}
-      />
+  sx={{
+    width: { xs: '100%', lg: '50%' },
+    minHeight: { xs: '200px', lg: 'auto' },
+    flexGrow: 1,
+    backgroundImage: `url('/images/conference-image.png')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    position: 'relative',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: `
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.3) 2px, transparent 2px),
+        radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.2) 2px, transparent 2px),
+        radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.25) 2px, transparent 2px),
+        radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.2) 2px, transparent 2px),
+        radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.3) 2px, transparent 2px)
+      `,
+      backgroundSize: '60px 60px, 80px 80px, 100px 100px, 90px 90px, 70px 70px',
+      zIndex: 1,
+    }
+  }}
+/>
+
 
       {/* Right Side - Login Form */}
       <Box
-        sx={{
-          flex: 1,
-          backgroundColor: '#ffffff',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          padding: '0 60px',
-        }}
-      >
+  sx={{
+    width: { xs: '100%', lg: '50%' },
+    flexGrow: 1,
+    minHeight: { xs: 'auto', lg: '100vh' },
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    padding: { xs: '24px', sm: '32px', lg: '60px' },
+  }}
+>
+
         {/* Top Right Icons */}
         <Box
           sx={{
@@ -161,17 +172,19 @@ const Login = () => {
 
         {/* Main Content Container */}
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flex: 1,
-            maxWidth: '474px',
-            margin: '0 auto',
-            width: '100%',
-          }}
-        >
+  sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+    width: '100%',
+    maxWidth: '400px', // slightly smaller max
+    px: { xs: 2, sm: 3, md: 0 }, // mobile padding
+    margin: '0 auto',
+  }}
+>
+
           {/* Polkadot Logo */}
           <Box
             sx={{
@@ -310,7 +323,7 @@ const Login = () => {
             disabled={loading}
             sx={{
               backgroundColor: '#FF2670',
-              width: '474px',
+              width: '100%',
               height: '44px',
               borderRadius: '10px',
               padding: '12px',

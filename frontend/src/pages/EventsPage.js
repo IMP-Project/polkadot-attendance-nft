@@ -87,14 +87,18 @@ const EventsPage = ({ onConnectToLuma }) => {
     >
       {/* Top Bar */}
       <Box
-        sx={{
-          px: 4,
-          py: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }}
-      >
+  sx={{
+    px: { xs: 2, md: 4 },
+    pt: { xs: 6, md: 3 }, // Adds top padding on mobile
+    pb: 3,
+    display: 'flex',
+    flexDirection: { xs: 'column', sm: 'row' },
+    justifyContent: 'space-between',
+    alignItems: { xs: 'flex-start', sm: 'center' },
+    gap: { xs: 2, sm: 0 },
+  }}
+>
+
         <Box>
           <Typography
             sx={{

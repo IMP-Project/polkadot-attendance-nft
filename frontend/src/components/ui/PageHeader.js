@@ -12,44 +12,61 @@ const PageHeader = ({
 }) => {
   return (
     <Box
-      sx={{
-        px: 4,
-        py: 3,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-      }}
-    >
+  sx={{
+    px: { xs: 2, md: 4 },
+    py: { xs: 8, md: 3 },
+    display: 'flex',
+    flexDirection: { xs: 'column', md: 'row' },
+    justifyContent: 'space-between',
+    alignItems: { xs: 'center', md: 'flex-start' },
+    gap: 2
+  }}
+>
+
       {/* Left Side - Title and Subtitle */}
       <Box>
         <Typography
-          sx={{
-            fontFamily: 'Manrope, sans-serif',
-            fontWeight: 500,
-            fontSize: '20px',
-            lineHeight: '33.6px',
-            color: '#18171C',
-            mb: 0.5,
-          }}
-        >
+  sx={{
+    fontFamily: 'Manrope, sans-serif',
+    fontWeight: 500,
+    fontSize: '20px',
+    lineHeight: '33.6px',
+    color: '#18171C',
+    mb: 0.5,
+    textAlign: { xs: 'center', md: 'left' }
+  }}
+>
+
           {title}
         </Typography>
         <Typography
-          sx={{
-            fontFamily: 'Manrope, sans-serif',
-            fontWeight: 400,
-            fontSize: '14px',
-            lineHeight: '19.6px',
-            letterSpacing: '1.4%',
-            color: '#77738C',
-          }}
-        >
+  sx={{
+    fontFamily: 'Manrope, sans-serif',
+    fontWeight: 400,
+    fontSize: '14px',
+    lineHeight: '19.6px',
+    letterSpacing: '1.4%',
+    color: '#77738C',
+    textAlign: { xs: 'center', md: 'left' }
+  }}
+>
+
           {subtitle}
         </Typography>
       </Box>
       
       {/* Right Side - Icons and Button */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <Box
+  sx={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: { xs: 'center', md: 'flex-end' },
+    gap: 3,
+    mt: { xs: 2, md: 0 },
+    flexWrap: 'wrap'
+  }}
+>
+
         {showIcons && (
           <>
             {/* Search icon */}

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Card, CardContent, Divider, Button,
-  Grid, FormControl, InputLabel, Select, MenuItem,
-  TextField, InputAdornment, Tabs, Tab, Paper, 
+  Box, Typography, Card, CardContent, Button, Grid, 
+  FormControl, Select, MenuItem, TextField, InputAdornment,
   useTheme
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import {
-  Event, Share, Search, ContentCopy
+  ContentCopy, Share
 } from '@mui/icons-material';
 import { api } from '../services/api';
-import PublicNFTGallery from '../components/layout/PublicNFTGallery';
+import PageHeader from '../components/ui/PageHeader';
+import UploadDesignModal from '../components/ui/UploadDesignModal';
 
 function Gallery() {
   const theme = useTheme();
@@ -18,10 +18,11 @@ function Gallery() {
   const [selectedEvent, setSelectedEvent] = useState('');
   const [loading, setLoading] = useState(true);
   const [publicUrl, setPublicUrl] = useState('');
-  const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
   const [error, setError] = useState(null);
+  const [nfts, setNfts] = useState([]);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -43,11 +44,27 @@ function Gallery() {
     
     fetchEvents();
   }, []);
-  
+
   useEffect(() => {
     if (selectedEvent) {
       const baseUrl = window.location.origin;
       setPublicUrl(`${baseUrl}/public/gallery/${selectedEvent}`);
+      
+      // Mock NFT data - replace with actual API call
+      const mockNfts = Array.from({ length: 5 }, (_, i) => ({
+        id: i + 1,
+        metadata: {
+          name: `Attendance #${i + 1}`,
+          event_name: 'PolkaDot Connect',
+          event_date: '25.05.2025',
+          location: 'Virtual',
+          attendee: `User ${i + 1}`,
+          image: '/images/nft-character.png'
+        },
+        owner: `125oca134cwqgv128${i}g231286${i}`,
+        created_at: new Date().toISOString()
+      }));
+      setNfts(mockNfts);
     }
   }, [selectedEvent]);
   
@@ -55,163 +72,419 @@ function Gallery() {
     setSelectedEvent(event.target.value);
   };
   
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-  
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-  
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
     setUrlCopied(true);
     setTimeout(() => setUrlCopied(false), 2000);
   };
-  
-  const filteredEvents = events.filter(event => 
-    event.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  const selectedEventData = events.find(event => event.id === selectedEvent);
+
+  const handleUploadNewDesign = () => {
+    setUploadModalOpen(true);
+  };
+
+  const handleShareGallery = () => {
+    // Share gallery functionality
+    if (navigator.share) {
+      navigator.share({
+        title: 'NFT Gallery',
+        text: 'Check out this NFT Gallery',
+        url: publicUrl,
+      });
+    } else {
+      handleCopyUrl();
+    }
+  };
+
+  const handleUploadComplete = (designData) => {
+    // Handle the uploaded design data
+    console.log('Design uploaded:', designData);
+    // You can add logic here to save the design, update NFTs, etc.
+    setUploadModalOpen(false);
+  };
 
   return (
-    <Box>
-      <Card 
-        sx={{ 
-          mb: 4, 
-          borderRadius: 2,
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? 'rgba(30, 30, 30, 0.85)' 
-            : 'rgba(255, 255, 255, 0.85)',
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Page Header */}
+      <Box
+        sx={{
+          px: 4,
+          py: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
         }}
       >
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
+        <Box>
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '20px',
+              lineHeight: '33.6px',
+              color: '#18171C',
+              mb: 0.5,
+            }}
+          >
             NFT Gallery
           </Typography>
-          <Typography variant="body1" color="text.secondary" paragraph>
-            View and share the NFTs from your events with a public gallery that can be embedded on your website.
-          </Typography>
-          
-          <Divider sx={{ my: 2 }} />
-          
-          <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel id="event-select-label">Select Event</InputLabel>
-                <Select
-                  labelId="event-select-label"
-                  id="event-select"
-                  value={selectedEvent}
-                  label="Select Event"
-                  onChange={handleEventChange}
-                  disabled={events.length === 0}
-                >
-                  {events.map((event) => (
-                    <MenuItem key={event.id} value={event.id}>
-                      {event.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                value={publicUrl}
-                label="Public Gallery URL"
-                variant="outlined"
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        startIcon={<ContentCopy />}
-                        onClick={handleCopyUrl}
-                        sx={{ borderRadius: 1 }}
-                      >
-                        {urlCopied ? 'Copied!' : 'Copy'}
-                      </Button>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          </Grid>
-          
-          {selectedEvent && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<Share />}
-                component={Link}
-                to={`/public/gallery/${selectedEvent}`}
-                target="_blank"
-                sx={{ borderRadius: 2 }}
-              >
-                View Public Gallery
-              </Button>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Paper 
-        sx={{ 
-          borderRadius: 2,
-          overflow: 'hidden',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? 'rgba(30, 30, 30, 0.85)' 
-            : 'rgba(255, 255, 255, 0.85)',
-        }}
-      >
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Gallery Preview
-          </Typography>
-          
-          <TextField
-            placeholder="Search events..."
-            size="small"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search fontSize="small" />
-                </InputAdornment>
-              ),
+          <Typography
+            sx={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 400,
+              fontSize: '14px',
+              lineHeight: '19.6px',
+              letterSpacing: '1.4%',
+              color: '#77738C',
             }}
-            sx={{ width: 250 }}
-          />
+          >
+            Create and manage the visual identity of your event NFTs
+          </Typography>
         </Box>
         
-        <Divider />
-        
-        {selectedEventData && (
-          <Box p={3}>
-            <PublicNFTGallery
-              eventId={selectedEvent}
-              showTitle={true}
-              limit={6}
-              showPoweredBy={true}
-              variant="grid"
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {/* Search icon */}
+          <Box
+            component="img"
+            src="/images/search-icon.png"
+            alt="Search"
+            sx={{ width: 20, height: 20, cursor: 'pointer' }}
+          />
+          
+          {/* Bell icon */}
+          <Box
+            component="img"
+            src="/images/bell-icon.png"
+            alt="Notifications"
+            sx={{ width: 20, height: 20, cursor: 'pointer' }}
+          />
+
+          {/* Share Gallery Button */}
+          <Button
+            onClick={handleShareGallery}
+            sx={{
+              backgroundColor: 'transparent',
+              color: '#18171C',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              textTransform: 'none',
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              border: '1px solid #E5E7EB',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.04)',
+              },
+            }}
+          >
+            <Box
+              component="img"
+              src="/images/share-icon.png"
+              alt="Share"
+              sx={{ width: 16, height: 16 }}
+            />
+            Share Gallery
+          </Button>
+                   
+          {/* Upload new design Button */}
+          <Button
+            onClick={handleUploadNewDesign}
+            sx={{
+              backgroundColor: '#FF2670',
+              color: 'white',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              textTransform: 'none',
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              '&:hover': {
+                backgroundColor: '#E91E63',
+              },
+            }}
+          >
+            <Box
+              component="img"
+              src="/images/plus-icon.png"
+              alt="Upload"
+              sx={{ width: 16, height: 16 }}
+            />
+            Upload new design
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Filter Bar */}
+      <Box 
+        sx={{ 
+          px: 4, 
+          py: 2,
+          display: 'flex',
+          justifyContent: 'flex-start',
+          alignItems: 'center'
+        }}
+      >
+        <Box
+          sx={{
+            width: 'auto',
+            maxWidth: '600px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '24px',
+            marginTop: '20px',
+            marginLeft: '0px'
+          }}
+        >
+          {/* Showing */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Typography 
+              sx={{
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                lineHeight: '20px',
+                letterSpacing: '-0.6%',
+                color: '#18171C',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Showing
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: '200px' }}>
+              <Select
+                value={selectedEvent}
+                onChange={handleEventChange}
+                displayEmpty
+                sx={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '8px',
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E5E7EB',
+                  },
+                  '& .MuiSelect-select': {
+                    fontFamily: 'Manrope, sans-serif',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    lineHeight: '20px',
+                    letterSpacing: '-0.6%',
+                    color: '#18171C',
+                    padding: '10px 14px'
+                  }
+                }}
+              >
+                {events.map(event => (
+                  <MenuItem key={event.id} value={event.id}>
+                    {event.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* URL */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Typography 
+              sx={{
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                lineHeight: '20px',
+                letterSpacing: '-0.6%',
+                color: '#18171C',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              URL
+            </Typography>
+            <TextField
+              value={publicUrl}
+              size="small"
+              sx={{
+                minWidth: '300px',
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '8px',
+                  height: '40px',
+                  '& fieldset': {
+                    borderColor: '#E5E7EB',
+                  },
+                  '& input': {
+                    fontFamily: 'Manrope, sans-serif',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    lineHeight: '20px',
+                    letterSpacing: '-0.6%',
+                    color: '#18171C',
+                    padding: '10px 14px'
+                  }
+                }
+              }}
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Button
+                      size="small"
+                      onClick={handleCopyUrl}
+                      sx={{
+                        minWidth: 'auto',
+                        p: 1,
+                        color: '#6B7280',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0,0,0,0.04)'
+                        }
+                      }}
+                    >
+                      <ContentCopy fontSize="small" />
+                    </Button>
+                  </InputAdornment>
+                ),
+              }}
             />
           </Box>
-        )}
-      </Paper>
+        </Box>
+      </Box>
+
+      {/* NFT Grid */}
+      <Box sx={{ px: 4, py: 2, flex: 1 }}>
+        <Grid container spacing={3}>
+          {nfts.map((nft) => (
+            <Grid item xs={12} sm={6} md={3} key={nft.id}>
+              <Card 
+                sx={{ 
+                  borderRadius: 3,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                  }
+                }}
+              >
+                {/* NFT Image */}
+                <Box 
+                  sx={{ 
+                    height: 200,
+                    background: 'linear-gradient(135deg, #00D4AA 0%, #00B894 100%)',
+                    borderRadius: '12px 12px 0 0',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/images/nft-character.png"
+                    alt="NFT Character"
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      objectFit: 'contain'
+                    }}
+                  />
+                </Box>
+                
+                <CardContent sx={{ p: 2 }}>
+                  {/* NFT Label */}
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#6B7280',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      mb: 1,
+                      display: 'block'
+                    }}
+                  >
+                    Attendance NFT
+                  </Typography>
+                  
+                  {/* NFT Title */}
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: '16px',
+                      color: '#18171C',
+                      mb: 2
+                    }}
+                  >
+                    {nft.metadata?.name || 'Attendance #1'}
+                  </Typography>
+
+                  {/* Owner Info */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: '#6B7280',
+                        fontSize: '11px',
+                        display: 'block',
+                        mb: 0.5
+                      }}
+                    >
+                      Owned by
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: '#6B7280',
+                        fontSize: '11px',
+                        wordBreak: 'break-all'
+                      }}
+                    >
+                      {nft.owner}
+                    </Typography>
+                  </Box>
+
+                  {/* View NFT Button */}
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    sx={{
+                      borderColor: '#FF2670',
+                      color: '#FF2670',
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      '&:hover': {
+                        borderColor: '#E91E63',
+                        backgroundColor: 'rgba(255, 38, 112, 0.04)',
+                      },
+                    }}
+                  >
+                    View NFT
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      {/* Upload Design Modal */}
+      <UploadDesignModal 
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onUpload={handleUploadComplete}
+      />
     </Box>
   );
 }
 
-export default Gallery; 
+export default Gallery;
