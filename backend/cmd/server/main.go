@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,29 +13,48 @@ import (
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/api"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/config"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
+	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
 	// Load configuration
 	cfg := config.Load()
 
-	// Initialize database
-	db, err := database.New()
+	// Create GORM database connection
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+		cfg.Database.Host,
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.DBName, // Changed from Name to DBName
+		cfg.Database.Port,
+	)
+
+	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Run database migrations
-	if err := db.MigrateUp(); err != nil {
+	// Run GORM auto-migrations
+	log.Println("Running database migrations...")
+	err = gormDB.AutoMigrate(
+		&database.User{},
+		&database.EventPermission{},
+		&models.Event{},
+		// Add other models here as needed
+	)
+	if err != nil {
 		log.Fatalf("Failed to run database migrations: %v", err)
 	}
+	log.Println("Database migrations completed successfully")
 
-	// Initialize repositories
-	eventRepo := database.NewEventRepository(db)
-	nftRepo := database.NewNFTRepository(db)
-	userRepo := database.NewUserRepository(db)
-	permRepo := database.NewPermissionRepository(db)
+	// Initialize repositories (temporarily comment out until updated to GORM)
+	// eventRepo := database.NewEventRepository(gormDB)
+	// nftRepo := database.NewNFTRepository(gormDB)
+	userRepo := database.NewUserRepository(gormDB)
+	permRepo := database.NewPermissionRepository(gormDB)
 
 	// Validate contract address
 	formattedAddress := api.ValidateContractAddress(cfg.ContractAddress)
@@ -42,8 +62,8 @@ func main() {
 	// Initialize Polkadot client
 	client := polkadot.NewClient(cfg.PolkadotRPC, formattedAddress)
 
-	// Create and configure the router
-	router := api.NewRouter(cfg, client, eventRepo, nftRepo, userRepo, permRepo)
+	// Create and configure the router (pass nil for commented out repos)
+	router := api.NewRouter(cfg, client, nil, nil, userRepo, permRepo)
 
 	// Create HTTP server
 	srv := &http.Server{
@@ -73,8 +93,13 @@ func main() {
 	}
 
 	// Close database connection
-	if err := db.Close(); err != nil {
-		log.Printf("Error closing database connection: %v", err)
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		log.Printf("Error getting underlying DB: %v", err)
+	} else {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Error closing database connection: %v", err)
+		}
 	}
 
 	log.Println("Server exited gracefully")
