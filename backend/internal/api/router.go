@@ -38,7 +38,6 @@ func NewRouter(
 	lumaHandler := NewLumaHandler(lumaClient, polkadotClient, nftRepo, eventRepo, userRepo)
 	userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, cfg.JWTSecret)
 
-
 	// Public routes
 	{
 		// Wallet login route
@@ -50,18 +49,18 @@ func NewRouter(
 		api.POST("/list-luma-events", lumaHandler.ListUserEvents)
 	}
 
-	// Admin routes (protected)
+	// Admin routes (protected with basic auth)
 	admin := api.Group("/admin")
 	admin.Use(BasicAuthMiddleware(cfg))
 	{
 		adminHandler := NewAdminHandler(polkadotClient, eventRepo, nftRepo, userRepo, permRepo)
 
-		// Event management
+		// Admin-only event management (for admin dashboard)
 		admin.POST("/events", adminHandler.CreateEvent)
 		admin.GET("/events", adminHandler.ListEvents)
 		admin.GET("/events/:id", adminHandler.GetEvent)
 
-		// NFT management
+		// Admin-only NFT management
 		admin.GET("/nfts", adminHandler.ListNFTs)
 	}
 
@@ -69,10 +68,23 @@ func NewRouter(
 	user := api.Group("/user")
 	user.Use(JWTAuth(cfg.JWTSecret))
 	{
-		// Already initialized userHandler is reused
+		// Profile routes
 		user.GET("/profile", userHandler.GetProfile)
 		user.GET("/events", userHandler.GetUserEvents)
 		user.GET("/nfts", userHandler.GetUserNFTs)
+		
+		// User settings routes
+		user.GET("/settings", userHandler.GetUserSettings)
+		user.PUT("/settings", userHandler.UpdateUserSettings)
+		
+		// Event management for authenticated users
+		user.POST("/events", userHandler.CreateEvent)           // Create events
+		user.GET("/events/:id", userHandler.GetEvent)           // Get specific event
+		user.PUT("/events/:id", userHandler.UpdateEvent)        // Update own events
+		user.DELETE("/events/:id", userHandler.DeleteEvent)     // Delete own events
+		
+		// NFT management for authenticated users
+		user.POST("/events/:id/mint", userHandler.MintNFT)      // Mint NFTs for events
 	}
 
 	return r

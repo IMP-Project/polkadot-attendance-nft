@@ -42,6 +42,7 @@ func main() {
 	log.Println("Running database migrations...")
 	err = gormDB.AutoMigrate(
 		&database.User{},
+		&database.UserSettings{},     // Added UserSettings migration
 		&database.EventPermission{},
 		&models.Event{},
 		// Add other models here as needed
@@ -51,11 +52,17 @@ func main() {
 	}
 	log.Println("Database migrations completed")
 
-	// Initialize repositories (temporarily comment out until updated to GORM)
-	// eventRepo := database.NewEventRepository(gormDB)
-	// nftRepo := database.NewNFTRepository(gormDB)
+	// Initialize repositories
 	userRepo := database.NewUserRepository(gormDB)
 	permRepo := database.NewPermissionRepository(gormDB)
+	
+	// Initialize event and NFT repositories as nil for now
+	// TODO: Update EventRepository and NFTRepository to use *gorm.DB instead of *database.DB
+	var eventRepo *database.EventRepository = nil
+	var nftRepo *database.NFTRepository = nil
+	
+	log.Println("User and Permission repositories initialized")
+	log.Println("Event and NFT repositories disabled (need GORM migration)")
 
 	// Validate contract address
 	formattedAddress := api.ValidateContractAddress(cfg.ContractAddress)
@@ -63,8 +70,8 @@ func main() {
 	// Initialize Polkadot client
 	client := polkadot.NewClient(cfg.PolkadotRPC, formattedAddress)
 
-	// Create and configure the router (pass nil for commented out repos)
-	router := api.NewRouter(cfg, client, nil, nil, userRepo, permRepo)
+	// Create and configure the router with all available repositories
+	router := api.NewRouter(cfg, client, eventRepo, nftRepo, userRepo, permRepo)
 
 	// Create HTTP server
 	srv := &http.Server{
