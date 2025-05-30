@@ -76,6 +76,13 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
     }
   };
 
+  // Helper function to safely format event ID for display
+  const formatEventId = (id) => {
+    if (!id) return 'N/A';
+    const idStr = id.toString();
+    return idStr.length > 8 ? `${idStr.substring(0, 8)}...` : idStr;
+  };
+
   return (
     <Box
       sx={{
@@ -87,18 +94,17 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
     >
       {/* Top Bar */}
       <Box
-  sx={{
-    px: { xs: 2, md: 4 },
-    pt: { xs: 6, md: 3 }, // Adds top padding on mobile
-    pb: 3,
-    display: 'flex',
-    flexDirection: { xs: 'column', sm: 'row' },
-    justifyContent: 'space-between',
-    alignItems: { xs: 'flex-start', sm: 'center' },
-    gap: { xs: 2, sm: 0 },
-  }}
->
-
+        sx={{
+          px: { xs: 2, md: 4 },
+          pt: { xs: 6, md: 3 }, // Adds top padding on mobile
+          pb: 3,
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: { xs: 2, sm: 0 },
+        }}
+      >
         <Box>
           <Typography
             sx={{
@@ -411,7 +417,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
               <TableBody>
                 {events.map((event, index) => (
                   <TableRow 
-                    key={event.id} 
+                    key={event.id || index} 
                     sx={{ 
                       '&:hover': { 
                         backgroundColor: (theme) => theme.palette.action.hover 
@@ -429,7 +435,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
                         py: 2
                       }}
                     >
-                      {event.id.substring(0, 8)}...
+                      {formatEventId(event.id)}
                     </TableCell>
                     <TableCell 
                       sx={{ 
@@ -440,7 +446,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
                         py: 2
                       }}
                     >
-                      {event.name}
+                      {event.name || 'Untitled Event'}
                     </TableCell>
                     <TableCell 
                       sx={{ 
@@ -450,7 +456,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
                         py: 2
                       }}
                     >
-                      {event.date}
+                      {event.date || 'No date set'}
                     </TableCell>
                     <TableCell 
                       sx={{ 
@@ -460,11 +466,11 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
                         py: 2
                       }}
                     >
-                      {event.location}
+                      {event.location || 'No location'}
                     </TableCell>
                     <TableCell sx={{ py: 2 }}>
                       <Chip
-                        label={event.status}
+                        label={event.status || 'upcoming'}
                         size="small"
                         icon={<span style={{ fontSize: '12px' }}>{getStatusIcon(event.status)}</span>}
                         sx={{
