@@ -11,6 +11,7 @@ type User struct {
     ID            uint64     `json:"id" gorm:"primaryKey;autoIncrement"`
     WalletAddress string     `json:"wallet_address" gorm:"uniqueIndex;not null"`
     Username      string     `json:"username,omitempty"`
+    LumaApiKey    string     `json:"-" gorm:"column:luma_api_key"` // Added this field - hidden from JSON
     CreatedAt     time.Time  `json:"created_at"`
     UpdatedAt     time.Time  `json:"updated_at"`
     LastLogin     *time.Time `json:"last_login,omitempty"`
@@ -206,4 +207,48 @@ func (r *PermissionRepository) GetByUserAndEvent(userID uint64, eventID string) 
     }
     
     return &permission, nil
+}
+
+// Luma API Key repository methods
+func (r *UserRepository) UpdateLumaApiKey(userID uint64, apiKey string) error {
+    result := r.db.Model(&User{}).Where("id = ?", userID).Update("luma_api_key", apiKey)
+    
+    if result.Error != nil {
+        return fmt.Errorf("failed to update Luma API key: %w", result.Error)
+    }
+    
+    if result.RowsAffected == 0 {
+        return fmt.Errorf("user not found")
+    }
+    
+    return nil
+}
+
+func (r *UserRepository) GetLumaApiKey(userID uint64) (string, error) {
+    var user User
+    err := r.db.Select("luma_api_key").Where("id = ?", userID).First(&user).Error
+    
+    if err == gorm.ErrRecordNotFound {
+        return "", fmt.Errorf("user not found")
+    }
+    
+    if err != nil {
+        return "", fmt.Errorf("failed to get Luma API key: %w", err)
+    }
+    
+    return user.LumaApiKey, nil
+}
+
+func (r *UserRepository) DeleteLumaApiKey(userID uint64) error {
+    result := r.db.Model(&User{}).Where("id = ?", userID).Update("luma_api_key", "")
+    
+    if result.Error != nil {
+        return fmt.Errorf("failed to delete Luma API key: %w", result.Error)
+    }
+    
+    if result.RowsAffected == 0 {
+        return fmt.Errorf("user not found")
+    }
+    
+    return nil
 }

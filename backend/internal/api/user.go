@@ -424,3 +424,73 @@ func (h *UserHandler) MintNFT(c *gin.Context) {
         "status":   "pending",
     })
 }
+
+// SaveLumaApiKey saves the Luma API key for the authenticated user
+func (h *UserHandler) SaveLumaApiKey(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    type SaveApiKeyRequest struct {
+        ApiKey string `json:"api_key"`
+    }
+
+    var req SaveApiKeyRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+        return
+    }
+
+    if req.ApiKey == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "API key cannot be empty"})
+        return
+    }
+
+    // Save API key to database
+    if err := h.userRepo.UpdateLumaApiKey(userID, req.ApiKey); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save API key"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Luma API key saved successfully"})
+}
+
+// GetLumaApiKey retrieves the Luma API key for the authenticated user
+func (h *UserHandler) GetLumaApiKey(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    apiKey, err := h.userRepo.GetLumaApiKey(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get API key"})
+        return
+    }
+
+    if apiKey == "" {
+        c.JSON(http.StatusNotFound, gin.H{"error": "No Luma API key found"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"api_key": apiKey})
+}
+
+// DeleteLumaApiKey removes the Luma API key for the authenticated user
+func (h *UserHandler) DeleteLumaApiKey(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    if err := h.userRepo.DeleteLumaApiKey(userID); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete API key"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Luma API key deleted successfully"})
+}

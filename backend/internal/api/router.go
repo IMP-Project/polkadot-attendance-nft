@@ -77,6 +77,11 @@ func NewRouter(
 		user.GET("/settings", userHandler.GetUserSettings)
 		user.PUT("/settings", userHandler.UpdateUserSettings)
 		
+		 // Luma API key management routes 
+   		 user.POST("/luma-api-key", userHandler.SaveLumaApiKey)
+   		 user.GET("/luma-api-key", userHandler.GetLumaApiKey)
+    	user.DELETE("/luma-api-key", userHandler.DeleteLumaApiKey)
+
 		// Event management for authenticated users
 		user.POST("/events", userHandler.CreateEvent)           // Create events
 		user.GET("/events/:id", userHandler.GetEvent)           // Get specific event
