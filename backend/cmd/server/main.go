@@ -40,6 +40,16 @@ func main() {
 
 	// Run GORM auto-migrations
 	log.Println("Running database migrations...")
+	
+	// First, ensure UserSettings table is created explicitly
+	log.Println("Creating UserSettings table...")
+	if err := gormDB.AutoMigrate(&database.UserSettings{}); err != nil {
+		log.Printf("UserSettings migration error: %v", err)
+	} else {
+		log.Println("UserSettings table migration completed")
+	}
+	
+	// Then run all migrations
 	err = gormDB.AutoMigrate(
 		&database.User{},
 		&database.UserSettings{},     // Added UserSettings migration
@@ -50,19 +60,21 @@ func main() {
 	if err != nil {
 		log.Printf("Migration warning: %v", err) // Don't crash on migration warnings
 	}
-	log.Println("Database migrations completed")
+	log.Println("All database migrations completed")
 
 	// Initialize repositories
 	userRepo := database.NewUserRepository(gormDB)
 	permRepo := database.NewPermissionRepository(gormDB)
 	
-	// Initialize event and NFT repositories as nil for now
-	// TODO: Update EventRepository and NFTRepository to use *gorm.DB instead of *database.DB
-	var eventRepo *database.EventRepository = nil
+	// Initialize event repository with GORM
+	eventRepo := database.NewEventRepository(gormDB)
+	log.Println("Event repository initialized with GORM")
+	
+	// Initialize NFT repository as nil for now (still needs GORM migration)
 	var nftRepo *database.NFTRepository = nil
 	
-	log.Println("User and Permission repositories initialized")
-	log.Println("Event and NFT repositories disabled (need GORM migration)")
+	log.Println("User, Permission, and Event repositories initialized")
+	log.Println("NFT repository disabled (need GORM migration)")
 
 	// Validate contract address
 	formattedAddress := api.ValidateContractAddress(cfg.ContractAddress)
