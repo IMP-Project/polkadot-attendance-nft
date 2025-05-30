@@ -12,7 +12,7 @@ import (
 
 // NewRouter creates a new gin router with configured routes
 func NewRouter(
-	cfg *config.Config, 
+	cfg *config.Config,
 	polkadotClient *polkadot.Client,
 	eventRepo *database.EventRepository,
 	nftRepo *database.NFTRepository,
@@ -33,17 +33,20 @@ func NewRouter(
 	// API routes
 	api := r.Group("/api")
 
+	// Initialize shared handlers
+	lumaClient := luma.NewClient(cfg.LumaAPIKey)
+	lumaHandler := NewLumaHandler(lumaClient, polkadotClient, nftRepo, eventRepo, userRepo)
+	userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, cfg.JWTSecret)
+
+
 	// Public routes
 	{
-		// Initialize handlers
-		lumaClient := luma.NewClient(cfg.LumaAPIKey)
-		lumaHandler := NewLumaHandler(lumaClient, polkadotClient, nftRepo, eventRepo, userRepo)
+		// Wallet login route
+		api.POST("/login", userHandler.WalletLogin)
 
-		// Webhook endpoint for Luma check-ins
+		// Webhook and Luma integration
 		api.POST("/webhook/check-in", lumaHandler.CheckInWebhook)
-
 		api.POST("/import-luma-event", lumaHandler.ImportSingleEvent)
-
 		api.POST("/list-luma-events", lumaHandler.ListUserEvents)
 	}
 
@@ -51,7 +54,6 @@ func NewRouter(
 	admin := api.Group("/admin")
 	admin.Use(BasicAuthMiddleware(cfg))
 	{
-		// Initialize handlers
 		adminHandler := NewAdminHandler(polkadotClient, eventRepo, nftRepo, userRepo, permRepo)
 
 		// Event management
@@ -67,10 +69,7 @@ func NewRouter(
 	user := api.Group("/user")
 	user.Use(JWTAuth(cfg.JWTSecret))
 	{
-		// Initialize handlers
-		userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo)
-
-		// User profile
+		// Already initialized userHandler is reused
 		user.GET("/profile", userHandler.GetProfile)
 		user.GET("/events", userHandler.GetUserEvents)
 		user.GET("/nfts", userHandler.GetUserNFTs)
