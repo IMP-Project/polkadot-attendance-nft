@@ -24,12 +24,13 @@ func main() {
 	cfg := config.Load()
 
 	// Create GORM database connection
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 		cfg.Database.Host,
 		cfg.Database.User,
 		cfg.Database.Password,
-		cfg.Database.DBName, // Changed from Name to DBName
+		cfg.Database.DBName,
 		cfg.Database.Port,
+		cfg.Database.SSLMode, // Now uses the environment variable
 	)
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
