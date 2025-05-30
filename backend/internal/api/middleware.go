@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"  // Updated to v5 to match user.go
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/config"
 	"github.com/patrickmn/go-cache"
 	"strconv"
@@ -149,12 +149,14 @@ func JWTAuth(jwtSecret string) gin.HandlerFunc {
 				}
 			}
 
-			// Set user ID from token claims
-			if userID, ok := claims["sub"].(string); ok {
+			// FIXED: Set user ID from token claims using correct key
+			if userID, ok := claims["user_id"].(string); ok {
 				c.Set("user_id", userID)
+				c.Next()
+			} else {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user not found in token"})
+				return
 			}
-
-			c.Next()
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			return
@@ -172,4 +174,4 @@ func OwnershipMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
-} 
+}
