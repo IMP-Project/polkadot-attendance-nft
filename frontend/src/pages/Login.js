@@ -263,7 +263,7 @@ const Login = () => {
           {/* Enter your Polkadot address label */}
           <Typography
             sx={{
-              fontFamily: 'Manrope, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               fontWeight: 500,
               fontSize: '14px',
               color: '#6B7280',
