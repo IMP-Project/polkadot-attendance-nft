@@ -49,14 +49,15 @@ func (h *UserHandler) WalletLogin(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userRepo.FindOrCreateByWallet(req.WalletAddress)
+	user, err := h.userRepo.GetOrCreate(req.WalletAddress)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process login"})
 		return
 	}
 
 	// user.ID is string, so use it directly for JWT
-	token, err := generateJWT(user.ID, h.JWTSecret)
+	// user.ID is uint64, so convert to string for JWT
+	token, err := generateJWT(strconv.FormatUint(user.ID, 10), h.JWTSecret)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
 		return
