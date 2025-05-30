@@ -147,6 +147,8 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
             maxWidth: '580px',
             margin: '16px',
             maxHeight: '90vh',
+            backgroundColor: (theme) => theme.palette.background.paper,
+            backgroundImage: 'none', // Remove any default gradient
           },
         }}
       >
@@ -200,7 +202,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   fontWeight: 600,
                   fontSize: '24px',
                   lineHeight: '32px',
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   marginBottom: '16px',
                 }}
               >
@@ -214,7 +216,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   fontWeight: 400,
                   fontSize: '16px',
                   lineHeight: '24px',
-                  color: '#6B7280',
+                  color: (theme) => theme.palette.text.secondary,
                   marginBottom: '24px',
                 }}
               >
@@ -242,7 +244,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   marginBottom: '8px',
                 }}
               >
@@ -260,12 +262,12 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   marginBottom: '24px',
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: (theme) => theme.palette.background.paper,
                     '& fieldset': {
-                      borderColor: '#D1D5DB',
+                      borderColor: (theme) => theme.palette.divider,
                     },
                     '&:hover fieldset': {
-                      borderColor: '#9CA3AF',
+                      borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : '#9CA3AF',
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: '#FF2670',
@@ -276,10 +278,10 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                     padding: '12px 16px',
                     fontFamily: 'Manrope, sans-serif',
                     fontSize: '16px',
-                    color: '#374151',
+                    color: (theme) => theme.palette.text.primary,
                     '&::placeholder': {
-                      color: '#9CA3AF',
-                      opacity: 1,
+                      color: (theme) => theme.palette.text.secondary,
+                      opacity: 0.7,
                     },
                   },
                 }}
@@ -334,7 +336,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   fontWeight: 600,
                   fontSize: '24px',
                   lineHeight: '32px',
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   marginBottom: '16px',
                   marginLeft: '40px', // Account for back button
                 }}
@@ -349,7 +351,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   fontWeight: 400,
                   fontSize: '16px',
                   lineHeight: '24px',
-                  color: '#6B7280',
+                  color: (theme) => theme.palette.text.secondary,
                   marginBottom: '24px',
                 }}
               >
@@ -379,8 +381,9 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   sx={{
                     maxHeight: '400px',
                     overflowY: 'auto',
-                    border: '1px solid #E5E7EB',
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: '12px',
+                    backgroundColor: (theme) => theme.palette.background.paper,
                   }}
                 >
                   <List sx={{ padding: 0 }}>
@@ -392,7 +395,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                           sx={{
                             padding: '20px',
                             '&:hover': {
-                              backgroundColor: '#F9FAFB',
+                              backgroundColor: (theme) => theme.palette.action.hover,
                             },
                           }}
                         >
@@ -403,7 +406,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                                   fontFamily: 'Manrope, sans-serif',
                                   fontWeight: 600,
                                   fontSize: '18px',
-                                  color: '#18171C',
+                                  color: (theme) => theme.palette.text.primary,
                                   flex: 1,
                                 }}
                               >
@@ -426,7 +429,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                               sx={{
                                 fontFamily: 'Manrope, sans-serif',
                                 fontSize: '14px',
-                                color: '#6B7280',
+                                color: (theme) => theme.palette.text.secondary,
                                 marginBottom: '8px',
                               }}
                             >
@@ -438,8 +441,9 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                                 sx={{
                                   fontFamily: 'Manrope, sans-serif',
                                   fontSize: '12px',
-                                  color: '#9CA3AF',
+                                  color: (theme) => theme.palette.text.secondary,
                                   marginBottom: '8px',
+                                  opacity: 0.8,
                                 }}
                               >
                                 📍 {event.timezone}
@@ -460,7 +464,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                             )}
                           </Box>
                         </ListItem>
-                        {index < events.length - 1 && <Divider />}
+                        {index < events.length - 1 && <Divider sx={{ borderColor: (theme) => theme.palette.divider }} />}
                       </React.Fragment>
                     ))}
                   </List>

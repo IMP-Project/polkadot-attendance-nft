@@ -12,7 +12,7 @@ import { api } from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 import UploadDesignModal from '../components/ui/UploadDesignModal';
 
-function Gallery() {
+function Gallery({ mode, toggleDarkMode }) {
   const theme = useTheme();
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState('');
@@ -106,7 +106,7 @@ function Gallery() {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundColor: 'white',
+        backgroundColor: (theme) => theme.palette.background.default,
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -128,7 +128,7 @@ function Gallery() {
               fontWeight: 500,
               fontSize: '20px',
               lineHeight: '33.6px',
-              color: '#18171C',
+              color: (theme) => theme.palette.text.primary,
               mb: 0.5,
             }}
           >
@@ -141,7 +141,7 @@ function Gallery() {
               fontSize: '14px',
               lineHeight: '19.6px',
               letterSpacing: '1.4%',
-              color: '#77738C',
+              color: (theme) => theme.palette.text.secondary,
             }}
           >
             Create and manage the visual identity of your event NFTs
@@ -154,7 +154,12 @@ function Gallery() {
             component="img"
             src="/images/search-icon.png"
             alt="Search"
-            sx={{ width: 20, height: 20, cursor: 'pointer' }}
+            sx={{ 
+              width: 20, 
+              height: 20, 
+              cursor: 'pointer',
+              filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+            }}
           />
           
           {/* Bell icon */}
@@ -162,7 +167,12 @@ function Gallery() {
             component="img"
             src="/images/bell-icon.png"
             alt="Notifications"
-            sx={{ width: 20, height: 20, cursor: 'pointer' }}
+            sx={{ 
+              width: 20, 
+              height: 20, 
+              cursor: 'pointer',
+              filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+            }}
           />
 
           {/* Share Gallery Button */}
@@ -170,7 +180,7 @@ function Gallery() {
             onClick={handleShareGallery}
             sx={{
               backgroundColor: 'transparent',
-              color: '#18171C',
+              color: (theme) => theme.palette.text.primary,
               borderRadius: '8px',
               padding: '12px 16px',
               textTransform: 'none',
@@ -180,9 +190,11 @@ function Gallery() {
               display: 'flex',
               alignItems: 'center',
               gap: 1,
-              border: '1px solid #E5E7EB',
+              border: '1px solid',
+              borderColor: (theme) => theme.palette.divider,
               '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.04)',
+                backgroundColor: (theme) => theme.palette.action.hover,
+                borderColor: (theme) => theme.palette.text.secondary,
               },
             }}
           >
@@ -190,7 +202,11 @@ function Gallery() {
               component="img"
               src="/images/share-icon.png"
               alt="Share"
-              sx={{ width: 16, height: 16 }}
+              sx={{ 
+                width: 16, 
+                height: 16,
+                filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+              }}
             />
             Share Gallery
           </Button>
@@ -257,7 +273,7 @@ function Gallery() {
                 fontSize: '14px',
                 lineHeight: '20px',
                 letterSpacing: '-0.6%',
-                color: '#18171C',
+                color: (theme) => theme.palette.text.primary,
                 whiteSpace: 'nowrap'
               }}
             >
@@ -269,11 +285,11 @@ function Gallery() {
                 onChange={handleEventChange}
                 displayEmpty
                 sx={{
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: (theme) => theme.palette.background.paper,
                   borderRadius: '8px',
                   height: '40px',
                   '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#E5E7EB',
+                    borderColor: (theme) => theme.palette.divider,
                   },
                   '& .MuiSelect-select': {
                     fontFamily: 'Manrope, sans-serif',
@@ -281,7 +297,7 @@ function Gallery() {
                     fontSize: '14px',
                     lineHeight: '20px',
                     letterSpacing: '-0.6%',
-                    color: '#18171C',
+                    color: (theme) => theme.palette.text.primary,
                     padding: '10px 14px'
                   }
                 }}
@@ -304,7 +320,7 @@ function Gallery() {
                 fontSize: '14px',
                 lineHeight: '20px',
                 letterSpacing: '-0.6%',
-                color: '#18171C',
+                color: (theme) => theme.palette.text.primary,
                 whiteSpace: 'nowrap'
               }}
             >
@@ -316,11 +332,11 @@ function Gallery() {
               sx={{
                 minWidth: '300px',
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: (theme) => theme.palette.background.paper,
                   borderRadius: '8px',
                   height: '40px',
                   '& fieldset': {
-                    borderColor: '#E5E7EB',
+                    borderColor: (theme) => theme.palette.divider,
                   },
                   '& input': {
                     fontFamily: 'Manrope, sans-serif',
@@ -328,7 +344,7 @@ function Gallery() {
                     fontSize: '14px',
                     lineHeight: '20px',
                     letterSpacing: '-0.6%',
-                    color: '#18171C',
+                    color: (theme) => theme.palette.text.primary,
                     padding: '10px 14px'
                   }
                 }
@@ -404,7 +420,7 @@ function Gallery() {
                   <Typography 
                     variant="caption" 
                     sx={{ 
-                      color: '#6B7280',
+                      color: (theme) => theme.palette.text.secondary,
                       fontSize: '12px',
                       fontWeight: 500,
                       mb: 1,
@@ -420,7 +436,7 @@ function Gallery() {
                     sx={{ 
                       fontWeight: 600,
                       fontSize: '16px',
-                      color: '#18171C',
+                      color: (theme) => theme.palette.text.primary,
                       mb: 2
                     }}
                   >
@@ -432,7 +448,7 @@ function Gallery() {
                     <Typography 
                       variant="caption" 
                       sx={{ 
-                        color: '#6B7280',
+                        color: (theme) => theme.palette.text.secondary,
                         fontSize: '11px',
                         display: 'block',
                         mb: 0.5
@@ -443,7 +459,7 @@ function Gallery() {
                     <Typography 
                       variant="caption" 
                       sx={{ 
-                        color: '#6B7280',
+                        color: (theme) => theme.palette.text.secondary,
                         fontSize: '11px',
                         wordBreak: 'break-all'
                       }}
