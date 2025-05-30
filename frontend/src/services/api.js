@@ -1,8 +1,8 @@
 import axios from 'axios';
 import blockchainService from './blockchainService';
 
-// Use environment variable if available, otherwise use the deployed backend URL
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://polkadot-attendance-nft-api.onrender.com';
+// Use environment variable if available, otherwise use the correct deployed backend URL
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://polkadot-attendance-nft-api-bpa5.onrender.com';
 
 // Maximum number of retries for API calls
 const MAX_RETRIES = 3;
@@ -107,6 +107,27 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Helper function to check if JWT token is valid and not expired
+const isValidJWT = (token) => {
+  if (!token) return false;
+  
+  try {
+    // Decode JWT payload (base64 decode the middle part)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    
+    // Check if token is expired
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      console.log('Token has expired');
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Invalid JWT token:', error);
+    return false;
+  }
+};
+
 // Check if mock mode is enabled or if there's a connection error to the backend
 const isMockDataEnabled = () => {
   return localStorage.getItem('use_mock_data') === 'true';
@@ -153,8 +174,46 @@ const apiCallWithRetry = async (apiCall, mockResponse, retries = 0) => {
 
 // Create API object with all methods
 export const api = {
-  // Authentication
+  // NEW: Wallet login method for your backend
+  login: async (walletAddress) => {
+    if (isMockDataEnabled()) {
+      // Mock login - create fake token
+      const mockToken = `mock_${Date.now()}_${walletAddress.substring(0, 8)}`;
+      localStorage.setItem('auth_token', mockToken);
+      localStorage.setItem('wallet_address', walletAddress);
+      localStorage.setItem('user_id', '1');
+      localStorage.setItem('auth_mode', 'mock');
+      return {
+        token: mockToken,
+        user: { id: 1, wallet_address: walletAddress }
+      };
+    }
+    
+    try {
+      const response = await apiClient.post('/login', { 
+        wallet_address: walletAddress
+      });
+      
+      // Store the real token and user data
+      localStorage.setItem('auth_token', response.data.token);
+      localStorage.setItem('wallet_address', walletAddress);
+      localStorage.setItem('user_id', response.data.user.id.toString());
+      localStorage.setItem('auth_mode', 'api');
+      
+      return response.data;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  },
+  
+  // OLD: Keep for backwards compatibility but update it
   authenticate: async (walletAddress, message, signature) => {
+    // Redirect to new login method for wallet addresses
+    if (walletAddress && !message && !signature) {
+      return api.login(walletAddress);
+    }
+    
     if (isMockDataEnabled()) {
       return { token: 'mock_token_' + Date.now() };
     }
@@ -175,24 +234,37 @@ export const api = {
   logout: () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('wallet_address');
+    localStorage.removeItem('user_id');
     localStorage.removeItem('auth_mode');
   },
   
+  // UPDATED: Better authentication check
   isAuthenticated: () => {
     const token = localStorage.getItem('auth_token');
     const authMode = localStorage.getItem('auth_mode');
     
-    // If we're in manual mode, just check if the token exists
-    if (authMode === 'manual' && token) {
-      return true;
+    if (!token) return false;
+    
+    // If we're in mock mode, just check if token exists
+    if (authMode === 'mock' || authMode === 'manual') {
+      return !!token;
     }
     
-    // Regular token check for non-manual mode
+    // For real API tokens, validate JWT
+    if (authMode === 'api') {
+      return isValidJWT(token);
+    }
+    
+    // Default: check if token exists
     return !!token;
   },
   
   getCurrentWallet: () => {
     return localStorage.getItem('wallet_address');
+  },
+  
+  getCurrentUserId: () => {
+    return localStorage.getItem('user_id');
   },
   
   // Mock data control
@@ -473,28 +545,35 @@ export const api = {
     );
   },
   
-  // Health check
+  // UPDATED: Better health check that doesn't auto-enable mock mode
   checkHealth: async () => {
     if (isMockDataEnabled()) {
       return true;
     }
     
     try {
-      // First check blockchain connection
-      try {
-        await blockchainService.init();
-        console.log('Blockchain connection successful');
-      } catch (error) {
-        console.error('Blockchain connection failed:', error);
-        return false;
+      // First check backend API (most important)
+      const response = await apiClient.get('/health');
+      const isBackendHealthy = response.data.status === 'ok';
+      
+      if (isBackendHealthy) {
+        console.log('Backend API connection successful');
+        
+        // Then check blockchain connection (optional)
+        try {
+          await blockchainService.init();
+          console.log('Blockchain connection successful');
+        } catch (error) {
+          console.warn('Blockchain connection failed, but backend API is working:', error);
+        }
+        
+        return true;
       }
       
-      // Then check backend API
-      const response = await apiClient.get('/health');
-      return response.data.status === 'ok';
+      return false;
     } catch (error) {
       console.error('Health check failed:', error);
-      setMockMode(true); // Auto-enable mock mode on health check failure
+      // Don't auto-enable mock mode - let the user decide
       return false;
     }
   }
