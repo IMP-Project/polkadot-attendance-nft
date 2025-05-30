@@ -23,7 +23,6 @@ const Dashboard = ({ onCreateEvent, mode, toggleDarkMode, onSearch }) => {
   // Generate a unique user ID based on wallet address
   const walletAddress = localStorage.getItem('wallet_address') || '';
   const userID = walletAddress ? `User-${walletAddress.slice(-4).toUpperCase()}` : 'User-ANON';
-  const displayName = localStorage.getItem('display_name') || userID;
   
   return (
     <Box sx={{ 
@@ -123,7 +122,7 @@ const Dashboard = ({ onCreateEvent, mode, toggleDarkMode, onSearch }) => {
               mb: 2,
             }}
           >
-            Welcome, {displayName}!
+            Welcome, {userID}!
           </Typography>
           <Typography
             sx={{
@@ -170,7 +169,6 @@ function Admin({ mode, toggleDarkMode }) {
   const walletAddress = localStorage.getItem('wallet_address') || '';
   const userID = walletAddress ? `User-${walletAddress.slice(-4).toUpperCase()}` : 'User-ANON';
   const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profile_picture') || '');
-  const [displayName, setDisplayName] = useState(localStorage.getItem('display_name') || userID);
 
   const fetchData = useCallback(async () => {
     try {
@@ -215,52 +213,8 @@ function Admin({ mode, toggleDarkMode }) {
         </IconButton>
       </Box>
 
-      {/* User Profile Section */}
-      <Box sx={{ p: 3, pt: { xs: 0, md: 3 }, pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar 
-              src={profilePicture}
-              sx={{ 
-                width: 40, 
-                height: 40, 
-                bgcolor: !profilePicture ? '#E6007A' : 'transparent',
-                fontSize: '16px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                '&:hover': {
-                  opacity: 0.8
-                }
-              }}
-              onClick={() => setCurrentPage('settings')}
-            >
-              {!profilePicture && displayName.slice(5, 7)}
-            </Avatar>
-            <Box>
-              <Typography sx={{ 
-                fontFamily: 'Manrope, sans-serif', 
-                fontWeight: 600, 
-                fontSize: '14px', 
-                color: (theme) => theme.palette.text.primary 
-              }}>
-                {displayName}
-              </Typography>
-              <Typography sx={{ 
-                fontFamily: 'Manrope, sans-serif', 
-                fontWeight: 400, 
-                fontSize: '12px', 
-                color: (theme) => theme.palette.text.secondary 
-              }}>
-                {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not connected'}
-              </Typography>
-            </Box>
-          </Box>
-          <DarkModeToggle mode={mode} onToggle={toggleDarkMode} />
-        </Box>
-      </Box>
-      <Divider sx={{ mx: 3, borderColor: (theme) => theme.palette.divider }} />
-
-      <Box sx={{ p: 3, pt: 2 }}>
+      {/* Polkadot Branding at Top */}
+      <Box sx={{ p: 3, pt: { xs: 0, md: 4 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Box component="img" src="/images/pol-logo.png" alt="Polkadot" sx={{ width: 24, height: 24, mr: 2 }} />
           <Typography sx={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500, fontSize: '14px', color: (theme) => theme.palette.text.primary }}>
@@ -272,6 +226,8 @@ function Admin({ mode, toggleDarkMode }) {
         </Typography>
       </Box>
       <Divider sx={{ mx: 3, borderColor: (theme) => theme.palette.divider }} />
+      
+      {/* Main Navigation */}
       <Box sx={{ px: 3, py: 2, flex: 1 }}>
         <Typography sx={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500, fontSize: '12px', letterSpacing: '0.04em', textTransform: 'uppercase', color: (theme) => theme.palette.text.secondary, mb: 2 }}>
           MAIN
@@ -321,7 +277,12 @@ function Admin({ mode, toggleDarkMode }) {
           ))}
         </Box>
       </Box>
+      
+      {/* Bottom Section with User Profile */}
       <Box sx={{ px: 3, pb: 3 }}>
+        <Divider sx={{ mb: 3, borderColor: (theme) => theme.palette.divider }} />
+        
+        {/* Settings and Logout */}
         {[{ id: 'settings', label: 'Settings', icon: '/images/settings-icon.png' }, { id: 'Log out', label: 'Log out', icon: '/images/Logout-icon.png' }].map((item) => (
           <ListItemButton
             key={item.id}
@@ -356,6 +317,51 @@ function Admin({ mode, toggleDarkMode }) {
             />
           </ListItemButton>
         ))}
+        
+        {/* User Profile Section */}
+        <Box sx={{ mt: 3 }}>
+          <Divider sx={{ mb: 3, borderColor: (theme) => theme.palette.divider }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar 
+                src={profilePicture}
+                sx={{ 
+                  width: 40, 
+                  height: 40, 
+                  bgcolor: !profilePicture ? '#E6007A' : 'transparent',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8
+                  }
+                }}
+                onClick={() => setCurrentPage('settings')}
+              >
+                {!profilePicture && userID.slice(-2).toUpperCase()}
+              </Avatar>
+              <Box>
+                <Typography sx={{ 
+                  fontFamily: 'Manrope, sans-serif', 
+                  fontWeight: 600, 
+                  fontSize: '14px', 
+                  color: (theme) => theme.palette.text.primary 
+                }}>
+                  {userID}
+                </Typography>
+                <Typography sx={{ 
+                  fontFamily: 'Manrope, sans-serif', 
+                  fontWeight: 400, 
+                  fontSize: '12px', 
+                  color: (theme) => theme.palette.text.secondary 
+                }}>
+                  {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not connected'}
+                </Typography>
+              </Box>
+            </Box>
+            <DarkModeToggle mode={mode} onToggle={toggleDarkMode} />
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

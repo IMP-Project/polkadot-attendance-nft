@@ -25,7 +25,6 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
     notifications: true,
     emailAlerts: false,
     autoMintNFTs: true,
-    displayName: localStorage.getItem('display_name') || userID,
     profilePicture: localStorage.getItem('profile_picture') || ''
   });
   
@@ -65,7 +64,6 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
   const handleSave = () => {
     // Save settings to localStorage
     localStorage.setItem('user_settings', JSON.stringify(settings));
-    localStorage.setItem('display_name', settings.displayName);
     localStorage.setItem('profile_picture', settings.profilePicture);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -131,7 +129,7 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
                     mr: 2
                   }}
                 >
-                  {!settings.profilePicture && settings.displayName.slice(5, 7)}
+                  {!settings.profilePicture && userID.slice(-2).toUpperCase()}
                 </Avatar>
                 <Box>
                   <input
@@ -166,11 +164,11 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
               
               <TextField
                 fullWidth
-                label="Display Name"
-                value={settings.displayName}
-                onChange={handleChange('displayName')}
+                label="User ID"
+                value={userID}
+                disabled
                 sx={{ mb: 3 }}
-                helperText="This is how you'll appear in the system"
+                helperText="Your unique identifier based on wallet"
               />
               
               <TextField
@@ -178,16 +176,7 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
                 label="Wallet Address"
                 value={walletAddress || 'Not connected'}
                 disabled
-                sx={{ mb: 3 }}
                 helperText="Your connected Polkadot wallet"
-              />
-              
-              <TextField
-                fullWidth
-                label="User ID"
-                value={userID}
-                disabled
-                helperText="Your unique identifier based on wallet"
               />
             </Paper>
           </Grid>
