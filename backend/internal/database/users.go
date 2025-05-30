@@ -8,7 +8,7 @@ import (
 
 // User represents a user in the system
 type User struct {
-	ID            uint64     `json:"id" gorm:"primaryKey"`
+	ID            uint64     `json:"id" gorm:"primaryKey;autoIncrement"`
 	WalletAddress string     `json:"wallet_address" gorm:"uniqueIndex;not null"`
 	Username      string     `json:"username,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
@@ -27,7 +27,7 @@ const (
 
 // EventPermission represents a user's permission for an event
 type EventPermission struct {
-	ID        uint64    `json:"id" gorm:"primaryKey"`
+	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	EventID   string    `json:"event_id" gorm:"not null"`
 	UserID    uint64    `json:"user_id" gorm:"not null"`
 	Role      Role      `json:"role" gorm:"not null"`
@@ -53,6 +53,22 @@ func (r *UserRepository) Create(user *User) error {
 	return nil
 }
 
+// GetByID gets a user by ID
+func (r *UserRepository) GetByID(id uint64) (*User, error) {
+	var user User
+	err := r.db.Where("id = ?", id).First(&user).Error
+	
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	
+	return &user, nil
+}
+
 // GetByWalletAddress gets a user by wallet address
 func (r *UserRepository) GetByWalletAddress(walletAddress string) (*User, error) {
 	var user User
@@ -69,7 +85,7 @@ func (r *UserRepository) GetByWalletAddress(walletAddress string) (*User, error)
 	return &user, nil
 }
 
-// GetOrCreate gets a user by wallet address or creates a new one
+// GetOrCreate gets a user by wallet address or creates a new one (also serves as FindOrCreateByWallet)
 func (r *UserRepository) GetOrCreate(walletAddress string) (*User, error) {
 	// Try to get existing user
 	user, err := r.GetByWalletAddress(walletAddress)

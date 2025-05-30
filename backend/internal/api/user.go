@@ -2,10 +2,11 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
 )
@@ -54,6 +55,7 @@ func (h *UserHandler) WalletLogin(c *gin.Context) {
 		return
 	}
 
+	// user.ID is string, so use it directly for JWT
 	token, err := generateJWT(user.ID, h.JWTSecret)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
@@ -86,7 +88,16 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userRepo.GetByWalletAddress(userID.(string))
+	// Convert userID string to uint64
+	userIDStr := userID.(string)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Get user by ID instead of wallet address
+	user, err := h.userRepo.GetByID(userIDUint)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -112,7 +123,16 @@ func (h *UserHandler) GetUserEvents(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userRepo.GetByWalletAddress(userID.(string))
+	// Convert userID string to uint64
+	userIDStr := userID.(string)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Get user by ID
+	user, err := h.userRepo.GetByID(userIDUint)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -140,7 +160,16 @@ func (h *UserHandler) GetUserNFTs(c *gin.Context) {
 		return
 	}
 
-	nfts, err := h.nftRepo.GetAllByOwner(userID.(string))
+	// Convert userID string to uint64
+	userIDStr := userID.(string)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Convert uint64 back to string for NFT repo (if it expects string)
+	nfts, err := h.nftRepo.GetAllByOwner(strconv.FormatUint(userIDUint, 10))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
