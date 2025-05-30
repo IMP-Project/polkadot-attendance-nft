@@ -214,7 +214,10 @@ func (c *Client) TestAPIKey(apiKey string) error {
 }
 
 func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
-	url := "https://api.lu.ma/public/v1/calendar/list-events"
+	// Add query parameters to get ALL events including recent ones
+	url := "https://api.lu.ma/public/v1/calendar/list-events?series_mode=events&pagination_limit=50&include_past_events=true"
+	
+	fmt.Printf("Fetching events from URL: %s\n", url)
 	
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -229,8 +232,17 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 	}
 	defer resp.Body.Close()
 
+	// Read the full response body for debugging
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	
+	fmt.Printf("List events - Status: %d\n", resp.StatusCode)
+	fmt.Printf("List events - Response body: %s\n", string(body))
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("API returned status: %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	var response struct {
@@ -239,8 +251,9 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 		} `json:"entries"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, err
+	if err := json.Unmarshal(body, &response); err != nil {
+		fmt.Printf("Error unmarshaling response: %v\n", err)
+		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
 	var events []map[string]interface{}
@@ -248,5 +261,6 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 		events = append(events, entry.Event)
 	}
 
+	fmt.Printf("Found %d events\n", len(events))
 	return events, nil
 }
