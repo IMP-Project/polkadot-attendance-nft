@@ -69,8 +69,8 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
         }));
       }
 
-      // Import the selected event
-      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/import-luma-event', {
+      // Import the selected event from Luma
+      const lumaResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/import-luma-event', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,15 +81,53 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to import event');
+      if (!lumaResponse.ok) {
+        throw new Error('Failed to import event from Luma');
       }
 
-      const data = await response.json();
-      console.log('Imported event:', data);
+      const lumaData = await lumaResponse.json();
+      console.log('Imported event from Luma:', lumaData);
       
-      // Add event to context
-      addEvent(data.event);
+      // NEW: Save event to your database via your backend API
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken) {
+        try {
+          const dbResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/events', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              name: lumaData.event.name || selectedEvent.name,
+              date: lumaData.event.start_at || selectedEvent.start_at,
+              location: lumaData.event.geo_address_json?.address || 'Online',
+              description: lumaData.event.description || '',
+              // Add any other fields your backend expects
+            }),
+          });
+
+          if (dbResponse.ok) {
+            const savedEvent = await dbResponse.json();
+            console.log('Event saved to database:', savedEvent);
+            
+            // Add the saved event (with database ID) to context
+            addEvent(savedEvent);
+          } else {
+            console.warn('Failed to save event to database, adding to context only');
+            // Fallback: add Luma event to context
+            addEvent(lumaData.event);
+          }
+        } catch (dbError) {
+          console.warn('Database save error, adding to context only:', dbError);
+          // Fallback: add Luma event to context
+          addEvent(lumaData.event);
+        }
+      } else {
+        console.warn('No auth token found, adding to context only');
+        // Fallback: add Luma event to context
+        addEvent(lumaData.event);
+      }
       
       // Close progress modal
       setImportProgress({ open: false, eventName: '', progress: 0 });
