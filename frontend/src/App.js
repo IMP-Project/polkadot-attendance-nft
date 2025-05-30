@@ -147,14 +147,20 @@ function MainContent() {
         main: '#E6007A', // Polkadot pink
       },
       secondary: {
-        main: '#552BBF', // Polkadot purple
+        main: mode === 'dark' ? '#8B5CF6' : '#552BBF', // Lighter purple for better contrast in dark mode
       },
       background: {
-        default: mode === 'dark' ? '#121212' : '#f7f7f7',
-        paper: mode === 'dark' ? '#1E1E1E' : '#ffffff',
+        default: mode === 'dark' ? '#1a1a1a' : '#f7f7f7',
+        paper: mode === 'dark' ? '#2d2d2d' : '#ffffff',
       },
       text: {
-        primary: mode === 'dark' ? '#f5f5f5' : '#333333',
+        primary: mode === 'dark' ? '#ffffff' : '#18171C',
+        secondary: mode === 'dark' ? '#b3b3b3' : '#77738C',
+      },
+      divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#E5E5E5',
+      action: {
+        selected: mode === 'dark' ? 'rgba(230, 0, 122, 0.16)' : 'rgba(255, 235, 241, 1)',
+        hover: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
       },
     },
     typography: {
@@ -204,7 +210,9 @@ function MainContent() {
       MuiCard: {
         styleOverrides: {
           root: {
-            backgroundColor: mode === 'dark' ? 'rgba(30, 30, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+            backgroundColor: mode === 'dark' ? 'rgba(45, 45, 45, 0.95)' : 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(10px)',
+            border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
           },
         },
       },
@@ -213,12 +221,28 @@ function MainContent() {
           root: {
             padding: `${0.5 * scale}rem ${1 * scale}rem`,
           },
+          contained: {
+            boxShadow: mode === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(255, 38, 112, 0.3)',
+          },
         },
       },
       MuiIconButton: {
         styleOverrides: {
           root: {
             padding: `${0.5 * scale}rem`,
+            color: mode === 'dark' ? '#ffffff' : 'inherit',
+          },
+        },
+      },
+      MuiListItemButton: {
+        styleOverrides: {
+          root: {
+            '&.Mui-selected': {
+              backgroundColor: mode === 'dark' ? 'rgba(230, 0, 122, 0.16)' : '#FFEBF1',
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? 'rgba(230, 0, 122, 0.24)' : '#FFEBF1',
+              },
+            },
           },
         },
       },
@@ -230,6 +254,14 @@ function MainContent() {
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
+
+  // Toggle dark mode function
+  const toggleDarkMode = () => {
+    setMode((prevMode) => prevMode === 'light' ? 'dark' : 'light');
+  };
+
+  // Pass mode and toggle function via context or props
+  const themeContext = { mode, toggleDarkMode };
 
   // Check if we're on a public page route
   const isPublicPage = location.pathname.startsWith('/public');
@@ -274,7 +306,7 @@ function MainContent() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Routes>
-          <Route path="/admin/*" element={<ProtectedRoute element={<Admin />} />} />
+          <Route path="/admin/*" element={<ProtectedRoute element={<Admin mode={mode} toggleDarkMode={toggleDarkMode} />} />} />
         </Routes>
       </ThemeProvider>
     );

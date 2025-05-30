@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import { useEvents } from '../contexts/EventsContext';
 
-const EventsPage = ({ onConnectToLuma }) => {
+const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
   const { events, removeEvent } = useEvents();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [selectedEventId, setSelectedEventId] = React.useState(null);
@@ -80,7 +80,7 @@ const EventsPage = ({ onConnectToLuma }) => {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundColor: 'white',
+        backgroundColor: (theme) => theme.palette.background.default,
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -106,7 +106,7 @@ const EventsPage = ({ onConnectToLuma }) => {
               fontWeight: 500,
               fontSize: '20px',
               lineHeight: '33.6px',
-              color: '#18171C',
+              color: (theme) => theme.palette.text.primary,
               mb: 0.5,
             }}
           >
@@ -119,7 +119,7 @@ const EventsPage = ({ onConnectToLuma }) => {
               fontSize: '14px',
               lineHeight: '19.6px',
               letterSpacing: '1.4%',
-              color: '#77738C',
+              color: (theme) => theme.palette.text.secondary,
             }}
           >
             Plan, manage, and monitor your on-chain events
@@ -134,7 +134,11 @@ const EventsPage = ({ onConnectToLuma }) => {
                 component="img"
                 src="/images/search-icon.png"
                 alt="Search"
-                sx={{ width: 20, height: 20 }}
+                sx={{ 
+                  width: 20, 
+                  height: 20,
+                  filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+                }}
               />
             </IconButton>
           </Tooltip>
@@ -146,7 +150,11 @@ const EventsPage = ({ onConnectToLuma }) => {
                 component="img"
                 src="/images/bell-icon.png"
                 alt="Notifications"
-                sx={{ width: 20, height: 20 }}
+                sx={{ 
+                  width: 20, 
+                  height: 20,
+                  filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+                }}
               />
             </IconButton>
           </Tooltip>
@@ -251,7 +259,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                   lineHeight: '114.9%',
                   letterSpacing: '0%',
                   textAlign: 'center',
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 3,
                 }}
               >
@@ -267,7 +275,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                   lineHeight: '24px',
                   letterSpacing: '0.9%',
                   textAlign: 'center',
-                  color: '#484554',
+                  color: (theme) => theme.palette.text.secondary,
                   mb: 4,
                   maxWidth: '500px',
                   mx: 'auto',
@@ -316,20 +324,22 @@ const EventsPage = ({ onConnectToLuma }) => {
             component={Paper} 
             sx={{ 
               borderRadius: '12px',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #E5E7EB'
+              boxShadow: (theme) => theme.palette.mode === 'dark' 
+                ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+                : '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: (theme) => `1px solid ${theme.palette.divider}`
             }}
           >
             <Table>
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#F9FAFB' }}>
+                <TableRow sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB' }}>
                   <TableCell 
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
                       fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #E5E7EB',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
                     }}
                   >
@@ -340,8 +350,8 @@ const EventsPage = ({ onConnectToLuma }) => {
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
                       fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #E5E7EB',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
                     }}
                   >
@@ -352,8 +362,8 @@ const EventsPage = ({ onConnectToLuma }) => {
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
                       fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #E5E7EB',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
                     }}
                   >
@@ -364,8 +374,8 @@ const EventsPage = ({ onConnectToLuma }) => {
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
                       fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #E5E7EB',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
                     }}
                   >
@@ -376,8 +386,8 @@ const EventsPage = ({ onConnectToLuma }) => {
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
                       fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #E5E7EB',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
                     }}
                   >
@@ -388,8 +398,8 @@ const EventsPage = ({ onConnectToLuma }) => {
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
                       fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #E5E7EB',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2,
                       textAlign: 'center'
                     }}
@@ -404,7 +414,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                     key={event.id} 
                     sx={{ 
                       '&:hover': { 
-                        backgroundColor: '#F9FAFB' 
+                        backgroundColor: (theme) => theme.palette.action.hover 
                       },
                       '&:last-child td': {
                         borderBottom: 0
@@ -415,7 +425,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                       sx={{ 
                         fontFamily: 'monospace',
                         fontSize: '14px',
-                        color: '#6B7280',
+                        color: (theme) => theme.palette.text.secondary,
                         py: 2
                       }}
                     >
@@ -425,7 +435,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                       sx={{ 
                         fontFamily: 'Manrope, sans-serif',
                         fontSize: '14px',
-                        color: '#18171C',
+                        color: (theme) => theme.palette.text.primary,
                         fontWeight: 500,
                         py: 2
                       }}
@@ -436,7 +446,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                       sx={{ 
                         fontFamily: 'Manrope, sans-serif',
                         fontSize: '14px',
-                        color: '#6B7280',
+                        color: (theme) => theme.palette.text.secondary,
                         py: 2
                       }}
                     >
@@ -446,7 +456,7 @@ const EventsPage = ({ onConnectToLuma }) => {
                       sx={{ 
                         fontFamily: 'Manrope, sans-serif',
                         fontSize: '14px',
-                        color: '#6B7280',
+                        color: (theme) => theme.palette.text.secondary,
                         py: 2
                       }}
                     >

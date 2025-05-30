@@ -16,7 +16,7 @@ import { api } from '../services/api';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-const NFTDesignPage = ({ nfts = [], events = [] }) => {
+const NFTDesignPage = ({ nfts = [], events = [], mode, toggleDarkMode }) => {
   const [viewMode, setViewMode] = useState('expanded'); // 'expanded' or 'collapsed'
   const [filterEvent, setFilterEvent] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
@@ -189,7 +189,12 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
         title: nft.metadata?.name || 'Attendance NFT',
         text: `Check out this Attendance NFT for ${nft.metadata?.event_name || 'an event'}`,
         url: shareUrl,
-      }).catch(() => copyToClipboard(shareUrl));
+      }).catch((error) => {
+        // Only copy to clipboard if it's not a user cancellation
+        if (error.name !== 'AbortError') {
+          copyToClipboard(shareUrl);
+        }
+      });
     } else {
       copyToClipboard(shareUrl);
     }
@@ -211,7 +216,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
     <Box
       sx={{
         height: '100vh', // Force full viewport height
-        backgroundColor: 'white',
+        backgroundColor: (theme) => theme.palette.background.default,
         display: 'flex',
         flexDirection: 'column',
         overflowX: 'hidden',
@@ -225,6 +230,8 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
         buttonText="Export"
         buttonIcon="/images/export-icon.png"
         onButtonClick={handleExportMenuOpen}
+        mode={mode}
+        toggleDarkMode={toggleDarkMode}
       />
 
       {/* Filter Bar */}
@@ -251,9 +258,8 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
           }}
         >
           {/* Showing */}
-          {/* Row 1: Showing */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography>Showing</Typography>
+            <Typography sx={{ color: (theme) => theme.palette.text.primary }}>Showing</Typography>
             <FormControl size="small" sx={{ minWidth: '140px' }}>
               <Select value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
                 <MenuItem value="expanded">Expanded view</MenuItem>
@@ -274,7 +280,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
 
           {/* Row 3: Sort by */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography>Sort by</Typography>
+            <Typography sx={{ color: (theme) => theme.palette.text.primary }}>Sort by</Typography>
             <FormControl size="small" sx={{ minWidth: '140px' }}>
               <Select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
                 <MenuItem value="newest">Newest first</MenuItem>
@@ -300,13 +306,15 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                 minHeight: '127px',
                 borderRadius: '32px',
                 padding: '24px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: (theme) => theme.palette.background.paper,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                  ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+                  : '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
             >
               <Typography 
@@ -317,7 +325,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                   lineHeight: '20px',
                   letterSpacing: '-0.6%',
                   textAlign: 'center',
-                  color: '#484554'
+                  color: (theme) => theme.palette.text.secondary
                 }}
               >
                 Events with NFTs
@@ -326,7 +334,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                 variant="h1" 
                 sx={{ 
                   fontWeight: 700, 
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   fontSize: '48px',
                   lineHeight: 1.2,
                   fontFamily: 'Manrope, sans-serif',
@@ -346,13 +354,15 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                 minHeight: '127px',
                 borderRadius: '32px',
                 padding: '24px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: (theme) => theme.palette.background.paper,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                  ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+                  : '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
             >
               <Typography 
@@ -363,7 +373,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                   lineHeight: '20px',
                   letterSpacing: '-0.6%',
                   textAlign: 'center',
-                  color: '#484554'
+                  color: (theme) => theme.palette.text.secondary
                 }}
               >
                 Minted NFTs
@@ -372,7 +382,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                 variant="h1" 
                 sx={{ 
                   fontWeight: 700, 
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   fontSize: '48px',
                   lineHeight: 1.2,
                   fontFamily: 'Manrope, sans-serif',
@@ -392,13 +402,15 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                 minHeight: '127px',
                 borderRadius: '32px',
                 padding: '24px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: (theme) => theme.palette.background.paper,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                  ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+                  : '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
             >
               <Typography 
@@ -409,7 +421,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                   lineHeight: '20px',
                   letterSpacing: '-0.6%',
                   textAlign: 'center',
-                  color: '#484554'
+                  color: (theme) => theme.palette.text.secondary
                 }}
               >
                 Most popular event
@@ -418,7 +430,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                 variant="h1" 
                 sx={{ 
                   fontWeight: 700, 
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   fontSize: '48px',
                   lineHeight: 1.2,
                   fontFamily: 'Manrope, sans-serif',
@@ -487,7 +499,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                     <Typography 
                       variant="caption" 
                       sx={{ 
-                        color: '#6B7280',
+                        color: (theme) => theme.palette.text.secondary,
                         fontSize: '12px',
                         fontWeight: 500,
                         mb: 1,
@@ -503,7 +515,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                       sx={{ 
                         fontWeight: 600,
                         fontSize: '16px',
-                        color: '#18171C',
+                        color: (theme) => theme.palette.text.primary,
                         mb: viewMode === 'expanded' ? 2 : 1
                       }}
                     >
@@ -514,21 +526,21 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                     {viewMode === 'expanded' && (
                       <Box sx={{ mb: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Person sx={{ fontSize: 16, color: '#6B7280', mr: 1 }} />
+                          <Person sx={{ fontSize: 16, color: (theme) => theme.palette.text.secondary, mr: 1 }} />
                           <Typography variant="body2" color="text.secondary">
                             {nft.metadata?.attendee || 'Joshua Olayot'}
                           </Typography>
                         </Box>
                         
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <LocationOn sx={{ fontSize: 16, color: '#6B7280', mr: 1 }} />
+                          <LocationOn sx={{ fontSize: 16, color: (theme) => theme.palette.text.secondary, mr: 1 }} />
                           <Typography variant="body2" color="text.secondary">
                             {nft.metadata?.location || 'Virtual'}
                           </Typography>
                         </Box>
                         
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <CalendarToday sx={{ fontSize: 16, color: '#6B7280', mr: 1 }} />
+                          <CalendarToday sx={{ fontSize: 16, color: (theme) => theme.palette.text.secondary, mr: 1 }} />
                           <Typography variant="body2" color="text.secondary">
                             {nft.metadata?.event_date || '25.05.2025'}
                           </Typography>
@@ -537,7 +549,7 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
                         <Typography 
                           variant="caption" 
                           sx={{ 
-                            color: '#6B7280',
+                            color: (theme) => theme.palette.text.secondary,
                             fontSize: '11px',
                             wordBreak: 'break-all'
                           }}
@@ -673,14 +685,18 @@ const NFTDesignPage = ({ nfts = [], events = [] }) => {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
+      {/* Success Snackbar */}
       <Snackbar
         open={showSnackbar}
-        autoHideDuration={4000}
+        autoHideDuration={6000}
         onClose={() => setShowSnackbar(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={() => setShowSnackbar(false)} severity="success">
+        <Alert 
+          onClose={() => setShowSnackbar(false)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
           {snackbarMessage}
         </Alert>
       </Snackbar>

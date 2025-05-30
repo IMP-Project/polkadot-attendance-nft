@@ -8,7 +8,8 @@ const PageHeader = ({
   showButton = true, 
   buttonText = "Connect to Luma", 
   onButtonClick,
-  buttonIcon = "/images/plus-icon.png"
+  buttonIcon = "/images/plus-icon.png",
+  sx
 }) => {
   return (
     <Box
@@ -19,7 +20,8 @@ const PageHeader = ({
     flexDirection: { xs: 'column', md: 'row' },
     justifyContent: 'space-between',
     alignItems: { xs: 'center', md: 'flex-start' },
-    gap: 2
+    gap: 2,
+    ...sx
   }}
 >
 
@@ -31,7 +33,7 @@ const PageHeader = ({
     fontWeight: 500,
     fontSize: '20px',
     lineHeight: '33.6px',
-    color: '#18171C',
+    color: (theme) => theme.palette.text.primary,
     mb: 0.5,
     textAlign: { xs: 'center', md: 'left' }
   }}
@@ -46,7 +48,7 @@ const PageHeader = ({
     fontSize: '14px',
     lineHeight: '19.6px',
     letterSpacing: '1.4%',
-    color: '#77738C',
+    color: (theme) => theme.palette.text.secondary,
     textAlign: { xs: 'center', md: 'left' }
   }}
 >
@@ -74,7 +76,12 @@ const PageHeader = ({
               component="img"
               src="/images/search-icon.png"
               alt="Search"
-              sx={{ width: 20, height: 20, cursor: 'pointer' }}
+              sx={{ 
+                width: 20, 
+                height: 20, 
+                cursor: 'pointer',
+                filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+              }}
             />
             
             {/* Bell icon */}
@@ -82,7 +89,12 @@ const PageHeader = ({
               component="img"
               src="/images/bell-icon.png"
               alt="Notifications"
-              sx={{ width: 20, height: 20, cursor: 'pointer' }}
+              sx={{ 
+                width: 20, 
+                height: 20, 
+                cursor: 'pointer',
+                filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
+              }}
             />
           </>
         )}
@@ -110,12 +122,16 @@ const PageHeader = ({
             }}
           >
             <Box sx={{ width: 7 }} /> 
-            <Box
-              component="img"
-              src={buttonIcon}
-              alt="Action"
-              sx={{ width: 16, height: 16 }}
-            />
+            {typeof buttonIcon === 'string' ? (
+              <Box
+                component="img"
+                src={buttonIcon}
+                alt="Action"
+                sx={{ width: 16, height: 16 }}
+              />
+            ) : (
+              buttonIcon
+            )}
             {buttonText}
             <Box sx={{ width: 13 }} /> 
           </Button>
