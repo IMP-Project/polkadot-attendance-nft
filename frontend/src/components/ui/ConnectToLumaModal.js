@@ -10,11 +10,108 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
   const [events, setEvents] = useState([]);
   const [step, setStep] = useState(1); // 1: Enter API Key, 2: Select Event
   const [importProgress, setImportProgress] = useState({ open: false, eventName: '', progress: 0 });
+  const [savedApiKey, setSavedApiKey] = useState('');
+  const [hasSavedKey, setHasSavedKey] = useState(false);
   
   const { addEvent } = useEvents();
 
-  const handleImportFromLuma = async () => {
-    if (!apiKey.trim()) {
+  // Load saved API key when modal opens
+  React.useEffect(() => {
+    if (open) {
+      loadSavedApiKey();
+    }
+  }, [open]);
+
+  const loadSavedApiKey = async () => {
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return;
+
+    try {
+      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSavedApiKey(data.api_key);
+        setApiKey(data.api_key);
+        setHasSavedKey(true);
+        // Auto-fetch events if we have a saved API key
+        handleImportFromLuma(data.api_key);
+      } else if (response.status === 404) {
+        // No saved API key
+        setHasSavedKey(false);
+        setSavedApiKey('');
+      }
+    } catch (error) {
+      console.warn('Error loading saved API key:', error);
+      setHasSavedKey(false);
+    }
+  };
+
+  const saveApiKeyToDatabase = async (keyToSave) => {
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return false;
+
+    try {
+      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ api_key: keyToSave }),
+      });
+
+      if (response.ok) {
+        setSavedApiKey(keyToSave);
+        setHasSavedKey(true);
+        console.log('API key saved to database');
+        return true;
+      } else {
+        console.warn('Failed to save API key to database');
+        return false;
+      }
+    } catch (error) {
+      console.warn('Error saving API key to database:', error);
+      return false;
+    }
+  };
+
+  const deleteApiKeyFromDatabase = async () => {
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return false;
+
+    try {
+      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (response.ok) {
+        setSavedApiKey('');
+        setHasSavedKey(false);
+        console.log('API key deleted from database');
+        return true;
+      } else {
+        console.warn('Failed to delete API key from database');
+        return false;
+      }
+    } catch (error) {
+      console.warn('Error deleting API key from database:', error);
+      return false;
+    }
+  };
+
+  const handleImportFromLuma = async (savedKey = null) => {
+    const keyToUse = savedKey || apiKey;
+    
+    if (!keyToUse.trim()) {
       return;
     }
 
@@ -27,7 +124,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          apiKey: apiKey
+          apiKey: keyToUse
         }),
       });
 
@@ -39,10 +136,22 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
       console.log('Luma events:', data);
       
       setEvents(data.events || []);
+      
+      // Save API key to database if it works and is not already saved
+      if (!savedKey && keyToUse !== savedApiKey) {
+        await saveApiKeyToDatabase(keyToUse);
+      }
+      
       setStep(2); // Move to event selection step
       
     } catch (error) {
       console.error('Error importing from Luma:', error);
+      // If saved key fails, clear it from database
+      if (savedKey && hasSavedKey) {
+        await deleteApiKeyFromDatabase();
+        setApiKey('');
+        setStep(1);
+      }
       alert('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -76,7 +185,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          apiKey: apiKey,
+          apiKey: savedApiKey || apiKey,
           eventId: selectedEvent.api_id
         }),
       });
@@ -88,7 +197,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
       const lumaData = await lumaResponse.json();
       console.log('Imported event from Luma:', lumaData);
       
-      // NEW: Save event to your database via your backend API
+      // Save event to your database via your backend API
       const authToken = localStorage.getItem('auth_token');
       if (authToken) {
         try {
@@ -103,7 +212,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
               date: lumaData.event.start_at || selectedEvent.start_at,
               location: lumaData.event.geo_address_json?.address || 'Online',
               description: lumaData.event.description || '',
-              // Add any other fields your backend expects
+              url: lumaData.event.url || selectedEvent.url || '',
             }),
           });
 
@@ -148,16 +257,25 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    setApiKey('');
     setEvents([]);
     setStep(1);
     setImportProgress({ open: false, eventName: '', progress: 0 });
     onClose();
+    // Note: We don't clear apiKey here so it's remembered for next time
   };
 
   const handleBackToApiKey = () => {
     setStep(1);
     setEvents([]);
+  };
+
+  const clearSavedApiKey = async () => {
+    const success = await deleteApiKeyFromDatabase();
+    if (success) {
+      setApiKey('');
+      setStep(1);
+      setEvents([]);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -186,7 +304,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
             margin: '16px',
             maxHeight: '90vh',
             backgroundColor: (theme) => theme.palette.background.paper,
-            backgroundImage: 'none', // Remove any default gradient
+            backgroundImage: 'none',
           },
         }}
       >
@@ -244,7 +362,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   marginBottom: '16px',
                 }}
               >
-                Connect to Luma
+                {hasSavedKey ? 'Update Luma API Key' : 'Connect to Luma'}
               </Typography>
 
               {/* Description */}
@@ -258,22 +376,61 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   marginBottom: '24px',
                 }}
               >
-                Enter your Luma API key to import your Luma events. If you do not have a LUMA API key, you can get one{' '}
-                <Box
-                  component="span"
-                  sx={{
-                    color: '#FF2670',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: '#E91E63',
-                    },
-                  }}
-                  onClick={() => window.open('https://luma.com/api', '_blank')}
-                >
-                  here
-                </Box>
+                {hasSavedKey 
+                  ? 'Update your Luma API key or continue with the saved one.'
+                  : 'Enter your Luma API key to import your Luma events. If you do not have a LUMA API key, you can get one'
+                }{' '}
+                {!hasSavedKey && (
+                  <Box
+                    component="span"
+                    sx={{
+                      color: '#FF2670',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        color: '#E91E63',
+                      },
+                    }}
+                    onClick={() => window.open('https://luma.com/api', '_blank')}
+                  >
+                    here
+                  </Box>
+                )}
               </Typography>
+
+              {/* Show saved API key info */}
+              {hasSavedKey && (
+                <Box
+                  sx={{
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F0F9FF',
+                    border: '1px solid #3B82F6',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontFamily: 'Manrope, sans-serif',
+                      fontSize: '14px',
+                      color: '#3B82F6',
+                      marginBottom: '8px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    ✅ API Key Saved to Your Account
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontFamily: 'Manrope, sans-serif',
+                      fontSize: '12px',
+                      color: (theme) => theme.palette.text.secondary,
+                    }}
+                  >
+                    Your Luma API key is securely saved and syncs across all your devices.
+                  </Typography>
+                </Box>
+              )}
 
               {/* Input Label */}
               <Typography
@@ -286,7 +443,7 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                   marginBottom: '8px',
                 }}
               >
-                Enter Luma API key
+                {hasSavedKey ? 'Update Luma API key (optional)' : 'Enter Luma API key'}
               </Typography>
 
               {/* Input Field */}
@@ -294,10 +451,10 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                 fullWidth
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter your API key"
+                placeholder={hasSavedKey ? 'Update your API key...' : 'Enter your API key'}
                 variant="outlined"
                 sx={{
-                  marginBottom: '24px',
+                  marginBottom: '16px',
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
                     backgroundColor: (theme) => theme.palette.background.paper,
@@ -325,10 +482,29 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                 }}
               />
 
+              {/* Clear API Key Button */}
+              {hasSavedKey && (
+                <Button
+                  onClick={clearSavedApiKey}
+                  sx={{
+                    color: '#EF4444',
+                    textTransform: 'none',
+                    fontFamily: 'Manrope, sans-serif',
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                    '&:hover': {
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    },
+                  }}
+                >
+                  Remove Saved API Key
+                </Button>
+              )}
+
               {/* Import Button */}
               <Button
-                onClick={handleImportFromLuma}
-                disabled={loading || !apiKey.trim()}
+                onClick={() => handleImportFromLuma()}
+                disabled={loading || (!apiKey.trim() && !hasSavedKey)}
                 sx={{
                   backgroundColor: '#FF2670',
                   color: 'white',
