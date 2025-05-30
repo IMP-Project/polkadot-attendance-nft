@@ -10,6 +10,8 @@ import (
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -32,14 +34,29 @@ func main() {
 	log.Printf("Initializing blockchain client...")
 	client := polkadot.NewClient(cfg.PolkadotRPC, cfg.ContractAddress)
 
-	// Initialize database connection
+	// Initialize GORM database connection
 	log.Printf("Connecting to database...")
-	db, err := database.New()
-	
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+		cfg.Database.Host,
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.DBName,
+		cfg.Database.Port,
+		cfg.Database.SSLMode,
+	)
+
+	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	
+	// Get underlying SQL DB for cleanup
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		log.Fatalf("Failed to get underlying sql.DB: %v", err)
+	}
+	defer sqlDB.Close()
+	
 	log.Println("Database connection successful.")
 
 	// Test 1: Create an event in the blockchain
@@ -75,9 +92,9 @@ func main() {
 	}
 	log.Println("Event data verified successfully.")
 	
-	// Test 3: Store the event in the database
+	// Test 3: Store the event in the database using GORM
 	log.Println("Test 3: Storing the event in the database...")
-	eventRepo := database.NewEventRepository(db)
+	eventRepo := database.NewEventRepository(gormDB) // Now uses *gorm.DB
 	dbEvent := &models.Event{
 		ID: fmt.Sprintf("%d", eventID), // converts uint64 to string
 		Name:      event.Name,
@@ -166,4 +183,4 @@ func main() {
 	fmt.Println("======================================================")
 	
 	fmt.Println("\nTest completed successfully!")
-} 
+}
