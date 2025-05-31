@@ -14,12 +14,22 @@ export const EventsProvider = ({ children }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [allEventsImported, setAllEventsImported] = useState(false); // NEW: Track sync status
+  const [allEventsImported, setAllEventsImported] = useState(false);
 
   // Load events from database when component mounts OR when auth token changes
   useEffect(() => {
     loadEventsFromDatabase();
   }, []);
+
+  // Check sync status when events change
+  useEffect(() => {
+    if (events.length > 0) {
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken) {
+        checkSyncStatus(authToken, events.length);
+      }
+    }
+  }, [events]);
 
   // NEW: Listen for auth token changes (login/logout)
   useEffect(() => {
@@ -85,8 +95,9 @@ export const EventsProvider = ({ children }) => {
         setEvents(formattedEvents);
         console.log(`✅ Loaded ${formattedEvents.length} events after login`);
 
-        // NEW: Check if all events are imported by comparing with Luma
-        checkSyncStatus(authToken);
+        // Check sync status after loading events
+        // Pass the event count directly since state update is async
+        checkSyncStatus(authToken, formattedEvents.length);
       } else {
         console.warn('Failed to load events from database:', response.status);
         // Don't set error for 401/403 as user might not be logged in
@@ -103,7 +114,7 @@ export const EventsProvider = ({ children }) => {
   };
 
   // NEW: Check if all Luma events are imported
-  const checkSyncStatus = async (authToken) => {
+  const checkSyncStatus = async (authToken, currentEventCount) => {
     try {
       // Get saved API key
       const apiKeyResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key', {
@@ -130,13 +141,19 @@ export const EventsProvider = ({ children }) => {
           if (lumaResponse.ok) {
             const lumaData = await lumaResponse.json();
             const lumaEventCount = lumaData.events?.length || 0;
-            const dbEventCount = events.length;
+            const dbEventCount = currentEventCount || 0;
 
             console.log(`📊 Sync Status: DB has ${dbEventCount} events, Luma has ${lumaEventCount} events`);
 
             // If we have same number of events (or more), consider all imported
-            setAllEventsImported(dbEventCount >= lumaEventCount && lumaEventCount > 0);
+            const isAllImported = dbEventCount >= lumaEventCount && lumaEventCount > 0;
+            setAllEventsImported(isAllImported);
+            
+            console.log(`🔄 All events imported: ${isAllImported}`);
           }
+        } else {
+          // No API key saved, so not all events imported
+          setAllEventsImported(false);
         }
       }
     } catch (err) {
@@ -153,9 +170,17 @@ export const EventsProvider = ({ children }) => {
   };
 
   // NEW: Function to mark all events as imported (call after successful bulk import)
-  const markAllEventsImported = () => {
+  const markAllEventsImported = async () => {
     console.log('✅ Marking all events as imported');
     setAllEventsImported(true);
+    
+    // Also trigger a sync check to ensure accuracy
+    const authToken = localStorage.getItem('auth_token');
+    if (authToken) {
+      setTimeout(() => {
+        checkSyncStatus(authToken, events.length);
+      }, 1000);
+    }
   };
 
   // NEW: Function to check if import is needed
@@ -197,8 +222,9 @@ export const EventsProvider = ({ children }) => {
           // Optionally reload events to sync with database
           loadEventsFromDatabase();
         } else {
-          // After deletion, recheck sync status
-          checkSyncStatus(authToken);
+          // After deletion, recheck sync status with new count
+          const newEventCount = events.length - 1;
+          checkSyncStatus(authToken, newEventCount);
         }
       } catch (err) {
         console.warn('Error deleting event from database:', err);
