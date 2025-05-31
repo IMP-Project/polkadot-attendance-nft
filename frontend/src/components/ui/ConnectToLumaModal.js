@@ -158,6 +158,104 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
     }
   };
 
+  // NEW: Bulk import function
+  const handleBulkImport = async () => {
+    const keyToUse = savedApiKey || apiKey;
+    
+    if (!keyToUse.trim()) {
+      alert('Please enter your Luma API key first');
+      return;
+    }
+
+    // Start import progress
+    setImportProgress({
+      open: true,
+      eventName: 'Importing All Events...',
+      progress: 0
+    });
+
+    try {
+      setLoading(true);
+      
+      // Get user ID from token
+      const authToken = localStorage.getItem('auth_token');
+      let userID = null;
+      
+      if (authToken) {
+        try {
+          const payload = JSON.parse(atob(authToken.split('.')[1]));
+          userID = payload.user_id;
+        } catch (e) {
+          console.warn('Could not parse token for user ID');
+        }
+      }
+
+      // Update progress
+      setImportProgress(prev => ({ ...prev, progress: 20 }));
+
+      // Call bulk import API
+      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/bulk-import-luma-events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiKey: keyToUse,
+          userId: userID
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to bulk import events from Luma');
+      }
+
+      const data = await response.json();
+      console.log('Bulk import result:', data);
+
+      // Update progress
+      setImportProgress(prev => ({ ...prev, progress: 60 }));
+
+      // Save API key to database if it works and is not already saved
+      if (keyToUse !== savedApiKey) {
+        await saveApiKeyToDatabase(keyToUse);
+      }
+
+      // Update progress
+      setImportProgress(prev => ({ ...prev, progress: 80 }));
+
+      // Add all imported events to context
+      if (data.events && Array.isArray(data.events)) {
+        for (const event of data.events) {
+          addEvent(event);
+        }
+      }
+
+      // Complete progress
+      setImportProgress(prev => ({ ...prev, progress: 100 }));
+      
+      // Show success message
+      alert(`Successfully imported ${data.imported_count} out of ${data.total_count} events!`);
+      
+      // Close progress modal after a short delay
+      setTimeout(() => {
+        setImportProgress({ open: false, eventName: '', progress: 0 });
+        handleClose();
+        
+        // Call success callback to redirect to events page
+        if (onSuccess) {
+          onSuccess();
+        }
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error during bulk import:', error);
+      setImportProgress({ open: false, eventName: '', progress: 0 });
+      alert('Error importing events: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelectEvent = async (selectedEvent) => {
     // Start import progress
     setImportProgress({
@@ -501,42 +599,82 @@ const ConnectToLumaModal = ({ open, onClose, onSuccess }) => {
                 </Button>
               )}
 
-              {/* Import Button */}
-              <Button
-                onClick={() => handleImportFromLuma()}
-                disabled={loading || (!apiKey.trim() && !hasSavedKey)}
-                sx={{
-                  backgroundColor: '#FF2670',
-                  color: 'white',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  textTransform: 'none',
-                  fontFamily: 'Manrope, sans-serif',
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  width: '200px',
-                  height: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  '&:hover': {
-                    backgroundColor: '#E91E63',
-                  },
-                  '&:disabled': {
-                    backgroundColor: '#F3F4F6',
-                    color: '#9CA3AF',
-                  },
-                }}
-              >
-                <Box
-                  component="img"
-                  src="/images/import-icon.png" 
-                  alt="Import"
-                  sx={{ width: 16, height: 16 }}
-                />
-                {loading ? 'Fetching Events...' : 'Fetch Events'}
-              </Button>
+              {/* Button Container */}
+              <Box sx={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {/* Original Fetch Events Button */}
+                <Button
+                  onClick={() => handleImportFromLuma()}
+                  disabled={loading || (!apiKey.trim() && !hasSavedKey)}
+                  sx={{
+                    backgroundColor: '#FF2670',
+                    color: 'white',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    textTransform: 'none',
+                    fontFamily: 'Manrope, sans-serif',
+                    fontWeight: 600,
+                    fontSize: '16px',
+                    width: '200px',
+                    height: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    '&:hover': {
+                      backgroundColor: '#E91E63',
+                    },
+                    '&:disabled': {
+                      backgroundColor: '#F3F4F6',
+                      color: '#9CA3AF',
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/images/import-icon.png" 
+                    alt="Import"
+                    sx={{ width: 16, height: 16 }}
+                  />
+                  {loading ? 'Fetching Events...' : 'Fetch Events'}
+                </Button>
+
+                {/* NEW: Bulk Import Button */}
+                <Button
+                  onClick={handleBulkImport}
+                  disabled={loading || (!apiKey.trim() && !hasSavedKey)}
+                  sx={{
+                    backgroundColor: '#10B981', // Green color for bulk import
+                    color: 'white',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    textTransform: 'none',
+                    fontFamily: 'Manrope, sans-serif',
+                    fontWeight: 600,
+                    fontSize: '16px',
+                    width: '220px',
+                    height: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    '&:hover': {
+                      backgroundColor: '#059669',
+                    },
+                    '&:disabled': {
+                      backgroundColor: '#F3F4F6',
+                      color: '#9CA3AF',
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/images/import-icon.png" 
+                    alt="Import All"
+                    sx={{ width: 16, height: 16 }}
+                  />
+                  {loading ? 'Importing All...' : 'Import All Events'}
+                </Button>
+              </Box>
             </>
           )}
 
