@@ -47,6 +47,7 @@ func NewRouter(
 		api.POST("/webhook/check-in", lumaHandler.CheckInWebhook)
 		api.POST("/import-luma-event", lumaHandler.ImportSingleEvent)
 		api.POST("/list-luma-events", lumaHandler.ListUserEvents)
+		api.POST("/bulk-import-luma-events", lumaHandler.BulkImportEvents) // Added bulk import route
 	}
 
 	// Admin routes (protected with basic auth)

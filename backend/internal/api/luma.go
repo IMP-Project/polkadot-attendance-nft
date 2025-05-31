@@ -211,3 +211,94 @@ func (h *LumaHandler) ListUserEvents(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"events": events})
 }
+
+// BulkImportEvents imports all events from Luma for the authenticated user
+func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
+	var request struct {
+		APIKey string `json:"apiKey"`
+		UserID uint64 `json:"userId"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil || request.APIKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "API key is required"})
+		return
+	}
+
+	// Test API key first
+	if err := h.lumaClient.TestAPIKey(request.APIKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid API key", "details": err.Error()})
+		return
+	}
+
+	// Get all events from Luma
+	lumaEvents, err := h.lumaClient.ListEvents(request.APIKey)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events from Luma", "details": err.Error()})
+		return
+	}
+
+	// Prepare response
+	var importedEvents []map[string]interface{}
+	var successCount int
+	var errors []string
+
+	// Import each event
+	for _, lumaEvent := range lumaEvents {
+		// Convert Luma event to our Event model
+		event := &models.Event{
+			ID:          lumaEvent["api_id"].(string),
+			Name:        getStringValue(lumaEvent, "name"),
+			Date:        getStringValue(lumaEvent, "start_at"),
+			Location:    getLocationFromEvent(lumaEvent),
+			URL:         getStringValue(lumaEvent, "url"),
+			Organizer:   getStringValue(lumaEvent, "user_api_id"), // Store user who imported it
+		}
+
+		// Save to database if repository is available
+		if h.eventRepo != nil {
+			if err := h.eventRepo.Create(event); err != nil {
+				errors = append(errors, fmt.Sprintf("Failed to save event '%s': %v", event.Name, err))
+				continue
+			}
+		}
+
+		importedEvents = append(importedEvents, lumaEvent)
+		successCount++
+	}
+
+	// Return results
+	c.JSON(http.StatusOK, gin.H{
+		"success":        true,
+		"imported_count": successCount,
+		"total_count":    len(lumaEvents),
+		"events":         importedEvents,
+		"errors":         errors,
+		"message":        fmt.Sprintf("Successfully imported %d out of %d events", successCount, len(lumaEvents)),
+	})
+}
+
+// Helper functions for extracting data from Luma event
+func getStringValue(event map[string]interface{}, key string) string {
+	if val, ok := event[key]; ok && val != nil {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func getLocationFromEvent(event map[string]interface{}) string {
+	// Try to get location from geo_address_json first
+	if geoAddr, ok := event["geo_address_json"].(map[string]interface{}); ok && geoAddr != nil {
+		if address, ok := geoAddr["address"].(string); ok && address != "" {
+			return address
+		}
+	}
+	
+	// Fallback to timezone
+	if timezone := getStringValue(event, "timezone"); timezone != "" {
+		return timezone
+	}
+	
+	return "Online"
+}
