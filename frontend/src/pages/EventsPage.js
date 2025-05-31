@@ -23,12 +23,13 @@ import {
   Delete as DeleteIcon,
   Settings as ConfigureIcon,
   Refresh as RefreshIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useEvents } from '../contexts/EventsContext';
 
 const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
-  const { events, removeEvent } = useEvents();
+  const { events, removeEvent, allEventsImported } = useEvents(); // Get allEventsImported from context
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [selectedEventId, setSelectedEventId] = React.useState(null);
 
@@ -165,34 +166,53 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
             </IconButton>
           </Tooltip>
 
-          {/* Import from Luma button (always visible) */}
-          <Button
-            onClick={onConnectToLuma}
-            startIcon={
-              <Box
-                component="img"
-                src="/images/plus-icon.png"
-                alt="Import"
-                sx={{ width: 16, height: 16 }}
-              />
-            }
-            sx={{
-              backgroundColor: '#FF2670',
-              color: 'white',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              textTransform: 'none',
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 500,
-              fontSize: '14px',
-              whiteSpace: 'nowrap',
-              '&:hover': {
-                backgroundColor: '#E91E63',
-              },
-            }}
-          >
-            {events.length > 0 ? 'Import More' : 'Connect to Luma'}
-          </Button>
+          {/* Import from Luma button - conditionally show based on allEventsImported */}
+          {allEventsImported ? (
+            // Show "All Events Synced" chip when all events are imported
+            <Chip
+              icon={<CheckCircleIcon />}
+              label="All Events Synced"
+              sx={{
+                backgroundColor: '#DCFCE7',
+                color: '#15803D',
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                '& .MuiChip-icon': {
+                  color: '#15803D',
+                },
+              }}
+            />
+          ) : (
+            // Show import button when not all events are imported
+            <Button
+              onClick={onConnectToLuma}
+              startIcon={
+                <Box
+                  component="img"
+                  src="/images/plus-icon.png"
+                  alt="Import"
+                  sx={{ width: 16, height: 16 }}
+                />
+              }
+              sx={{
+                backgroundColor: '#FF2670',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                textTransform: 'none',
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                whiteSpace: 'nowrap',
+                '&:hover': {
+                  backgroundColor: '#E91E63',
+                },
+              }}
+            >
+              {events.length > 0 ? 'Import More' : 'Connect to Luma'}
+            </Button>
+          )}
 
           {/* Create Event button (only show when events exist) */}
           {events.length > 0 && (
