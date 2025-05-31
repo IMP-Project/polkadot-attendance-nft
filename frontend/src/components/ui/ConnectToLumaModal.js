@@ -20,7 +20,7 @@ import {
   Event as EventIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import { useEvents } from '../contexts/EventsContext';
+import { useEvents } from '../../contexts/EventsContext';
 import { useNavigate } from 'react-router-dom';
 
 const ConnectToLumaModal = ({ open, onClose }) => {
