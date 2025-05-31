@@ -365,15 +365,30 @@ func (h *UserHandler) DeleteEvent(c *gin.Context) {
     }
 
     eventIDStr := c.Param("id")
-    eventID, err := strconv.ParseUint(eventIDStr, 10, 64)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+    if eventIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
         return
     }
 
     if h.eventRepo != nil {
-        // Check if user is the organizer
-        existingEvent, err := h.eventRepo.GetByID(eventID)
+        // Try to parse as uint64 first, if that fails, treat as string ID
+        var existingEvent *models.Event
+        var err error
+        
+        if eventID, parseErr := strconv.ParseUint(eventIDStr, 10, 64); parseErr == nil {
+            // Numeric ID - use GetByID
+            existingEvent, err = h.eventRepo.GetByID(eventID)
+        } else {
+            // String ID - use GetByStringID (you'll need to add this method)
+            // For now, handle the "N/A" case specifically
+            if eventIDStr == "N/A" {
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete event with invalid ID"})
+                return
+            }
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID format"})
+            return
+        }
+
         if err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get event"})
             return
@@ -389,6 +404,8 @@ func (h *UserHandler) DeleteEvent(c *gin.Context) {
             return
         }
 
+        // Convert back to uint64 for deletion
+        eventID, _ := strconv.ParseUint(eventIDStr, 10, 64)
         if err := h.eventRepo.Delete(eventID); err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete event"})
             return
@@ -494,3 +511,4 @@ func (h *UserHandler) DeleteLumaApiKey(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"message": "Luma API key deleted successfully"})
 }
+
