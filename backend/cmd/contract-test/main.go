@@ -104,7 +104,7 @@ func main() {
 	}
 	
 	// Check if event already exists in database
-	existingEvent, err := eventRepo.GetByID(eventID)
+	existingEvent, err := eventRepo.GetByID(fmt.Sprintf("%d", eventID))
 	if err != nil {
 		log.Printf("Error checking for existing event: %v", err)
 	}

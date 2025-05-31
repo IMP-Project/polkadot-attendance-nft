@@ -265,30 +265,24 @@ func (h *UserHandler) CreateEvent(c *gin.Context) {
 // GetEvent gets a specific event by ID
 func (h *UserHandler) GetEvent(c *gin.Context) {
     eventIDStr := c.Param("id")
-    
-    if h.eventRepo != nil {
-        // For database events, convert string ID to uint64
-        eventID, err := strconv.ParseUint(eventIDStr, 10, 64)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
-            return
-        }
 
-        event, err := h.eventRepo.GetByID(eventID)
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get event"})
-            return
-        }
-
-        if event == nil {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
-            return
-        }
-
-        c.JSON(http.StatusOK, event)
-    } else {
+    if h.eventRepo == nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "Event repository not available"})
+        return
     }
+
+    event, err := h.eventRepo.GetByID(eventIDStr)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get event"})
+        return
+    }
+
+    if event == nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+        return
+    }
+
+    c.JSON(http.StatusOK, event)
 }
 
 // UpdateEvent updates an event (only if user is the organizer)
@@ -314,7 +308,7 @@ func (h *UserHandler) UpdateEvent(c *gin.Context) {
 
     if h.eventRepo != nil {
         // Check if user is the organizer
-        existingEvent, err := h.eventRepo.GetByID(eventID)
+        existingEvent, err := h.eventRepo.GetByID(eventIDStr)
         if err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get event"})
             return
@@ -351,6 +345,7 @@ func (h *UserHandler) UpdateEvent(c *gin.Context) {
 }
 
 // DeleteEvent deletes an event (only if user is the organizer)
+// DeleteEvent deletes an event (only if user is the organizer)
 func (h *UserHandler) DeleteEvent(c *gin.Context) {
     userID, err := h.getUserIDFromContext(c)
     if err != nil {
@@ -365,57 +360,42 @@ func (h *UserHandler) DeleteEvent(c *gin.Context) {
     }
 
     eventIDStr := c.Param("id")
-    if eventIDStr == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+    if eventIDStr == "" || eventIDStr == "N/A" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
         return
     }
 
-    if h.eventRepo != nil {
-        // Try to parse as uint64 first, if that fails, treat as string ID
-        var existingEvent *models.Event
-        var err error
-        
-        if eventID, parseErr := strconv.ParseUint(eventIDStr, 10, 64); parseErr == nil {
-            // Numeric ID - use GetByID
-            existingEvent, err = h.eventRepo.GetByID(eventID)
-        } else {
-            // String ID - use GetByStringID (you'll need to add this method)
-            // For now, handle the "N/A" case specifically
-            if eventIDStr == "N/A" {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete event with invalid ID"})
-                return
-            }
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID format"})
-            return
-        }
-
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get event"})
-            return
-        }
-
-        if existingEvent == nil {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
-            return
-        }
-
-        if existingEvent.Organizer != user.WalletAddress {
-            c.JSON(http.StatusForbidden, gin.H{"error": "Only the organizer can delete this event"})
-            return
-        }
-
-        // Convert back to uint64 for deletion
-        eventID, _ := strconv.ParseUint(eventIDStr, 10, 64)
-        if err := h.eventRepo.Delete(eventID); err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete event"})
-            return
-        }
-
-        c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
-    } else {
+    if h.eventRepo == nil {
         c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Event repository not available"})
+        return
     }
+
+    // Fetch event
+    existingEvent, err := h.eventRepo.GetByID(eventIDStr)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get event"})
+        return
+    }
+
+    if existingEvent == nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+        return
+    }
+
+    if existingEvent.Organizer != user.WalletAddress {
+        c.JSON(http.StatusForbidden, gin.H{"error": "Only the organizer can delete this event"})
+        return
+    }
+
+    // Delete event
+    if err := h.eventRepo.Delete(eventIDStr); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete event"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
 }
+
 
 // MintNFT mints an NFT for an event
 func (h *UserHandler) MintNFT(c *gin.Context) {

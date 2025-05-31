@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
+	"strconv"
 	"github.com/gin-gonic/gin"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma"
@@ -213,7 +213,6 @@ func (h *LumaHandler) ListUserEvents(c *gin.Context) {
 }
 
 // BulkImportEvents imports all events from Luma for the authenticated user
-// BulkImportEvents imports all events from Luma for the authenticated user
 func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 	var request struct {
 		APIKey string `json:"apiKey"`
@@ -243,6 +242,19 @@ func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 		return
 	}
 
+	// Save the API key for the user
+	if request.UserID != "" {
+		userID, err := strconv.ParseUint(request.UserID, 10, 64)
+		if err == nil {
+			if err := h.userRepo.UpdateLumaApiKey(userID, request.APIKey); err != nil {
+				fmt.Printf("Failed to save API key for user %d: %v\n", userID, err)
+				// Continue with import even if API key save fails
+			} else {
+				fmt.Printf("Saved API key for user %d\n", userID)
+			}
+		}
+	}
+
 	// Get all events from Luma
 	lumaEvents, err := h.lumaClient.ListEvents(request.APIKey)
 	if err != nil {
@@ -259,12 +271,16 @@ func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 	for _, lumaEvent := range lumaEvents {
 		// Convert Luma event to our Event model
 		event := &models.Event{
-			ID:          lumaEvent["api_id"].(string),
-			Name:        getStringValue(lumaEvent, "name"),
-			Date:        getStringValue(lumaEvent, "start_at"),
-			Location:    getLocationFromEvent(lumaEvent),
-			URL:         getStringValue(lumaEvent, "url"),
-			Organizer:   getStringValue(lumaEvent, "user_api_id"), // Store user who imported it
+			ID:            lumaEvent["api_id"].(string),
+			Name:          getStringValue(lumaEvent, "name"),
+			Date:          getStringValue(lumaEvent, "start_at"),
+			Location:      getLocationFromEvent(lumaEvent),
+			URL:           getStringValue(lumaEvent, "url"),
+			Organizer:     getStringValue(lumaEvent, "user_api_id"),
+			UserID:        request.UserID, // Add UserID for sync tracking
+			LastSyncedAt:  time.Now(),     // Set initial sync time
+			LumaUpdatedAt: getStringValue(lumaEvent, "updated_at"), // Track Luma's update time
+			IsDeleted:     false,
 		}
 
 		// Save to database if repository is available

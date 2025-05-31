@@ -37,7 +37,7 @@ func main() {
 	// Run GORM auto-migrations
 	log.Println("Running database migrations...")
 	err = gormDB.AutoMigrate(
-		&database.User{},
+		&models.User{},
 		&database.EventPermission{},
 		&models.Event{},
 		// Add other models here as needed
@@ -55,7 +55,7 @@ func main() {
 	_ = database.NewPermissionRepository(gormDB) // Comment out until needed
 
 	// Test repositories by creating a test user
-	testUser := &database.User{
+	testUser := &models.User{
 		WalletAddress: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", // Test address
 	}
 

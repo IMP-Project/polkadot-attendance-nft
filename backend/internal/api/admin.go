@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -135,15 +134,11 @@ func (h *AdminHandler) ListEvents(c *gin.Context) {
 }
 
 // GetEvent gets an event by ID
+// GetEvent gets an event by ID
 func (h *AdminHandler) GetEvent(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
-		return
-	}
 
-	event, err := h.eventRepo.GetByID(id)
+	event, err := h.eventRepo.GetByID(idStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

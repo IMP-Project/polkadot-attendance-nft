@@ -4,18 +4,8 @@ import (
     "fmt"
     "time"
     "gorm.io/gorm"
+    "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
-
-// User represents a user in the system
-type User struct {
-    ID            uint64     `json:"id" gorm:"primaryKey;autoIncrement"`
-    WalletAddress string     `json:"wallet_address" gorm:"uniqueIndex;not null"`
-    Username      string     `json:"username,omitempty"`
-    LumaApiKey    string     `json:"-" gorm:"column:luma_api_key"` // Added this field - hidden from JSON
-    CreatedAt     time.Time  `json:"created_at"`
-    UpdatedAt     time.Time  `json:"updated_at"`
-    LastLogin     *time.Time `json:"last_login,omitempty"`
-}
 
 // UserSettings represents user preferences and settings
 type UserSettings struct {
@@ -30,7 +20,7 @@ type UserSettings struct {
     UpdatedAt    time.Time `json:"updated_at"`
     
     // Foreign key relationship
-    User User `json:"-" gorm:"foreignKey:UserID"`
+    User models.User `json:"-" gorm:"foreignKey:UserID"`
 }
 
 // EventPermission represents user permissions for events
@@ -42,7 +32,7 @@ type EventPermission struct {
     CreatedAt time.Time `json:"created_at"`
     
     // Foreign key relationship
-    User User `json:"-" gorm:"foreignKey:UserID"`
+    User models.User `json:"-" gorm:"foreignKey:UserID"`
 }
 
 type Role string
@@ -75,12 +65,12 @@ func NewPermissionRepository(db *gorm.DB) *PermissionRepository {
 }
 
 // User repository methods
-func (r *UserRepository) Create(user *User) error {
+func (r *UserRepository) Create(user *models.User) error {
     return r.db.Create(user).Error
 }
 
-func (r *UserRepository) GetByID(id uint64) (*User, error) {
-    var user User
+func (r *UserRepository) GetByID(id uint64) (*models.User, error) {
+    var user models.User
     err := r.db.Where("id = ?", id).First(&user).Error
     
     if err == gorm.ErrRecordNotFound {
@@ -94,8 +84,8 @@ func (r *UserRepository) GetByID(id uint64) (*User, error) {
     return &user, nil
 }
 
-func (r *UserRepository) GetByWalletAddress(walletAddress string) (*User, error) {
-    var user User
+func (r *UserRepository) GetByWalletAddress(walletAddress string) (*models.User, error) {
+    var user models.User
     err := r.db.Where("wallet_address = ?", walletAddress).First(&user).Error
     
     if err == gorm.ErrRecordNotFound {
@@ -109,7 +99,7 @@ func (r *UserRepository) GetByWalletAddress(walletAddress string) (*User, error)
     return &user, nil
 }
 
-func (r *UserRepository) GetOrCreate(walletAddress string) (*User, error) {
+func (r *UserRepository) GetOrCreate(walletAddress string) (*models.User, error) {
     // Try to find existing user first
     user, err := r.GetByWalletAddress(walletAddress)
     if err != nil {
@@ -121,7 +111,7 @@ func (r *UserRepository) GetOrCreate(walletAddress string) (*User, error) {
     }
     
     // Create new user if not found
-    newUser := &User{
+    newUser := &models.User{
         WalletAddress: walletAddress,
         CreatedAt:     time.Now(),
         UpdatedAt:     time.Now(),
@@ -136,7 +126,7 @@ func (r *UserRepository) GetOrCreate(walletAddress string) (*User, error) {
 
 func (r *UserRepository) UpdateLastLogin(userID uint64) error {
     now := time.Now()
-    return r.db.Model(&User{}).Where("id = ?", userID).Update("last_login", &now).Error
+    return r.db.Model(&models.User{}).Where("id = ?", userID).Update("last_login", &now).Error
 }
 
 // UserSettings repository methods
@@ -211,7 +201,7 @@ func (r *PermissionRepository) GetByUserAndEvent(userID uint64, eventID string) 
 
 // Luma API Key repository methods
 func (r *UserRepository) UpdateLumaApiKey(userID uint64, apiKey string) error {
-    result := r.db.Model(&User{}).Where("id = ?", userID).Update("luma_api_key", apiKey)
+    result := r.db.Model(&models.User{}).Where("id = ?", userID).Update("luma_api_key", apiKey)
     
     if result.Error != nil {
         return fmt.Errorf("failed to update Luma API key: %w", result.Error)
@@ -225,7 +215,7 @@ func (r *UserRepository) UpdateLumaApiKey(userID uint64, apiKey string) error {
 }
 
 func (r *UserRepository) GetLumaApiKey(userID uint64) (string, error) {
-    var user User
+    var user models.User
     err := r.db.Select("luma_api_key").Where("id = ?", userID).First(&user).Error
     
     if err == gorm.ErrRecordNotFound {
@@ -236,11 +226,11 @@ func (r *UserRepository) GetLumaApiKey(userID uint64) (string, error) {
         return "", fmt.Errorf("failed to get Luma API key: %w", err)
     }
     
-    return user.LumaApiKey, nil
+    return user.LumaAPIKey, nil
 }
 
 func (r *UserRepository) DeleteLumaApiKey(userID uint64) error {
-    result := r.db.Model(&User{}).Where("id = ?", userID).Update("luma_api_key", "")
+    result := r.db.Model(&models.User{}).Where("id = ?", userID).Update("luma_api_key", "")
     
     if result.Error != nil {
         return fmt.Errorf("failed to delete Luma API key: %w", result.Error)
@@ -251,4 +241,16 @@ func (r *UserRepository) DeleteLumaApiKey(userID uint64) error {
     }
     
     return nil
+}
+
+// GetUsersWithLumaAPIKey returns all users who have a Luma API key
+func (r *UserRepository) GetUsersWithLumaAPIKey() ([]models.User, error) {
+    var users []models.User
+    err := r.db.Where("luma_api_key IS NOT NULL AND luma_api_key != ''").Find(&users).Error
+    
+    if err != nil {
+        return nil, fmt.Errorf("failed to get users with Luma API key: %w", err)
+    }
+    
+    return users, nil
 }
