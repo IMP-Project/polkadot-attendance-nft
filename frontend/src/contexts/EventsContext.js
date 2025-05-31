@@ -14,6 +14,7 @@ export const EventsProvider = ({ children }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [allEventsImported, setAllEventsImported] = useState(false); // NEW: Track sync status
 
   // Load events from database when component mounts OR when auth token changes
   useEffect(() => {
@@ -30,6 +31,7 @@ export const EventsProvider = ({ children }) => {
       } else {
         console.log('No auth token, clearing events');
         setEvents([]);
+        setAllEventsImported(false);
         setLoading(false);
       }
     };
@@ -49,6 +51,7 @@ export const EventsProvider = ({ children }) => {
     // Skip loading if user is not authenticated
     if (!authToken) {
       setEvents([]);
+      setAllEventsImported(false);
       setLoading(false);
       return;
     }
@@ -81,6 +84,9 @@ export const EventsProvider = ({ children }) => {
         
         setEvents(formattedEvents);
         console.log(`✅ Loaded ${formattedEvents.length} events after login`);
+
+        // NEW: Check if all events are imported by comparing with Luma
+        checkSyncStatus(authToken);
       } else {
         console.warn('Failed to load events from database:', response.status);
         // Don't set error for 401/403 as user might not be logged in
@@ -96,10 +102,65 @@ export const EventsProvider = ({ children }) => {
     }
   };
 
+  // NEW: Check if all Luma events are imported
+  const checkSyncStatus = async (authToken) => {
+    try {
+      // Get saved API key
+      const apiKeyResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (apiKeyResponse.ok) {
+        const apiKeyData = await apiKeyResponse.json();
+        const lumaApiKey = apiKeyData.api_key;
+
+        if (lumaApiKey) {
+          // Get Luma events count
+          const lumaResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/list-luma-events', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ apiKey: lumaApiKey }),
+          });
+
+          if (lumaResponse.ok) {
+            const lumaData = await lumaResponse.json();
+            const lumaEventCount = lumaData.events?.length || 0;
+            const dbEventCount = events.length;
+
+            console.log(`📊 Sync Status: DB has ${dbEventCount} events, Luma has ${lumaEventCount} events`);
+
+            // If we have same number of events (or more), consider all imported
+            setAllEventsImported(dbEventCount >= lumaEventCount && lumaEventCount > 0);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error checking sync status:', err);
+      // If we can't check, assume not all imported
+      setAllEventsImported(false);
+    }
+  };
+
   // NEW: Function to manually trigger event loading (call this after successful login)
   const refreshEventsAfterLogin = () => {
     console.log('🔄 Refreshing events after login...');
     loadEventsFromDatabase();
+  };
+
+  // NEW: Function to mark all events as imported (call after successful bulk import)
+  const markAllEventsImported = () => {
+    console.log('✅ Marking all events as imported');
+    setAllEventsImported(true);
+  };
+
+  // NEW: Function to check if import is needed
+  const needsImport = () => {
+    return !allEventsImported;
   };
 
   const addEvent = (event) => {
@@ -135,6 +196,9 @@ export const EventsProvider = ({ children }) => {
           console.warn('Failed to delete event from database');
           // Optionally reload events to sync with database
           loadEventsFromDatabase();
+        } else {
+          // After deletion, recheck sync status
+          checkSyncStatus(authToken);
         }
       } catch (err) {
         console.warn('Error deleting event from database:', err);
@@ -181,6 +245,7 @@ export const EventsProvider = ({ children }) => {
 
   const clearEvents = () => {
     setEvents([]);
+    setAllEventsImported(false);
   };
 
   const refreshEvents = () => {
@@ -218,12 +283,15 @@ export const EventsProvider = ({ children }) => {
     events,
     loading,
     error,
+    allEventsImported, // NEW: Expose sync status
     addEvent,
     removeEvent,
     updateEvent,
     clearEvents,
     refreshEvents,
-    refreshEventsAfterLogin, // NEW: Expose this function
+    refreshEventsAfterLogin,
+    markAllEventsImported, // NEW: Function to mark as imported
+    needsImport, // NEW: Function to check if import needed
     loadEventsFromDatabase, // Expose for manual refresh
   };
 
