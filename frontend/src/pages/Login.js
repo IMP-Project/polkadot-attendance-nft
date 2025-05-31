@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useEvents } from '../contexts/EventsContext'; // Add this import
 
 const Login = () => {
   const navigate = useNavigate();
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Add this to access events context
+  const { refreshEventsAfterLogin } = useEvents();
 
   const handleLogin = (address) => {
     // After successful login, redirect to admin dashboard
@@ -71,6 +75,12 @@ const Login = () => {
         walletAddress: data.user.wallet_address,
         tokenReceived: !!data.token
       });
+      
+      // NEW: Refresh events after successful login
+      console.log("🔄 Triggering events refresh after login...");
+      setTimeout(() => {
+        refreshEventsAfterLogin();
+      }, 500); // Small delay to ensure token is saved
       
       // Run callback function
       handleLogin(walletAddress);

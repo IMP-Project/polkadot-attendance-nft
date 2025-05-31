@@ -15,9 +15,32 @@ export const EventsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load events from database when component mounts
+  // Load events from database when component mounts OR when auth token changes
   useEffect(() => {
     loadEventsFromDatabase();
+  }, []);
+
+  // NEW: Listen for auth token changes (login/logout)
+  useEffect(() => {
+    const checkAuthAndLoadEvents = () => {
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken) {
+        console.log('Auth token detected, loading events...');
+        loadEventsFromDatabase();
+      } else {
+        console.log('No auth token, clearing events');
+        setEvents([]);
+        setLoading(false);
+      }
+    };
+
+    // Check immediately
+    checkAuthAndLoadEvents();
+
+    // Set up interval to check for auth changes every 2 seconds
+    const authCheckInterval = setInterval(checkAuthAndLoadEvents, 2000);
+
+    return () => clearInterval(authCheckInterval);
   }, []);
 
   const loadEventsFromDatabase = async () => {
@@ -25,6 +48,7 @@ export const EventsProvider = ({ children }) => {
     
     // Skip loading if user is not authenticated
     if (!authToken) {
+      setEvents([]);
       setLoading(false);
       return;
     }
@@ -47,8 +71,8 @@ export const EventsProvider = ({ children }) => {
         
         // Transform database events to match UI format
         const formattedEvents = (Array.isArray(data) ? data : []).map(event => ({
-          id: event.api_id || event.id,
-          name: event.name,
+          id: event.api_id || event.id || 'unknown',
+          name: event.name || 'Untitled Event',
           date: formatDate(event.date || event.start_at),
           location: event.location || event.timezone || 'Online',
           status: getEventStatus(event.date || event.start_at, event.end_at),
@@ -56,6 +80,7 @@ export const EventsProvider = ({ children }) => {
         }));
         
         setEvents(formattedEvents);
+        console.log(`✅ Loaded ${formattedEvents.length} events after login`);
       } else {
         console.warn('Failed to load events from database:', response.status);
         // Don't set error for 401/403 as user might not be logged in
@@ -71,10 +96,16 @@ export const EventsProvider = ({ children }) => {
     }
   };
 
+  // NEW: Function to manually trigger event loading (call this after successful login)
+  const refreshEventsAfterLogin = () => {
+    console.log('🔄 Refreshing events after login...');
+    loadEventsFromDatabase();
+  };
+
   const addEvent = (event) => {
     const formattedEvent = {
-      id: event.api_id || event.id,
-      name: event.name,
+      id: event.api_id || event.id || 'unknown',
+      name: event.name || 'Untitled Event',
       date: formatDate(event.start_at || event.date),
       location: event.location || event.timezone || 'Online',
       status: getEventStatus(event.start_at || event.date, event.end_at),
@@ -192,6 +223,7 @@ export const EventsProvider = ({ children }) => {
     updateEvent,
     clearEvents,
     refreshEvents,
+    refreshEventsAfterLogin, // NEW: Expose this function
     loadEventsFromDatabase, // Expose for manual refresh
   };
 
