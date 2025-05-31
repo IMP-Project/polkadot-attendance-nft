@@ -217,10 +217,9 @@ func (h *LumaHandler) ListUserEvents(c *gin.Context) {
 func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 	var request struct {
 		APIKey string `json:"apiKey"`
-		UserID uint64 `json:"userId"`
+		UserID string `json:"userId"` // Changed to string to match frontend
 	}
 
-	// Debug: Print what we received
 	fmt.Printf("BulkImportEvents called\n")
 	
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -229,9 +228,8 @@ func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 		return
 	}
 	
-	// Debug: Print parsed values
 	fmt.Printf("Parsed APIKey: '%s' (length: %d)\n", request.APIKey, len(request.APIKey))
-	fmt.Printf("Parsed UserID: %d\n", request.UserID)
+	fmt.Printf("Parsed UserID: '%s'\n", request.UserID)
 	
 	if request.APIKey == "" {
 		fmt.Printf("API key is empty after parsing\n")
