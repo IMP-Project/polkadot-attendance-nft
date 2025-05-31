@@ -213,13 +213,28 @@ func (h *LumaHandler) ListUserEvents(c *gin.Context) {
 }
 
 // BulkImportEvents imports all events from Luma for the authenticated user
+// BulkImportEvents imports all events from Luma for the authenticated user
 func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 	var request struct {
 		APIKey string `json:"apiKey"`
 		UserID uint64 `json:"userId"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil || request.APIKey == "" {
+	// Debug: Print what we received
+	fmt.Printf("BulkImportEvents called\n")
+	
+	if err := c.ShouldBindJSON(&request); err != nil {
+		fmt.Printf("JSON binding failed: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+		return
+	}
+	
+	// Debug: Print parsed values
+	fmt.Printf("Parsed APIKey: '%s' (length: %d)\n", request.APIKey, len(request.APIKey))
+	fmt.Printf("Parsed UserID: %d\n", request.UserID)
+	
+	if request.APIKey == "" {
+		fmt.Printf("API key is empty after parsing\n")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "API key is required"})
 		return
 	}
