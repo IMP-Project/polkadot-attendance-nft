@@ -12,7 +12,7 @@ import UploadDesignModal from '../components/ui/UploadDesignModal';
 
 function Gallery() {
   const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [publicUrl, setPublicUrl] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
@@ -714,7 +714,7 @@ function Gallery() {
             </Typography>
             <FormControl size="small" sx={{ minWidth: '200px' }}>
               <Select
-                value={selectedEvent}
+                 value={selectedEvent || ''} 
                 onChange={handleEventChange}
                 displayEmpty
                 sx={{
