@@ -31,9 +31,8 @@ function Gallery() {
         
         if (eventsData.length > 0) {
           console.log('🎉 Events loaded:', eventsData);
-  console.log('🔍 First event structure:', eventsData[0]);
-  console.log('📋 All event IDs:', eventsData.map(e => e.id));
-  console.log('📋 All event names:', eventsData.map(e => e.name));
+  console.log('🔍 First event FULL structure:', JSON.stringify(eventsData[0], null, 2));
+  console.log('📋 First event keys:', Object.keys(eventsData[0]));
           setSelectedEvent(eventsData[0].id);
         }
       } catch (error) {
