@@ -714,33 +714,40 @@ function Gallery() {
             </Typography>
             <FormControl size="small" sx={{ minWidth: '200px' }}>
               <Select
-                 value={selectedEvent || ''} 
-                onChange={handleEventChange}
-                displayEmpty
-                sx={{
-                  backgroundColor: (theme) => theme.palette.background.paper,
-                  borderRadius: '8px',
-                  height: '40px',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: (theme) => theme.palette.divider,
-                  },
-                  '& .MuiSelect-select': {
-                    fontFamily: 'Manrope, sans-serif',
-                    fontWeight: 500,
-                    fontSize: '14px',
-                    lineHeight: '20px',
-                    letterSpacing: '-0.6%',
-                    color: (theme) => theme.palette.text.primary,
-                    padding: '10px 14px'
-                  }
-                }}
-              >
-                {events.map(event => (
-                  <MenuItem key={event.id} value={event.id}>
-                    {event.name}
-                  </MenuItem>
-                ))}
-              </Select>
+  value={selectedEvent || events[0]?.id || ''}
+  onChange={handleEventChange}
+  displayEmpty
+  MenuProps={{
+    PaperProps: {
+      style: {
+        maxHeight: 200,
+      },
+    },
+  }}
+  sx={{
+    backgroundColor: (theme) => theme.palette.background.paper,
+    borderRadius: '8px',
+    height: '40px',
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: (theme) => theme.palette.divider,
+    },
+    '& .MuiSelect-select': {
+      fontFamily: 'Manrope, sans-serif',
+      fontWeight: 500,
+      fontSize: '14px',
+      lineHeight: '20px',
+      letterSpacing: '-0.6%',
+      color: (theme) => theme.palette.text.primary,
+      padding: '10px 14px'
+    }
+  }}
+>
+  {events.map(event => (
+    <MenuItem key={event.id} value={event.id}>
+      {event.name}
+    </MenuItem>
+  ))}
+</Select>
             </FormControl>
           </Box>
 
