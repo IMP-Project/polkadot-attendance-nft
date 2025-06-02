@@ -276,37 +276,36 @@ func (c *MockContractCaller) Call(method string, args ...interface{}) ([]byte, e
 		}
 
 		var id uint64
-		switch v := args[0].(type) {
+switch v := args[0].(type) {
 case uint64:
-    eventID = v
+	id = v
 case float64:
-    eventID = uint64(v)
+	id = uint64(v)
 case int:
-    eventID = uint64(v)
+	id = uint64(v)
+case json.Number:
+	val, err := v.Int64()
+	if err != nil {
+		return nil, fmt.Errorf("invalid event ID: %v", err)
+	}
+	id = uint64(val)
 case string:
-    // For Luma event IDs, convert string to a hash or use a mapping
-    // Simple approach: use a hash of the string
-    h := hash(v)  // You'll need to implement this
-    eventID = h
-default:
-    return nil, fmt.Errorf("invalid event ID type: %T", args[0])
-}
-			id = uint64(val)
-		case map[string]interface{}:
-			// This handles the case where we're passing a marshaled callData object
-			if methodArgs, ok := v["args"].([]interface{}); ok && len(methodArgs) > 0 {
-				if idVal, ok := methodArgs[0].(float64); ok {
-					id = uint64(idVal)
-				} else {
-					return nil, fmt.Errorf("invalid event ID type in callData")
-				}
-			} else {
-				return nil, fmt.Errorf("invalid callData format")
-			}
-		default:
-			return nil, fmt.Errorf("invalid event ID type: %T", args[0])
+	// For string event IDs, use a simple hash
+	id = uint64(len(v))
+case map[string]interface{}:
+	// This handles the case where we're passing a marshaled callData object
+	if methodArgs, ok := v["args"].([]interface{}); ok && len(methodArgs) > 0 {
+		if idVal, ok := methodArgs[0].(float64); ok {
+			id = uint64(idVal)
+		} else {
+			return nil, fmt.Errorf("invalid event ID type in callData")
 		}
-		
+	} else {
+		return nil, fmt.Errorf("invalid callData format")
+	}
+default:
+	return nil, fmt.Errorf("invalid event ID type: %T", args[0])
+}
 		log.Printf("Looking up event ID: %d (available: %v)", id, c.events)
 
 		event, exists := c.events[id]
@@ -318,7 +317,7 @@ default:
 		log.Printf("Found event %d: %s", id, event.Name)
 
 		return json.Marshal(event)
-
+	
 	case "mint_nft":
 		if len(args) < 3 {
 			return nil, fmt.Errorf("mint_nft requires 3 arguments")
