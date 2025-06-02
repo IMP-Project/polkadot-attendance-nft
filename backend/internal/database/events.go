@@ -164,3 +164,13 @@ func (r *EventRepository) CountByUserID(userID string) (int64, error) {
 	
 	return count, nil
 }
+
+// GetCheckInCount returns the number of check-ins (NFTs minted) for an event
+func (r *EventRepository) GetCheckInCount(eventID string) (int, error) {
+	var count int64
+	err := r.db.Table("nfts").Where("event_id = ?", eventID).Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("failed to get check-in count: %w", err)
+	}
+	return int(count), nil
+}

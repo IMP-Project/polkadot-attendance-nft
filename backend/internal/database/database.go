@@ -101,6 +101,48 @@ func (db *DB) MigrateUp() error {
 	}
 	log.Println("NFTs table created/verified")
 
+	// Create NFT designs table
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS nft_designs (
+			id VARCHAR(36) PRIMARY KEY,
+			event_id VARCHAR(100) NOT NULL,
+			title VARCHAR(255) NOT NULL,
+			description TEXT,
+			traits VARCHAR(255),
+			image_data TEXT NOT NULL,
+			metadata JSONB,
+			created_by VARCHAR(100) NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+			is_active BOOLEAN NOT NULL DEFAULT TRUE,
+			INDEX idx_event_id (event_id),
+			INDEX idx_created_by (created_by)
+		)
+	`); err != nil {
+		// PostgreSQL doesn't support INDEX in CREATE TABLE, so try without indexes
+		if _, err := db.Exec(`
+			CREATE TABLE IF NOT EXISTS nft_designs (
+				id VARCHAR(36) PRIMARY KEY,
+				event_id VARCHAR(100) NOT NULL,
+				title VARCHAR(255) NOT NULL,
+				description TEXT,
+				traits VARCHAR(255),
+				image_data TEXT NOT NULL,
+				metadata JSONB,
+				created_by VARCHAR(100) NOT NULL,
+				created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+				updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+				is_active BOOLEAN NOT NULL DEFAULT TRUE
+			)
+		`); err != nil {
+			return fmt.Errorf("failed to create nft_designs table: %w", err)
+		}
+		// Create indexes separately
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_nft_designs_event_id ON nft_designs(event_id)`)
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_nft_designs_created_by ON nft_designs(created_by)`)
+	}
+	log.Println("NFT designs table created/verified")
+
 	// Check if foreign key constraint already exists
 	var constraintExists bool
 	err := db.QueryRow(`

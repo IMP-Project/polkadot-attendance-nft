@@ -4,9 +4,27 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
+
+// NFT represents the database model for NFTs (for GORM migration)
+type NFT struct {
+	ID              uint64    `gorm:"primaryKey;autoIncrement"`
+	EventID         uint64    `gorm:"not null;index"`
+	Owner           string    `gorm:"not null;size:255"`
+	Metadata        string    `gorm:"type:jsonb"`
+	TransactionHash *string   `gorm:"size:255"`
+	Confirmed       bool      `gorm:"default:false"`
+	CreatedAt       time.Time `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
+}
+
+// TableName specifies the table name for GORM
+func (NFT) TableName() string {
+	return "nfts"
+}
 
 // NFTRepository handles database operations for NFTs
 type NFTRepository struct {
@@ -85,12 +103,12 @@ func (r *NFTRepository) GetByID(id uint64) (*models.NFT, error) {
 }
 
 // GetAllByEventID gets all NFTs for an event
-func (r *NFTRepository) GetAllByEventID(eventID uint64) ([]models.NFT, error) {
+func (r *NFTRepository) GetAllByEventID(eventID string) ([]models.NFT, error) {
 	query := `
-		SELECT id, event_id, owner, metadata, tx_hash, confirmed
+		SELECT id, event_id, owner, metadata, tx_hash, confirmed, created_at
 		FROM nfts
 		WHERE event_id = $1
-		ORDER BY id
+		ORDER BY created_at DESC
 	`
 
 	rows, err := r.db.Query(query, eventID)
@@ -104,7 +122,6 @@ func (r *NFTRepository) GetAllByEventID(eventID uint64) ([]models.NFT, error) {
 		var nft models.NFT
 		var metadataJSON []byte
 		var txHash sql.NullString
-		var confirmed bool
 
 		err := rows.Scan(
 			&nft.ID,
@@ -112,7 +129,8 @@ func (r *NFTRepository) GetAllByEventID(eventID uint64) ([]models.NFT, error) {
 			&nft.Owner,
 			&metadataJSON,
 			&txHash,
-			&confirmed,
+			&nft.Confirmed,
+			&nft.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan NFT: %w", err)
@@ -121,6 +139,11 @@ func (r *NFTRepository) GetAllByEventID(eventID uint64) ([]models.NFT, error) {
 		// Parse metadata JSON
 		if err := json.Unmarshal(metadataJSON, &nft.Metadata); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+
+		// Handle nullable transaction hash
+		if txHash.Valid {
+			nft.TransactionHash = txHash.String
 		}
 
 		nfts = append(nfts, nft)

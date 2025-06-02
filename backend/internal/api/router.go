@@ -18,6 +18,7 @@ func NewRouter(
 	nftRepo *database.NFTRepository,
 	userRepo *database.UserRepository,
 	permRepo *database.PermissionRepository,
+	designRepo *database.DesignRepository,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -36,15 +37,14 @@ func NewRouter(
 	// Initialize shared handlers
 	lumaClient := luma.NewClient(cfg.LumaAPIKey)
 	lumaHandler := NewLumaHandler(lumaClient, polkadotClient, nftRepo, eventRepo, userRepo)
-	userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, cfg.JWTSecret)
+	userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, designRepo, cfg.JWTSecret)
 
 	// Public routes
 	{
 		// Wallet login route
 		api.POST("/login", userHandler.WalletLogin)
 
-		// Webhook and Luma integration
-		api.POST("/webhook/check-in", lumaHandler.CheckInWebhook)
+		// Luma integration
 		api.POST("/import-luma-event", lumaHandler.ImportSingleEvent)
 		api.POST("/list-luma-events", lumaHandler.ListUserEvents)
 		api.POST("/bulk-import-luma-events", lumaHandler.BulkImportEvents) // Added bulk import route
@@ -91,6 +91,19 @@ func NewRouter(
 		
 		// NFT management for authenticated users
 		user.POST("/events/:id/mint", userHandler.MintNFT)      // Mint NFTs for events
+		
+		// Check-in counts
+		user.GET("/events/:id/check-ins/count", userHandler.GetEventCheckInCount)
+		user.GET("/events/check-ins/counts", userHandler.GetAllEventCheckInCounts)
+		
+		// NFTs by event
+		user.GET("/events/:id/nfts", userHandler.GetEventNFTs)
+		
+		// NFT Design routes
+		user.POST("/designs", userHandler.CreateDesign)                          // Create new design
+		user.GET("/events/:id/designs", userHandler.GetEventDesigns)            // Get designs for event
+		user.GET("/designs/:designId", userHandler.GetDesign)                   // Get specific design
+		user.DELETE("/designs/:designId", userHandler.DeleteDesign)             // Delete design
 	}
 
 	return r

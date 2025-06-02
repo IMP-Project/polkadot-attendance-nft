@@ -264,3 +264,55 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 	fmt.Printf("Found %d events\n", len(events))
 	return events, nil
 }
+
+// GetEventGuests fetches all guests (attendees) for an event, including check-in status
+func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]interface{}, error) {
+	// According to Luma API docs, we can get guests with their check-in status
+	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/guests?event_api_id=%s&pagination_limit=500", eventID)
+	
+	fmt.Printf("Fetching event guests from URL: %s\n", url)
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("x-luma-api-key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	
+	fmt.Printf("Get guests - Status: %d\n", resp.StatusCode)
+	
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var response struct {
+		Entries []struct {
+			Guest map[string]interface{} `json:"guest"`
+		} `json:"entries"`
+		HasMore bool `json:"has_more"`
+	}
+
+	if err := json.Unmarshal(body, &response); err != nil {
+		fmt.Printf("Error unmarshaling response: %v\n", err)
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	var guests []map[string]interface{}
+	for _, entry := range response.Entries {
+		guests = append(guests, entry.Guest)
+	}
+
+	fmt.Printf("Found %d guests for event %s\n", len(guests), eventID)
+	return guests, nil
+}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog, DialogContent, Box, Typography, Button, TextField,
   IconButton, Switch, FormControlLabel, Chip, Grid, Paper
@@ -10,12 +10,56 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
   const [description, setDescription] = useState('');
   const [traits, setTraits] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFileData, setUploadedFileData] = useState(null); // Store base64 data
   const [dragActive, setDragActive] = useState(false);
   const [metadata, setMetadata] = useState({
     attendeeName: true,
     eventName: true,
     eventDate: true
   });
+
+  // Load saved data from localStorage on component mount
+  useEffect(() => {
+    if (open) {
+      const savedData = localStorage.getItem('nftDesignDraft');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          setNftTitle(parsed.nftTitle || '');
+          setDescription(parsed.description || '');
+          setTraits(parsed.traits || '');
+          setMetadata(parsed.metadata || {
+            attendeeName: true,
+            eventName: true,
+            eventDate: true
+          });
+          if (parsed.uploadedFileData) {
+            setUploadedFileData(parsed.uploadedFileData);
+            // Recreate file object for display purposes
+            setUploadedFile({ name: parsed.uploadedFileName || 'Saved file' });
+          }
+        } catch (error) {
+          console.error('Error loading saved draft:', error);
+        }
+      }
+    }
+  }, [open]);
+
+  // Save draft data to localStorage whenever form data changes
+  useEffect(() => {
+    if (open && (nftTitle || description || traits || uploadedFileData)) {
+      const draftData = {
+        nftTitle,
+        description,
+        traits,
+        metadata,
+        uploadedFileData,
+        uploadedFileName: uploadedFile?.name,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem('nftDesignDraft', JSON.stringify(draftData));
+    }
+  }, [nftTitle, description, traits, metadata, uploadedFileData, uploadedFile, open]);
 
   // Handle drag events
   const handleDrag = useCallback((e) => {
@@ -28,6 +72,16 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
     }
   }, []);
 
+  // Convert file to base64 and store it
+  const processFile = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedFileData(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    setUploadedFile(file);
+  };
+
   // Handle drop
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -36,7 +90,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      setUploadedFile(file);
+      processFile(file);
     }
   }, []);
 
@@ -44,7 +98,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setUploadedFile(file);
+      processFile(file);
     }
   };
 
@@ -65,19 +119,52 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
     }));
   };
 
-  // Handle preview
-  const handlePreview = () => {
-    // Preview functionality
-    console.log('Preview clicked');
+  // Handle upload instead of preview
+  const handleUpload = () => {
+    // Validate required fields
+    if (!uploadedFileData || !nftTitle) {
+      console.error('Please upload a file and provide a title');
+      return;
+    }
+
+    // Create design data object
+    const designData = {
+      file: uploadedFile,
+      fileData: uploadedFileData, // Include base64 data
+      title: nftTitle,
+      description: description || 'This NFT serves as verifiable proof of attendance at {event_name}. Minted on the Polkadot blockchain, it commemorates your participation and may unlock special perks, access, or exclusive content within the ecosystem.',
+      traits: traits || 'VIP',
+      metadata: metadata
+    };
+
+    // Call the onUpload callback with the design data
+    if (onUpload) {
+      onUpload(designData);
+    }
+
+    // Clear the saved draft after successful upload
+    localStorage.removeItem('nftDesignDraft');
+
+    // Close the modal
+    handleClose();
   };
 
   // Handle close
   const handleClose = () => {
+    // Ask user if they want to save draft before closing
+    if ((nftTitle || description || traits || uploadedFileData) && open) {
+      const shouldClearDraft = window.confirm('Do you want to discard your changes? Your draft will be saved for later.');
+      if (shouldClearDraft) {
+        localStorage.removeItem('nftDesignDraft');
+      }
+    }
+    
     // Reset form
     setNftTitle('');
     setDescription('');
     setTraits('');
     setUploadedFile(null);
+    setUploadedFileData(null);
     setMetadata({
       attendeeName: true,
       eventName: true,
@@ -96,7 +183,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
         sx: {
           borderRadius: '16px',
           maxHeight: '90vh',
-          backgroundColor: '#FFFFFF'
+          backgroundColor: (theme) => theme.palette.background.paper
         }
       }}
     >
@@ -112,12 +199,12 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 600,
                   fontSize: '24px',
                   lineHeight: '32px',
-                  color: '#18171C'
+                  color: (theme) => theme.palette.text.primary
                 }}
               >
                 Add a new design
               </Typography>
-              <IconButton onClick={handleClose} sx={{ color: '#6B7280' }}>
+              <IconButton onClick={handleClose} sx={{ color: (theme) => theme.palette.text.secondary }}>
                 <Close />
               </IconButton>
             </Box>
@@ -128,7 +215,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                 fontWeight: 400,
                 fontSize: '14px',
                 lineHeight: '20px',
-                color: '#6B7280',
+                color: (theme) => theme.palette.text.secondary,
                 mb: 4
               }}
             >
@@ -142,29 +229,29 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
               onDragOver={handleDrag}
               onDrop={handleDrop}
               sx={{
-                border: '2px dashed #E5E7EB',
+                border: (theme) => `2px dashed ${theme.palette.divider}`,
                 borderRadius: '12px',
                 padding: '32px',
                 textAlign: 'center',
-                backgroundColor: dragActive ? '#F9FAFB' : '#FAFBFC',
+                backgroundColor: (theme) => dragActive ? theme.palette.action.hover : theme.palette.background.default,
                 cursor: 'pointer',
                 mb: 3,
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   borderColor: '#FF2670',
-                  backgroundColor: '#F9FAFB'
+                  backgroundColor: (theme) => theme.palette.action.hover
                 }
               }}
               onClick={handleBrowseFile}
             >
-              <CloudUpload sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
+              <CloudUpload sx={{ fontSize: 48, color: (theme) => theme.palette.text.secondary, mb: 2 }} />
               <Typography
                 sx={{
                   fontFamily: 'Manrope, sans-serif',
                   fontWeight: 500,
                   fontSize: '16px',
                   lineHeight: '24px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 1
                 }}
               >
@@ -176,7 +263,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 400,
                   fontSize: '12px',
                   lineHeight: '16px',
-                  color: '#9CA3AF',
+                  color: (theme) => theme.palette.text.secondary,
                   mb: 2
                 }}
               >
@@ -185,8 +272,8 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
               <Button
                 variant="outlined"
                 sx={{
-                  borderColor: '#E5E7EB',
-                  color: '#6B7280',
+                  borderColor: (theme) => theme.palette.divider,
+                  color: (theme) => theme.palette.text.secondary,
                   textTransform: 'none',
                   fontFamily: 'Manrope, sans-serif',
                   fontWeight: 500,
@@ -223,7 +310,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 1
                 }}
               >
@@ -238,12 +325,13 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
                     '& fieldset': {
-                      borderColor: '#E5E7EB',
+                      borderColor: (theme) => theme.palette.divider,
                     },
                     '& input': {
                       fontFamily: 'Manrope, sans-serif',
                       fontSize: '14px',
-                      padding: '12px 14px'
+                      padding: '12px 14px',
+                      color: (theme) => theme.palette.text.primary
                     }
                   }
                 }}
@@ -258,7 +346,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 1
                 }}
               >
@@ -275,12 +363,13 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
                     '& fieldset': {
-                      borderColor: '#E5E7EB',
+                      borderColor: (theme) => theme.palette.divider,
                     },
                     '& textarea': {
                       fontFamily: 'Manrope, sans-serif',
                       fontSize: '14px',
-                      padding: '12px 14px'
+                      padding: '12px 14px',
+                      color: (theme) => theme.palette.text.primary
                     }
                   }
                 }}
@@ -295,7 +384,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 1
                 }}
               >
@@ -310,12 +399,13 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
                     '& fieldset': {
-                      borderColor: '#E5E7EB',
+                      borderColor: (theme) => theme.palette.divider,
                     },
                     '& input': {
                       fontFamily: 'Manrope, sans-serif',
                       fontSize: '14px',
-                      padding: '12px 14px'
+                      padding: '12px 14px',
+                      color: (theme) => theme.palette.text.primary
                     }
                   }
                 }}
@@ -330,7 +420,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 2
                 }}
               >
@@ -358,7 +448,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                       sx={{
                         fontFamily: 'Manrope, sans-serif',
                         fontSize: '14px',
-                        color: '#6B7280'
+                        color: (theme) => theme.palette.text.primary
                       }}
                     >
                       Attendee name
@@ -386,7 +476,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                       sx={{
                         fontFamily: 'Manrope, sans-serif',
                         fontSize: '14px',
-                        color: '#6B7280'
+                        color: (theme) => theme.palette.text.primary
                       }}
                     >
                       Event name
@@ -414,7 +504,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                       sx={{
                         fontFamily: 'Manrope, sans-serif',
                         fontSize: '14px',
-                        color: '#6B7280'
+                        color: (theme) => theme.palette.text.primary
                       }}
                     >
                       Event Date
@@ -424,10 +514,11 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
               </Box>
             </Box>
 
-            {/* Preview Button */}
+            {/* Upload Button */}
             <Button
-              onClick={handlePreview}
+              onClick={handleUpload}
               variant="contained"
+              disabled={!uploadedFile || !nftTitle}
               sx={{
                 backgroundColor: '#FF2670',
                 color: 'white',
@@ -440,21 +531,25 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                 '&:hover': {
                   backgroundColor: '#E91E63',
                 },
+                '&:disabled': {
+                  backgroundColor: (theme) => theme.palette.action.disabledBackground,
+                  color: (theme) => theme.palette.action.disabled,
+                }
               }}
             >
-              Preview
+              Upload
             </Button>
           </Grid>
 
           {/* Right Side - Preview */}
-          <Grid item sx={{ width: '50%', padding: '32px', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}>
+          <Grid item sx={{ width: '50%', padding: '32px', backgroundColor: (theme) => theme.palette.background.default, boxSizing: 'border-box' }}>
             <Typography
               sx={{
                 fontFamily: 'Manrope, sans-serif',
                 fontWeight: 600,
                 fontSize: '24px',
                 lineHeight: '32px',
-                color: '#18171C',
+                color: (theme) => theme.palette.text.primary,
                 mb: 1
               }}
             >
@@ -467,7 +562,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                 fontWeight: 400,
                 fontSize: '14px',
                 lineHeight: '20px',
-                color: '#6B7280',
+                color: (theme) => theme.palette.text.secondary,
                 mb: 4
               }}
             >
@@ -479,8 +574,11 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
               sx={{
                 borderRadius: '16px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                mb: 3
+                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                  ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+                  : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                mb: 3,
+                backgroundColor: (theme) => theme.palette.background.paper
               }}
             >
               <Typography
@@ -489,9 +587,9 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 600,
                   fontSize: '16px',
                   lineHeight: '24px',
-                  color: '#18171C',
+                  color: (theme) => theme.palette.text.primary,
                   p: 2,
-                  borderBottom: '1px solid #E5E7EB'
+                  borderBottom: (theme) => `1px solid ${theme.palette.divider}`
                 }}
               >
                 Attendance Badge - Polkadot Connect
@@ -501,15 +599,15 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
               <Box
                 sx={{
                   height: '200px',
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: (theme) => theme.palette.action.hover,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}
               >
-                {uploadedFile ? (
+                {uploadedFileData ? (
                   <img
-                    src={URL.createObjectURL(uploadedFile)}
+                    src={uploadedFileData}
                     alt="Preview"
                     style={{
                       width: '100%',
@@ -518,7 +616,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                     }}
                   />
                 ) : (
-                  <Typography sx={{ color: '#9CA3AF', fontSize: '14px' }}>
+                  <Typography sx={{ color: (theme) => theme.palette.text.secondary, fontSize: '14px' }}>
                     Preview will appear here
                   </Typography>
                 )}
@@ -533,7 +631,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 1
                 }}
               >
@@ -545,7 +643,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 400,
                   fontSize: '12px',
                   lineHeight: '16px',
-                  color: '#6B7280'
+                  color: (theme) => theme.palette.text.secondary
                 }}
               >
                 {description || 'This NFT serves as verifiable proof of attendance at {event_name}. Minted on the Polkadot blockchain, it commemorates your participation and may unlock special perks, access, or exclusive content within the ecosystem.'}
@@ -560,18 +658,18 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 1
                 }}
               >
                 Traits
               </Typography>
               <Chip
-                label="VIP"
+                label={traits || "VIP"}
                 size="small"
                 sx={{
-                  backgroundColor: '#F3F4F6',
-                  color: '#6B7280',
+                  backgroundColor: (theme) => theme.palette.action.selected,
+                  color: (theme) => theme.palette.text.primary,
                   fontFamily: 'Manrope, sans-serif',
                   fontSize: '12px'
                 }}
@@ -586,43 +684,49 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
                   fontWeight: 500,
                   fontSize: '14px',
                   lineHeight: '20px',
-                  color: '#374151',
+                  color: (theme) => theme.palette.text.primary,
                   mb: 2
                 }}
               >
                 Metadata
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Chip
-                  label="Attendee Name"
-                  size="small"
-                  sx={{
-                    backgroundColor: '#EFF6FF',
-                    color: '#1D4ED8',
-                    fontFamily: 'Manrope, sans-serif',
-                    fontSize: '11px'
-                  }}
-                />
-                <Chip
-                  label="Event date"
-                  size="small"
-                  sx={{
-                    backgroundColor: '#F0F9FF',
-                    color: '#0369A1',
-                    fontFamily: 'Manrope, sans-serif',
-                    fontSize: '11px'
-                  }}
-                />
-                <Chip
-                  label="Tag"
-                  size="small"
-                  sx={{
-                    backgroundColor: '#F9FAFB',
-                    color: '#6B7280',
-                    fontFamily: 'Manrope, sans-serif',
-                    fontSize: '11px'
-                  }}
-                />
+                {metadata.attendeeName && (
+                  <Chip
+                    label="Attendee Name"
+                    size="small"
+                    sx={{
+                      backgroundColor: '#EFF6FF',
+                      color: '#1D4ED8',
+                      fontFamily: 'Manrope, sans-serif',
+                      fontSize: '11px'
+                    }}
+                  />
+                )}
+                {metadata.eventDate && (
+                  <Chip
+                    label="Event date"
+                    size="small"
+                    sx={{
+                      backgroundColor: '#F0F9FF',
+                      color: '#0369A1',
+                      fontFamily: 'Manrope, sans-serif',
+                      fontSize: '11px'
+                    }}
+                  />
+                )}
+                {metadata.eventName && (
+                  <Chip
+                    label="Event name"
+                    size="small"
+                    sx={{
+                      backgroundColor: '#F9FAFB',
+                      color: '#6B7280',
+                      fontFamily: 'Manrope, sans-serif',
+                      fontSize: '11px'
+                    }}
+                  />
+                )}
               </Box>
             </Box>
           </Grid>

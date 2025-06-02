@@ -51,15 +51,22 @@ func (e *EventSyncCron) Stop() {
 
 // runSync executes the sync process
 func (e *EventSyncCron) runSync() {
-	startTime := time.Now()
+	start := time.Now()
 	log.Println("Starting Luma event sync...")
-
-	err := e.syncService.SyncAllUsers() // ✅ Corrected: Only one return value
+	
+	// First sync events
+	err := e.syncService.SyncAllUsers()
 	if err != nil {
-		log.Printf("Error during Luma sync: %v", err)
-		return
+		log.Printf("Error during Luma event sync: %v", err)
 	}
-
-	duration := time.Since(startTime)
+	
+	// Then sync check-ins for all events
+	log.Println("Starting check-in sync...")
+	err = e.syncService.SyncAllCheckIns()
+	if err != nil {
+		log.Printf("Error during check-in sync: %v", err)
+	}
+	
+	duration := time.Since(start)
 	log.Printf("Luma sync completed in %v", duration)
 }
