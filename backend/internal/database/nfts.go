@@ -12,7 +12,7 @@ import (
 // NFT represents the database model for NFTs (for GORM migration)
 type NFT struct {
 	ID              uint64    `gorm:"primaryKey;autoIncrement"`
-	EventID         uint64    `gorm:"not null;index"`
+	EventID         string    `gorm:"not null;index"`
 	Owner           string    `gorm:"not null;size:255"`
 	Metadata        string    `gorm:"type:jsonb"`
 	TransactionHash *string   `gorm:"size:255"`
