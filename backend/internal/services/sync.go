@@ -231,19 +231,17 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 		}
 		
 		// Check if guest has checked in
-		checkedIn, ok := guest["checked_in_at"].(bool)
-		if !ok {
-			log.Printf("Guest %d: no check-in status field found", i+1)
-			continue
-		}
-		
-		if !checkedIn {
-			log.Printf("Guest %d: not checked in", i+1)
-			continue
-		}
-		
-		checkedInCount++
-		log.Printf("Found checked-in guest %d: %+v", i+1, guest)
+		// Check if guest has checked in (checked_in_at contains timestamp string)
+checkedInAt, ok := guest["checked_in_at"].(string)
+if !ok || checkedInAt == "" {
+	log.Printf("Guest %d: no check-in status found", i+1)
+	continue
+}
+
+log.Printf("Guest %d: checked in at %s", i+1, checkedInAt)
+
+checkedInCount++
+log.Printf("Found checked-in guest %d: %+v", i+1, guest)
 
 		// Get wallet address from guest data using enhanced extraction
 		walletAddress := s.extractWalletAddress(guest)
