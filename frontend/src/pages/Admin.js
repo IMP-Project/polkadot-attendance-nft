@@ -171,14 +171,16 @@ function Admin({ mode, toggleDarkMode }) {
   const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profile_picture') || '');
 
   const fetchData = useCallback(async () => {
-    try {
-      const [eventsData, nftsData] = await Promise.all([api.getEvents(), api.getNFTs()]);
-      setEvents(eventsData);
-      setNFTs(nftsData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  }, []);
+  try {
+    // Only fetch events - remove NFTs call that requires admin access
+    const eventsData = await api.getEvents();
+    setEvents(eventsData);
+    // Don't fetch NFTs here since it requires admin permissions
+    setNFTs([]); // Set empty array instead
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
+}, []);
 
   useEffect(() => {
     fetchData();
