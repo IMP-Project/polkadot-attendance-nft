@@ -2,7 +2,6 @@ package models
 
 import (
 	"time"
-	"gorm.io/gorm"
 )
 
 type Event struct {
@@ -20,9 +19,8 @@ type Event struct {
 	IsDeleted     bool      `gorm:"default:false;index" json:"is_deleted"`
 	
 	// Standard GORM timestamps
-	CreatedAt     time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt     time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedAt     time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 	
 	// Relationship with NFTs
 	NFTs          []NFT     `gorm:"foreignKey:EventID;references:ID" json:"nfts,omitempty"`
