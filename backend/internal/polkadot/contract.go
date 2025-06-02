@@ -277,17 +277,20 @@ func (c *MockContractCaller) Call(method string, args ...interface{}) ([]byte, e
 
 		var id uint64
 		switch v := args[0].(type) {
-		case uint64:
-			id = v
-		case float64:
-			id = uint64(v)
-		case int:
-			id = uint64(v)
-		case json.Number:
-			val, err := v.Int64()
-			if err != nil {
-				return nil, fmt.Errorf("invalid event ID: %v", err)
-			}
+case uint64:
+    eventID = v
+case float64:
+    eventID = uint64(v)
+case int:
+    eventID = uint64(v)
+case string:
+    // For Luma event IDs, convert string to a hash or use a mapping
+    // Simple approach: use a hash of the string
+    h := hash(v)  // You'll need to implement this
+    eventID = h
+default:
+    return nil, fmt.Errorf("invalid event ID type: %T", args[0])
+}
 			id = uint64(val)
 		case map[string]interface{}:
 			// This handles the case where we're passing a marshaled callData object

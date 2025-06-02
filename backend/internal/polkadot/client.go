@@ -219,8 +219,8 @@ func (c *Client) ListEvents() ([]models.Event, error) {
 
 // MintNFT mints a new NFT for an attendee
 func (c *Client) MintNFT(eventID string, recipient string, metadata map[string]interface{}) (bool, error) {
-	log.Printf("Minting NFT for event %d to recipient %s", eventID, recipient)
-	
+	log.Printf("Minting NFT for event %s to recipient %s", eventID, recipient)
+		
 	// Validate recipient address
 	if recipient == "" {
 		return false, fmt.Errorf("recipient address is required")
