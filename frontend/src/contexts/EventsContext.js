@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const EventsContext = createContext();
 
@@ -18,51 +18,14 @@ export const EventsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [allEventsImported, setAllEventsImported] = useState(false);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('auth_token'));
 
-  // Load events from database when component mounts OR when auth token changes
-  useEffect(() => {
-    loadEventsFromDatabase();
-  }, []);
-
-  // Check sync status when events change
-  useEffect(() => {
-    if (events.length > 0) {
-      const authToken = localStorage.getItem('auth_token');
-      if (authToken) {
-        checkSyncStatus(authToken, events.length);
-      }
-    }
-  }, [events]);
-
-  // NEW: Listen for auth token changes (login/logout)
-  useEffect(() => {
-    const checkAuthAndLoadEvents = () => {
-      const authToken = localStorage.getItem('auth_token');
-      if (authToken) {
-        console.log('Auth token detected, loading events...');
-        loadEventsFromDatabase();
-      } else {
-        console.log('No auth token, clearing events');
-        setEvents([]);
-        setAllEventsImported(false);
-        setLoading(false);
-      }
-    };
-
-    // Check immediately
-    checkAuthAndLoadEvents();
-
-    // Set up interval to check for auth changes every 2 seconds
-    const authCheckInterval = setInterval(checkAuthAndLoadEvents, 2000);
-
-    return () => clearInterval(authCheckInterval);
-  }, []);
-
-  const loadEventsFromDatabase = async () => {
-    const authToken = localStorage.getItem('auth_token');
+  // Memoized function to load events - prevents recreation on every render
+  const loadEventsFromDatabase = useCallback(async () => {
+    const currentAuthToken = localStorage.getItem('auth_token');
     
     // Skip loading if user is not authenticated
-    if (!authToken) {
+    if (!currentAuthToken) {
       setEvents([]);
       setAllEventsImported(false);
       setLoading(false);
@@ -76,7 +39,7 @@ export const EventsProvider = ({ children }) => {
       const response = await fetch(`${API_BASE_URL}/api/user/events`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${authToken}`,
+          'Authorization': `Bearer ${currentAuthToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -99,8 +62,7 @@ export const EventsProvider = ({ children }) => {
         console.log(`✅ Loaded ${formattedEvents.length} events after login`);
 
         // Check sync status after loading events
-        // Pass the event count directly since state update is async
-        checkSyncStatus(authToken, formattedEvents.length);
+        checkSyncStatus(currentAuthToken, formattedEvents.length);
       } else {
         console.warn('Failed to load events from database:', response.status);
         // Don't set error for 401/403 as user might not be logged in
@@ -114,15 +76,15 @@ export const EventsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // No dependencies - function is stable
 
-  // NEW: Check if all Luma events are imported
-  const checkSyncStatus = async (authToken, currentEventCount) => {
+  // Memoized sync status check
+  const checkSyncStatus = useCallback(async (currentAuthToken, currentEventCount) => {
     try {
       // Get saved API key
       const apiKeyResponse = await fetch(`${API_BASE_URL}/api/user/luma-api-key`, {
         headers: {
-          'Authorization': `Bearer ${authToken}`,
+          'Authorization': `Bearer ${currentAuthToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -164,34 +126,70 @@ export const EventsProvider = ({ children }) => {
       // If we can't check, assume not all imported
       setAllEventsImported(false);
     }
-  };
+  }, []);
 
-  // NEW: Function to manually trigger event loading (call this after successful login)
-  const refreshEventsAfterLogin = () => {
+  // Load events only once when component mounts
+  useEffect(() => {
+    loadEventsFromDatabase();
+  }, [loadEventsFromDatabase]);
+
+  // Monitor auth token changes - FIXED: Only update when token actually changes
+  useEffect(() => {
+    const checkAuthToken = () => {
+      const currentToken = localStorage.getItem('auth_token');
+      
+      // Only update if token actually changed
+      if (currentToken !== authToken) {
+        console.log('Auth token changed:', currentToken ? 'Login detected' : 'Logout detected');
+        setAuthToken(currentToken);
+        
+        if (currentToken) {
+          console.log('Auth token detected, loading events...');
+          loadEventsFromDatabase();
+        } else {
+          console.log('No auth token, clearing events');
+          setEvents([]);
+          setAllEventsImported(false);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Check immediately
+    checkAuthToken();
+
+    // Set up interval to check for auth changes - REDUCED frequency
+    const authCheckInterval = setInterval(checkAuthToken, 5000); // Check every 5 seconds instead of 2
+
+    return () => clearInterval(authCheckInterval);
+  }, [authToken, loadEventsFromDatabase]); // FIXED: Include authToken as dependency
+
+  // Function to manually trigger event loading (call this after successful login)
+  const refreshEventsAfterLogin = useCallback(() => {
     console.log('🔄 Refreshing events after login...');
     loadEventsFromDatabase();
-  };
+  }, [loadEventsFromDatabase]);
 
-  // NEW: Function to mark all events as imported (call after successful bulk import)
-  const markAllEventsImported = async () => {
+  // Function to mark all events as imported (call after successful bulk import)
+  const markAllEventsImported = useCallback(async () => {
     console.log('✅ Marking all events as imported');
     setAllEventsImported(true);
     
     // Also trigger a sync check to ensure accuracy
-    const authToken = localStorage.getItem('auth_token');
-    if (authToken) {
+    const currentAuthToken = localStorage.getItem('auth_token');
+    if (currentAuthToken) {
       setTimeout(() => {
-        checkSyncStatus(authToken, events.length);
+        checkSyncStatus(currentAuthToken, events.length);
       }, 1000);
     }
-  };
+  }, [events.length, checkSyncStatus]);
 
-  // NEW: Function to check if import is needed
-  const needsImport = () => {
+  // Function to check if import is needed
+  const needsImport = useCallback(() => {
     return !allEventsImported;
-  };
+  }, [allEventsImported]);
 
-  const addEvent = (event) => {
+  const addEvent = useCallback((event) => {
     const formattedEvent = {
       id: event.api_id || event.id || 'unknown',
       name: event.name || 'Untitled Event',
@@ -202,21 +200,21 @@ export const EventsProvider = ({ children }) => {
     };
     
     setEvents(prevEvents => [...prevEvents, formattedEvent]);
-  };
+  }, []);
 
-  const removeEvent = async (eventId) => {
-    const authToken = localStorage.getItem('auth_token');
+  const removeEvent = useCallback(async (eventId) => {
+    const currentAuthToken = localStorage.getItem('auth_token');
     
     // Remove from UI immediately for better UX
     setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
     
     // Try to delete from database
-    if (authToken) {
+    if (currentAuthToken) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/user/events/${eventId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${currentAuthToken}`,
           },
         });
         
@@ -227,7 +225,7 @@ export const EventsProvider = ({ children }) => {
         } else {
           // After deletion, recheck sync status with new count
           const newEventCount = events.length - 1;
-          checkSyncStatus(authToken, newEventCount);
+          checkSyncStatus(currentAuthToken, newEventCount);
         }
       } catch (err) {
         console.warn('Error deleting event from database:', err);
@@ -235,10 +233,10 @@ export const EventsProvider = ({ children }) => {
         loadEventsFromDatabase();
       }
     }
-  };
+  }, [events.length, loadEventsFromDatabase, checkSyncStatus]);
 
-  const updateEvent = async (eventId, updatedData) => {
-    const authToken = localStorage.getItem('auth_token');
+  const updateEvent = useCallback(async (eventId, updatedData) => {
+    const currentAuthToken = localStorage.getItem('auth_token');
     
     // Update UI immediately for better UX
     setEvents(prevEvents => 
@@ -248,12 +246,12 @@ export const EventsProvider = ({ children }) => {
     );
     
     // Try to update in database
-    if (authToken) {
+    if (currentAuthToken) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/user/events/${eventId}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${currentAuthToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(updatedData),
@@ -270,16 +268,16 @@ export const EventsProvider = ({ children }) => {
         loadEventsFromDatabase();
       }
     }
-  };
+  }, [loadEventsFromDatabase]);
 
-  const clearEvents = () => {
+  const clearEvents = useCallback(() => {
     setEvents([]);
     setAllEventsImported(false);
-  };
+  }, []);
 
-  const refreshEvents = () => {
+  const refreshEvents = useCallback(() => {
     loadEventsFromDatabase();
-  };
+  }, [loadEventsFromDatabase]);
 
   // Helper functions
   const formatDate = (dateString) => {
@@ -312,16 +310,16 @@ export const EventsProvider = ({ children }) => {
     events,
     loading,
     error,
-    allEventsImported, // NEW: Expose sync status
+    allEventsImported,
     addEvent,
     removeEvent,
     updateEvent,
     clearEvents,
     refreshEvents,
     refreshEventsAfterLogin,
-    markAllEventsImported, // NEW: Function to mark as imported
-    needsImport, // NEW: Function to check if import needed
-    loadEventsFromDatabase, // Expose for manual refresh
+    markAllEventsImported,
+    needsImport,
+    loadEventsFromDatabase,
   };
 
   return (
