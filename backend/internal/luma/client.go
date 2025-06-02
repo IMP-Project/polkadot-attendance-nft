@@ -4,30 +4,143 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"io/ioutil" 
+	"io/ioutil"
+	"time"
+	"log"
+	"math"
+	"sync"
 	
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
-// Client handles interactions with the Luma API
+// Client handles interactions with the Luma API with rate limiting
 type Client struct {
-	apiKey     string
-	httpClient *http.Client
-	baseURL    string
+	apiKey         string
+	httpClient     *http.Client
+	baseURL        string
+	rateLimiter    *RateLimiter
 }
 
-// NewClient creates a new Luma API client
-func NewClient(apiKey string) *Client {
-	return &Client{
-		apiKey:     apiKey,
-		httpClient: &http.Client{},
-		baseURL:    "https://api.lu.ma/v1",
+// RateLimiter handles API rate limiting with exponential backoff
+type RateLimiter struct {
+	requestInterval time.Duration
+	lastRequest     time.Time
+	retryCount      int
+	maxRetries      int
+	mutex           sync.Mutex
+}
+
+// NewRateLimiter creates a new rate limiter
+func NewRateLimiter() *RateLimiter {
+	return &RateLimiter{
+		requestInterval: 2 * time.Second, // 2 seconds between requests
+		maxRetries:      3,
+		retryCount:      0,
 	}
 }
 
-// GetAttendee gets an attendee by ID
+// Wait implements rate limiting with exponential backoff
+func (rl *RateLimiter) Wait() {
+	rl.mutex.Lock()
+	defer rl.mutex.Unlock()
+	
+	now := time.Now()
+	timeSinceLastRequest := now.Sub(rl.lastRequest)
+	
+	if timeSinceLastRequest < rl.requestInterval {
+		waitTime := rl.requestInterval - timeSinceLastRequest
+		log.Printf("Rate limiting: waiting %v before next API call", waitTime)
+		time.Sleep(waitTime)
+	}
+	
+	rl.lastRequest = time.Now()
+}
+
+// HandleRetry handles retry logic with exponential backoff
+func (rl *RateLimiter) HandleRetry(statusCode int) (bool, time.Duration) {
+	if statusCode == 429 { // Too Many Requests
+		rl.retryCount++
+		if rl.retryCount <= rl.maxRetries {
+			// Exponential backoff: 2^retryCount seconds
+			backoffTime := time.Duration(math.Pow(2, float64(rl.retryCount))) * time.Second
+			log.Printf("Rate limit hit (429), retry %d/%d in %v", rl.retryCount, rl.maxRetries, backoffTime)
+			return true, backoffTime
+		}
+	}
+	
+	// Reset retry count on success or other errors
+	if statusCode == 200 {
+		rl.retryCount = 0
+	}
+	
+	return false, 0
+}
+
+// NewClient creates a new Luma API client with rate limiting
+func NewClient(apiKey string) *Client {
+	return &Client{
+		apiKey:      apiKey,
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		baseURL:     "https://api.lu.ma/v1",
+		rateLimiter: NewRateLimiter(),
+	}
+}
+
+// makeAPIRequest makes a rate-limited request to the Luma API with retry logic
+func (c *Client) makeAPIRequest(method, url string) ([]byte, error) {
+	var lastErr error
+	
+	for attempt := 0; attempt <= c.rateLimiter.maxRetries; attempt++ {
+		// Rate limiting
+		c.rateLimiter.Wait()
+		
+		req, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error creating request: %w", err)
+		}
+		
+		req.Header.Set("x-luma-api-key", c.apiKey)
+		req.Header.Set("Content-Type", "application/json")
+		
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("HTTP request failed: %w", err)
+			continue
+		}
+		
+		body, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		
+		if err != nil {
+			lastErr = fmt.Errorf("error reading response body: %w", err)
+			continue
+		}
+		
+		log.Printf("API Request: %s - Status: %d", url, resp.StatusCode)
+		
+		// Handle rate limiting and retries
+		if shouldRetry, backoffTime := c.rateLimiter.HandleRetry(resp.StatusCode); shouldRetry {
+			time.Sleep(backoffTime)
+			continue
+		}
+		
+		if resp.StatusCode == 200 {
+			return body, nil
+		}
+		
+		lastErr = fmt.Errorf("API returned status: %d, body: %s", resp.StatusCode, string(body))
+		
+		// Don't retry on client errors (4xx except 429)
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != 429 {
+			break
+		}
+	}
+	
+	return nil, lastErr
+}
+
+// GetAttendee gets an attendee by ID (keeping original mock for dev)
 func (c *Client) GetAttendee(attendeeID string) (*models.Attendee, error) {
-	// If in development mode without API key, use mock data
 	if c.apiKey == "" {
 		return &models.Attendee{
 			ID:            attendeeID,
@@ -37,33 +150,6 @@ func (c *Client) GetAttendee(attendeeID string) (*models.Attendee, error) {
 		}, nil
 	}
 
-	// In a real implementation, this would make an HTTP request to the Luma API
-	// Example:
-	// url := fmt.Sprintf("%s/attendees/%s", c.baseURL, attendeeID)
-	// req, err := http.NewRequest("GET", url, nil)
-	// if err != nil {
-	//     return nil, err
-	// }
-	//
-	// req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	// req.Header.Set("Content-Type", "application/json")
-	//
-	// resp, err := c.httpClient.Do(req)
-	// if err != nil {
-	//     return nil, err
-	// }
-	// defer resp.Body.Close()
-	//
-	// if resp.StatusCode != http.StatusOK {
-	//     return nil, fmt.Errorf("API returned status: %d", resp.StatusCode)
-	// }
-	//
-	// var attendee models.Attendee
-	// if err := json.NewDecoder(resp.Body).Decode(&attendee); err != nil {
-	//     return nil, err
-	// }
-
-	// For now, return mock data
 	return &models.Attendee{
 		ID:            attendeeID,
 		Name:          "John Doe",
@@ -72,9 +158,8 @@ func (c *Client) GetAttendee(attendeeID string) (*models.Attendee, error) {
 	}, nil
 }
 
-// GetEvent gets an event by ID
+// GetEvent gets an event by ID (keeping original mock for dev)
 func (c *Client) GetEvent(eventID string) (*models.Event, error) {
-	// If in development mode without API key, use mock data
 	if c.apiKey == "" {
 		return &models.Event{
 			ID:       "1",
@@ -84,10 +169,6 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 		}, nil
 	}
 
-	// In a real implementation, this would make an HTTP request to the Luma API
-	// Similar to GetAttendee but with the events endpoint
-
-	// For now, return mock data
 	return &models.Event{
 		ID:       "1",
 		Name:     "Polkadot Meetup",
@@ -96,154 +177,53 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 	}, nil
 }
 
-
-// LumaAPIResponse represents the response structure from Luma API
-type LumaAPIResponse struct {
-	Success bool            `json:"success"`
-	Data    json.RawMessage `json:"data"`
-	Error   string          `json:"error,omitempty"`
-}
-
-// fetchFromAPI makes a request to the Luma API
-func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMessage, error) {
-	url := c.baseURL + endpoint
-
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned status: %d", resp.StatusCode)
-	}
-
-	var apiResp LumaAPIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-		return nil, err
-	}
-
-	if !apiResp.Success {
-		return nil, fmt.Errorf("API error: %s", apiResp.Error)
-	}
-
-	return apiResp.Data, nil
-}
-
+// FetchSingleEvent fetches a single event with rate limiting
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
-	// Use api_id parameter instead of event_api_id (based on API error messages)
 	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get?api_id=%s", eventID)
-	fmt.Printf("Making request to URL: %s\n", url)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		fmt.Printf("Error creating request: %v\n", err)
-		return nil, err
-	}
-	req.Header.Set("x-luma-api-key", apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		fmt.Printf("Error making HTTP request: %v\n", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
 	
-	fmt.Printf("Response status: %d\n", resp.StatusCode)
-	fmt.Printf("Response body: %s\n", string(body))
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Luma API returned status: %d, body: %s", resp.StatusCode, string(body))
+	body, err := c.makeAPIRequest("GET", url)
+	if err != nil {
+		return nil, err
 	}
 
 	var response struct {
-	Event models.Event `json:"event"`
-}
-if err := json.Unmarshal(body, &response); err != nil {
-	fmt.Printf("Error unmarshaling JSON: %v\n", err)
-	return nil, fmt.Errorf("failed to decode response: %v", err)
-}
-
-return &response.Event, nil
-}
-
-func (c *Client) TestAPIKey(apiKey string) error {
-	url := "https://api.lu.ma/public/v1/user/get-self"
-	fmt.Printf("Testing API key with URL: %s\n", url)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("x-luma-api-key", apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+		Event models.Event `json:"event"`
 	}
 	
-	fmt.Printf("API key test - Status: %d\n", resp.StatusCode)
-	fmt.Printf("API key test - Body: %s\n", string(body))
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API key test failed with status: %d, body: %s", resp.StatusCode, string(body))
+	if err := json.Unmarshal(body, &response); err != nil {
+		log.Printf("Error unmarshaling JSON: %v", err)
+		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
+	return &response.Event, nil
+}
+
+// TestAPIKey tests the API key with rate limiting
+func (c *Client) TestAPIKey(apiKey string) error {
+	url := "https://api.lu.ma/public/v1/user/get-self"
+	log.Printf("Testing API key with URL: %s", url)
+
+	body, err := c.makeAPIRequest("GET", url)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("API key test successful - Body: %s", string(body))
 	return nil
 }
 
+// ListEvents fetches all events with rate limiting
 func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
-	// Add query parameters to get ALL events including recent ones
 	url := "https://api.lu.ma/public/v1/calendar/list-events?series_mode=events&pagination_limit=50&include_past_events=true"
 	
-	fmt.Printf("Fetching events from URL: %s\n", url)
+	log.Printf("Fetching events from URL: %s", url)
 	
-	req, err := http.NewRequest("GET", url, nil)
+	body, err := c.makeAPIRequest("GET", url)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("x-luma-api-key", apiKey)
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Read the full response body for debugging
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	
-	fmt.Printf("List events - Status: %d\n", resp.StatusCode)
-	fmt.Printf("List events - Response body: %s\n", string(body))
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned status: %d, body: %s", resp.StatusCode, string(body))
-	}
+	log.Printf("List events - Response body: %s", string(body))
 
 	var response struct {
 		Entries []struct {
@@ -252,7 +232,7 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 	}
 
 	if err := json.Unmarshal(body, &response); err != nil {
-		fmt.Printf("Error unmarshaling response: %v\n", err)
+		log.Printf("Error unmarshaling response: %v", err)
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
@@ -261,40 +241,23 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 		events = append(events, entry.Event)
 	}
 
-	fmt.Printf("Found %d events\n", len(events))
+	log.Printf("Found %d events", len(events))
 	return events, nil
 }
 
-// GetEventGuests fetches all guests (attendees) for an event, including check-in status
+// GetEventGuests fetches all guests with enhanced debugging and rate limiting
 func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]interface{}, error) {
-	// According to Luma API docs, we can get guests with their check-in status
 	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get-guests?event_api_id=%s&pagination_limit=500", eventID)
 	
-	fmt.Printf("Fetching event guests from URL: %s\n", url)
+	log.Printf("Fetching event guests from URL: %s", url)
 	
-	req, err := http.NewRequest("GET", url, nil)
+	body, err := c.makeAPIRequest("GET", url)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("x-luma-api-key", apiKey)
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	
-	fmt.Printf("Get guests - Status: %d\n", resp.StatusCode)
-	
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned status: %d, body: %s", resp.StatusCode, string(body))
-	}
+	// Enhanced logging for debugging guest data issues
+	log.Printf("Get guests - Raw response: %s", string(body))
 
 	var response struct {
 		Entries []struct {
@@ -304,7 +267,7 @@ func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]int
 	}
 
 	if err := json.Unmarshal(body, &response); err != nil {
-		fmt.Printf("Error unmarshaling response: %v\n", err)
+		log.Printf("Error unmarshaling response: %v", err)
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
@@ -313,6 +276,97 @@ func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]int
 		guests = append(guests, entry.Guest)
 	}
 
-	fmt.Printf("Found %d guests for event %s\n", len(guests), eventID)
+	log.Printf("Found %d guests for event %s", len(guests), eventID)
+	
+	// Log details about each guest for debugging
+	for i, guest := range guests {
+		log.Printf("Guest %d: %+v", i+1, guest)
+		
+		// Check if guest has checked in
+		if checkedIn, ok := guest["checked_in"].(bool); ok {
+			log.Printf("Guest %d checked in status: %v", i+1, checkedIn)
+		} else {
+			log.Printf("Guest %d: no check-in status found", i+1)
+		}
+		
+		// Look for wallet address in various fields
+		walletAddress := extractWalletAddress(guest)
+		if walletAddress != "" {
+			log.Printf("Guest %d wallet address: %s", i+1, walletAddress)
+		} else {
+			log.Printf("Guest %d: no wallet address found", i+1)
+		}
+	}
+	
 	return guests, nil
+}
+
+// extractWalletAddress tries to extract wallet address from guest data
+func extractWalletAddress(guest map[string]interface{}) string {
+	// Check custom_data field
+	if customData, ok := guest["custom_data"].(map[string]interface{}); ok {
+		if wallet, ok := customData["wallet_address"].(string); ok && wallet != "" {
+			return wallet
+		}
+		if wallet, ok := customData["polkadot_wallet"].(string); ok && wallet != "" {
+			return wallet
+		}
+	}
+	
+	// Check answers/form responses
+	if answers, ok := guest["answers"].([]interface{}); ok {
+		for _, answer := range answers {
+			if answerMap, ok := answer.(map[string]interface{}); ok {
+				if question, ok := answerMap["question"].(string); ok {
+					// Look for wallet-related questions
+					if question == "Wallet Address" || 
+					   question == "Polkadot Wallet" || 
+					   question == "Wallet" ||
+					   question == "DOT Wallet Address" {
+						if value, ok := answerMap["value"].(string); ok && value != "" {
+							return value
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	// Check direct fields
+	if wallet, ok := guest["wallet_address"].(string); ok && wallet != "" {
+		return wallet
+	}
+	if wallet, ok := guest["polkadot_wallet"].(string); ok && wallet != "" {
+		return wallet
+	}
+	
+	return ""
+}
+
+// LumaAPIResponse represents the response structure from Luma API (kept for compatibility)
+type LumaAPIResponse struct {
+	Success bool            `json:"success"`
+	Data    json.RawMessage `json:"data"`
+	Error   string          `json:"error,omitempty"`
+}
+
+// fetchFromAPI is kept for backward compatibility but now uses rate limiting
+func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMessage, error) {
+	url := c.baseURL + endpoint
+	
+	responseBody, err := c.makeAPIRequest(method, url)
+	if err != nil {
+		return nil, err
+	}
+
+	var apiResp LumaAPIResponse
+	if err := json.Unmarshal(responseBody, &apiResp); err != nil {
+		return nil, err
+	}
+
+	if !apiResp.Success {
+		return nil, fmt.Errorf("API error: %s", apiResp.Error)
+	}
+
+	return apiResp.Data, nil
 }

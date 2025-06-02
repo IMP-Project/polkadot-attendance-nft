@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"strings"
 
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma"
@@ -46,7 +47,7 @@ type SyncResult struct {
 	Duration  time.Duration
 }
 
-// SyncUserEvents syncs all events for a specific user
+// SyncUserEvents syncs all events for a specific user with rate limiting
 func (s *SyncService) SyncUserEvents(userID string, apiKey string) (*SyncResult, error) {
 	startTime := time.Now()
 	result := &SyncResult{
@@ -59,6 +60,9 @@ func (s *SyncService) SyncUserEvents(userID string, apiKey string) (*SyncResult,
 	if err := s.lumaClient.TestAPIKey(apiKey); err != nil {
 		return nil, fmt.Errorf("invalid API key: %w", err)
 	}
+
+	// Add delay to prevent immediate API hammering
+	time.Sleep(1 * time.Second)
 
 	// Fetch all events from Luma
 	lumaEvents, err := s.lumaClient.ListEvents(apiKey)
@@ -83,8 +87,13 @@ func (s *SyncService) SyncUserEvents(userID string, apiKey string) (*SyncResult,
 	// Track which events we've seen from Luma
 	seenEventIDs := make(map[string]bool)
 
-	// Process each Luma event
-	for _, lumaEvent := range lumaEvents {
+	// Process each Luma event with delays
+	for i, lumaEvent := range lumaEvents {
+		// Add delay between processing events to avoid rate limits
+		if i > 0 {
+			time.Sleep(500 * time.Millisecond)
+		}
+
 		eventID := getStringValue(lumaEvent, "api_id")
 		if eventID == "" {
 			result.Errors = append(result.Errors, "Event missing api_id")
@@ -137,7 +146,7 @@ func (s *SyncService) SyncUserEvents(userID string, apiKey string) (*SyncResult,
 	return result, nil
 }
 
-// SyncAllUsers syncs events for all users with API keys
+// SyncAllUsers syncs events for all users with staggered delays
 func (s *SyncService) SyncAllUsers() error {
 	log.Println("Starting sync for all users")
 
@@ -149,17 +158,26 @@ func (s *SyncService) SyncAllUsers() error {
 
 	log.Printf("Found %d users with Luma API keys", len(users))
 
-	// Sync each user's events
-	for _, user := range users {
+	// Sync each user's events with delays between users
+	for i, user := range users {
+		// Add delay between users to prevent API rate limiting
+		if i > 0 {
+			delay := 5 * time.Second
+			log.Printf("Waiting %v before syncing next user to avoid rate limits", delay)
+			time.Sleep(delay)
+		}
+
+		log.Printf("Syncing user %d of %d", i+1, len(users))
+		
 		result, err := s.SyncUserEvents(fmt.Sprintf("%d", user.ID), user.LumaAPIKey)
 		if err != nil {
-			log.Printf("Error syncing user %s: %v", user.ID, err)
+			log.Printf("Error syncing user %d: %v", user.ID, err)
 			continue
 		}
 
 		// Log results
 		if len(result.Errors) > 0 {
-			log.Printf("Sync completed with errors for user %s: %v", user.ID, result.Errors)
+			log.Printf("Sync completed with errors for user %d: %v", user.ID, result.Errors)
 		}
 	}
 
@@ -167,7 +185,7 @@ func (s *SyncService) SyncAllUsers() error {
 	return nil
 }
 
-// SyncEventCheckIns syncs check-ins for a specific event
+// SyncEventCheckIns syncs check-ins for a specific event with enhanced debugging
 func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 	log.Printf("Starting check-in sync for event %s", eventID)
 
@@ -178,6 +196,16 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 	}
 
 	log.Printf("Found %d guests for event %s", len(guests), eventID)
+
+	// If no guests found, let's debug why
+	if len(guests) == 0 {
+		log.Printf("DEBUG: No guests found for event %s. Possible reasons:", eventID)
+		log.Printf("1. Event has no registered attendees")
+		log.Printf("2. Event is private or requires approval")
+		log.Printf("3. API permissions issue")
+		log.Printf("4. Event ID format issue")
+		return nil // Don't treat as error, just log for debugging
+	}
 
 	// Get existing NFTs for this event to avoid duplicates
 	existingNFTs, err := s.nftRepo.GetAllByEventID(eventID)
@@ -191,76 +219,57 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 		existingNFTMap[nft.Owner] = true
 	}
 
-	// Process each guest
+	// Process each guest with enhanced debugging
 	checkedInCount := 0
 	mintedCount := 0
+	noWalletCount := 0
 	
 	for i, guest := range guests {
 		// Log first guest structure to understand available fields
-		if i == 0 && len(guests) > 0 {
+		if i == 0 {
 			log.Printf("Sample guest data structure: %+v", guest)
 		}
 		
 		// Check if guest has checked in
 		checkedIn, ok := guest["checked_in"].(bool)
-		if !ok || !checkedIn {
-			continue // Skip guests who haven't checked in
+		if !ok {
+			log.Printf("Guest %d: no check-in status field found", i+1)
+			continue
+		}
+		
+		if !checkedIn {
+			log.Printf("Guest %d: not checked in", i+1)
+			continue
 		}
 		
 		checkedInCount++
+		log.Printf("Found checked-in guest %d: %+v", i+1, guest)
 
-		// Log checked-in guest details
-		log.Printf("Found checked-in guest: %+v", guest)
-
-		// Get wallet address from guest data
-		// Check various possible fields where wallet might be stored
-		walletAddress := ""
+		// Get wallet address from guest data using enhanced extraction
+		walletAddress := s.extractWalletAddress(guest)
 		
-		// Check if wallet is in a custom field
-		if customData, ok := guest["custom_data"].(map[string]interface{}); ok {
-			if wallet, ok := customData["wallet_address"].(string); ok {
-				walletAddress = wallet
-			}
+		// Get guest info for logging
+		name := "Unknown"
+		if n, ok := guest["name"].(string); ok {
+			name = n
 		}
 		
-		// Check if wallet is in answers/form responses
-		if answers, ok := guest["answers"].([]interface{}); ok {
-			for _, answer := range answers {
-				if answerMap, ok := answer.(map[string]interface{}); ok {
-					if question, ok := answerMap["question"].(string); ok {
-						if question == "Wallet Address" || question == "Polkadot Wallet" {
-							if value, ok := answerMap["value"].(string); ok {
-								walletAddress = value
-								break
-							}
-						}
-					}
-				}
-			}
-		}
-		
-		// If still no wallet, check email and log it
 		email := ""
 		if e, ok := guest["email"].(string); ok {
 			email = e
 		}
 		
 		if walletAddress == "" {
-			log.Printf("Guest %s (email: %s) has checked in but no wallet address found in guest data", 
-				guest["name"], email)
+			noWalletCount++
+			log.Printf("Guest %s (email: %s) has checked in but no wallet address found", name, email)
+			log.Printf("Guest data available fields: %v", getGuestFieldNames(guest))
 			continue
 		}
 
 		// Skip if NFT already minted for this wallet
 		if existingNFTMap[walletAddress] {
-			log.Printf("NFT already exists for wallet %s", walletAddress)
+			log.Printf("NFT already exists for wallet %s (guest: %s)", walletAddress, name)
 			continue
-		}
-
-		// Get guest name
-		name := "Unknown"
-		if n, ok := guest["name"].(string); ok {
-			name = n
 		}
 
 		// Create NFT metadata
@@ -302,16 +311,20 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 		}
 
 		mintedCount++
-		log.Printf("Created NFT for checked-in attendee: %s", name)
+		log.Printf("Created NFT for checked-in attendee: %s (wallet: %s)", name, walletAddress)
 	}
 
-	log.Printf("Check-in sync completed for event %s: %d checked in, %d NFTs minted", 
-		eventID, checkedInCount, mintedCount)
+	// Enhanced logging summary
+	log.Printf("Check-in sync completed for event %s:", eventID)
+	log.Printf("  - Total guests: %d", len(guests))
+	log.Printf("  - Checked in: %d", checkedInCount)
+	log.Printf("  - Missing wallet: %d", noWalletCount)
+	log.Printf("  - NFTs minted: %d", mintedCount)
 
 	return nil
 }
 
-// SyncAllCheckIns syncs check-ins for all active events
+// SyncAllCheckIns syncs check-ins for all active events with improved batching
 func (s *SyncService) SyncAllCheckIns() error {
 	log.Println("Starting check-in sync for all events")
 
@@ -321,8 +334,16 @@ func (s *SyncService) SyncAllCheckIns() error {
 		return fmt.Errorf("failed to get users with API keys: %w", err)
 	}
 
-	// For each user, sync check-ins for their events
-	for _, user := range users {
+	log.Printf("Processing check-ins for %d users", len(users))
+
+	// For each user, sync check-ins for their events with delays
+	for userIndex, user := range users {
+		if userIndex > 0 {
+			delay := 3 * time.Second
+			log.Printf("Waiting %v between users to avoid rate limits", delay)
+			time.Sleep(delay)
+		}
+
 		// Get user's active events
 		events, err := s.eventRepo.GetActiveByUserID(fmt.Sprintf("%d", user.ID))
 		if err != nil {
@@ -330,8 +351,16 @@ func (s *SyncService) SyncAllCheckIns() error {
 			continue
 		}
 
-		// Sync check-ins for each event
-		for _, event := range events {
+		log.Printf("User %d has %d active events", user.ID, len(events))
+
+		// Sync check-ins for each event with delays
+		for eventIndex, event := range events {
+			if eventIndex > 0 {
+				delay := 2 * time.Second
+				log.Printf("Waiting %v between events to avoid rate limits", delay)
+				time.Sleep(delay)
+			}
+
 			if err := s.SyncEventCheckIns(event.ID, user.LumaAPIKey); err != nil {
 				log.Printf("Failed to sync check-ins for event %s: %v", event.ID, err)
 			}
@@ -340,6 +369,62 @@ func (s *SyncService) SyncAllCheckIns() error {
 
 	log.Println("Check-in sync completed for all events")
 	return nil
+}
+
+// extractWalletAddress extracts wallet address from guest data with multiple strategies
+func (s *SyncService) extractWalletAddress(guest map[string]interface{}) string {
+	// Strategy 1: Check custom_data field
+	if customData, ok := guest["custom_data"].(map[string]interface{}); ok {
+		walletFields := []string{"wallet_address", "polkadot_wallet", "wallet", "dot_wallet"}
+		for _, field := range walletFields {
+			if wallet, ok := customData[field].(string); ok && wallet != "" {
+				return wallet
+			}
+		}
+	}
+	
+	// Strategy 2: Check answers/form responses
+	if answers, ok := guest["answers"].([]interface{}); ok {
+		for _, answer := range answers {
+			if answerMap, ok := answer.(map[string]interface{}); ok {
+				if question, ok := answerMap["question"].(string); ok {
+					// Look for wallet-related questions (case insensitive)
+					walletQuestions := []string{
+						"Wallet Address", "Polkadot Wallet", "Wallet", 
+						"DOT Wallet Address", "wallet address", "polkadot wallet",
+						"Substrate Wallet", "Kusama Wallet", "DOT Address",
+					}
+					
+					for _, wq := range walletQuestions {
+						if strings.EqualFold(question, wq) {
+							if value, ok := answerMap["value"].(string); ok && value != "" {
+								return value
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	// Strategy 3: Check direct fields on guest object
+	walletFields := []string{"wallet_address", "polkadot_wallet", "wallet", "dot_wallet", "substrate_wallet"}
+	for _, field := range walletFields {
+		if wallet, ok := guest[field].(string); ok && wallet != "" {
+			return wallet
+		}
+	}
+	
+	return ""
+}
+
+// getGuestFieldNames returns all available field names in a guest object for debugging
+func getGuestFieldNames(guest map[string]interface{}) []string {
+	var fields []string
+	for key := range guest {
+		fields = append(fields, key)
+	}
+	return fields
 }
 
 // createEvent creates a new event from Luma data
@@ -391,7 +476,7 @@ func (s *SyncService) eventNeedsUpdate(existingEvent *models.Event, lumaEvent ma
 	return false
 }
 
-// Helper functions (copied from luma.go)
+// Helper functions
 func getStringValue(event map[string]interface{}, key string) string {
 	if val, ok := event[key]; ok && val != nil {
 		if str, ok := val.(string); ok {
