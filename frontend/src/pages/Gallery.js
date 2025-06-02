@@ -30,9 +30,10 @@ function Gallery() {
         setEvents(eventsData);
         
         if (eventsData.length > 0) {
-           console.log('🎉 Events loaded:', eventsData);
-  console.log('🎯 Setting initial event to:', eventsData[0].id);
-  console.log('📋 Event names:', eventsData.map(e => `${e.id}: ${e.name}`));
+          console.log('🎉 Events loaded:', eventsData);
+  console.log('🔍 First event structure:', eventsData[0]);
+  console.log('📋 All event IDs:', eventsData.map(e => e.id));
+  console.log('📋 All event names:', eventsData.map(e => e.name));
           setSelectedEvent(eventsData[0].id);
         }
       } catch (error) {
@@ -79,10 +80,12 @@ function Gallery() {
   
   const handleEventChange = (event) => {
      console.log('🔄 Dropdown change triggered!');
-    console.log('📝 Event object:', event);
-    console.log('🎯 Target value:', event.target.value);
-    console.log('📋 Previous selectedEvent:', selectedEvent);
-    console.log('📊 All events:', events);
+  console.log('📝 Full event object:', event);
+  console.log('🎯 Target:', event.target);
+  console.log('📊 Target value:', event.target.value);
+  console.log('📋 Target name:', event.target.name);
+  console.log('🗂️ All available events:', events.map(e => `${e.id}: ${e.name}`));
+  
 
     setSelectedEvent(event.target.value);
 
