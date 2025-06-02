@@ -24,14 +24,33 @@ import {
   Settings as ConfigureIcon,
   Refresh as RefreshIcon,
   Add as AddIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
 import { useEvents } from '../contexts/EventsContext';
+import { api } from '../services/api';
 
-const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
-  const { events, removeEvent, allEventsImported } = useEvents(); // Get allEventsImported from context
+const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) => {
+  const { events, removeEvent, allEventsImported } = useEvents();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [selectedEventId, setSelectedEventId] = React.useState(null);
+  const [checkInCounts, setCheckInCounts] = React.useState({});
+
+  // Fetch check-in counts when events change
+  React.useEffect(() => {
+    const fetchCheckInCounts = async () => {
+      if (events.length > 0) {
+        try {
+          const response = await api.getAllEventCheckInCounts();
+          setCheckInCounts(response.check_in_counts || {});
+        } catch (error) {
+          console.error('Failed to fetch check-in counts:', error);
+        }
+      }
+    };
+    
+    fetchCheckInCounts();
+  }, [events]);
 
   const handleMenuClick = (event, eventId) => {
     setAnchorEl(event.currentTarget);
@@ -82,6 +101,13 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
     if (!id) return 'N/A';
     const idStr = id.toString();
     return idStr.length > 8 ? `${idStr.substring(0, 8)}...` : idStr;
+  };
+
+  const handleCheckInClick = (event) => {
+    // Store the selected event ID for the Check-ins page
+    localStorage.setItem('selectedEventId', event.id);
+    // Navigate to check-ins page
+    setCurrentPage('check-ins');
   };
 
   return (
@@ -426,6 +452,18 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
                       fontSize: '14px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}
+                  >
+                    Check-ins
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      fontFamily: 'Manrope, sans-serif',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2,
                       textAlign: 'center'
                     }}
@@ -505,6 +543,31 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode }) => {
                           }
                         }}
                       />
+                    </TableCell>
+                    <TableCell sx={{ py: 2 }}>
+                      <Box 
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 0.5,
+                          cursor: 'pointer',
+                          '&:hover': {
+                            opacity: 0.8
+                          }
+                        }}
+                        onClick={() => handleCheckInClick(event)}
+                      >
+                        <PeopleIcon sx={{ fontSize: '16px', color: '#6B7280' }} />
+                        <Typography sx={{ 
+                          fontFamily: 'Manrope, sans-serif',
+                          fontSize: '14px',
+                          color: (theme) => theme.palette.text.primary,
+                          fontWeight: 500,
+                          textDecoration: 'underline'
+                        }}>
+                          {checkInCounts[event.id] || 0}
+                        </Typography>
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ py: 2, textAlign: 'center' }}>
                       <IconButton

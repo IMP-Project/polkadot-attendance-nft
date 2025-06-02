@@ -70,7 +70,7 @@ export const EventsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/events', {
+      const response = await fetch('http://localhost:8080/api/user/events', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -117,7 +117,7 @@ export const EventsProvider = ({ children }) => {
   const checkSyncStatus = async (authToken, currentEventCount) => {
     try {
       // Get saved API key
-      const apiKeyResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key', {
+      const apiKeyResponse = await fetch('http://localhost:8080/api/user/luma-api-key', {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ export const EventsProvider = ({ children }) => {
 
         if (lumaApiKey) {
           // Get Luma events count
-          const lumaResponse = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/list-luma-events', {
+          const lumaResponse = await fetch('http://localhost:8080/api/list-luma-events', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -210,7 +210,7 @@ export const EventsProvider = ({ children }) => {
     // Try to delete from database
     if (authToken) {
       try {
-        const response = await fetch(`https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/events/${eventId}`, {
+        const response = await fetch(`http://localhost:8080/api/user/events/${eventId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -247,7 +247,7 @@ export const EventsProvider = ({ children }) => {
     // Try to update in database
     if (authToken) {
       try {
-        const response = await fetch(`https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/events/${eventId}`, {
+        const response = await fetch(`http://localhost:8080/api/user/events/${eventId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${authToken}`,

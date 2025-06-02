@@ -39,7 +39,9 @@ import {
   FileDownload as ExportIcon,
   Person as PersonIcon,
   AccessTime as TimeIcon,
-  Event as EventIcon
+  Event as EventIcon,
+  AccountBalanceWallet as WalletIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import { api } from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
@@ -54,11 +56,22 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
   const [manualCheckInOpen, setManualCheckInOpen] = useState(false);
   const [selectedAttendee, setSelectedAttendee] = useState(null);
   const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch events on mount
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Check if we have a pre-selected event from navigation
+  useEffect(() => {
+    const storedEventId = localStorage.getItem('selectedEventId');
+    if (storedEventId && events.length > 0) {
+      setSelectedEvent(storedEventId);
+      // Clear the stored event ID
+      localStorage.removeItem('selectedEventId');
+    }
+  }, [events]);
 
   // Fetch attendees when event is selected
   useEffect(() => {
@@ -71,7 +84,9 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
     try {
       const eventsData = await api.getEvents();
       setEvents(eventsData);
-      if (eventsData.length > 0) {
+      
+      // If no pre-selected event from navigation, select the first one
+      if (!localStorage.getItem('selectedEventId') && eventsData.length > 0) {
         setSelectedEvent(eventsData[0].id);
       }
     } catch (error) {
@@ -82,40 +97,47 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
   const fetchAttendees = async (eventId) => {
     setLoading(true);
     try {
-      // In a real implementation, this would fetch from Luma API
-      // For now, we'll use mock data
-      const mockAttendees = [
-        {
-          id: 'att1',
-          name: 'John Doe',
-          email: 'john@example.com',
-          checkInTime: null,
-          walletAddress: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
-          ticketType: 'General Admission'
-        },
-        {
-          id: 'att2',
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          checkInTime: '2024-03-20T14:30:00',
-          walletAddress: '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
-          ticketType: 'VIP'
-        },
-        {
-          id: 'att3',
-          name: 'Bob Wilson',
-          email: 'bob@example.com',
-          checkInTime: null,
-          walletAddress: '5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw',
-          ticketType: 'General Admission'
-        }
-      ];
-      setAttendees(mockAttendees);
+      // Fetch NFTs for this event (check-ins are tracked via NFTs)
+      const nfts = await api.getNFTsByEvent(eventId);
+      
+      // Transform NFT data to attendee format
+      const attendeeData = nfts.map(nft => ({
+        id: nft.id,
+        name: nft.metadata?.attributes?.find(attr => attr.trait_type === 'Attendee')?.value || 'Unknown Attendee',
+        email: nft.metadata?.email || 'Not provided',
+        checkInTime: new Date(nft.created_at).toLocaleString(),
+        walletAddress: nft.owner,
+        ticketType: nft.metadata?.ticket_type || 'General Admission',
+        nftId: nft.id,
+        nftStatus: nft.transaction_hash ? 'minted' : 'pending',
+        transactionHash: nft.transaction_hash || null
+      }));
+      
+      setAttendees(attendeeData);
     } catch (error) {
       console.error('Error fetching attendees:', error);
+      setAttendees([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    if (selectedEvent) {
+      setRefreshing(true);
+      await fetchAttendees(selectedEvent);
+      setRefreshing(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    // Could show a snackbar here for feedback
+  };
+
+  const truncateWalletAddress = (address) => {
+    if (!address) return 'N/A';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   const handleCheckIn = async (attendee) => {
@@ -187,17 +209,16 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
   // Filter attendees based on search
   const filteredAttendees = attendees.filter(attendee =>
     attendee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    attendee.email.toLowerCase().includes(searchTerm.toLowerCase())
+    attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attendee.walletAddress.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate statistics
   const stats = {
     total: attendees.length,
-    checkedIn: attendees.filter(a => a.checkInTime).length,
-    pending: attendees.filter(a => !a.checkInTime).length,
-    percentage: attendees.length > 0 
-      ? Math.round((attendees.filter(a => a.checkInTime).length / attendees.length) * 100)
-      : 0
+    minted: attendees.filter(a => a.nftStatus === 'minted').length,
+    pending: attendees.filter(a => a.nftStatus === 'pending').length,
+    percentage: attendees.length > 0 ? Math.round((attendees.filter(a => a.nftStatus === 'minted').length / attendees.length) * 100) : 0
   };
 
   return (
@@ -278,7 +299,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
           <TextField
             size="small"
             variant="outlined"
-            placeholder="Search by name or email..."
+            placeholder="Search by name, email, or wallet address..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ 
@@ -298,7 +319,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-            <IconButton onClick={() => fetchAttendees(selectedEvent)} disabled={!selectedEvent} size="small">
+            <IconButton onClick={handleRefresh} disabled={!selectedEvent} size="small">
               <RefreshIcon />
             </IconButton>
             <Button
@@ -356,7 +377,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                     color: (theme) => theme.palette.text.secondary
                   }}
                 >
-                  Total Registered
+                  Total Check-ins
                 </Typography>
                 <Typography 
                   variant="h1" 
@@ -404,7 +425,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                     color: (theme) => theme.palette.text.secondary
                   }}
                 >
-                  Checked In
+                  NFTs Minted
                 </Typography>
                 <Typography 
                   variant="h1" 
@@ -417,7 +438,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                     textAlign: 'center'
                   }}
                 >
-                  {stats.checkedIn}
+                  {stats.minted}
                 </Typography>
               </Box>
             </Grid>
@@ -500,7 +521,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                     color: (theme) => theme.palette.text.secondary
                   }}
                 >
-                  Check-in Rate
+                  Minting Rate
                 </Typography>
                 <Box sx={{ width: '100%', textAlign: 'center' }}>
                   <Typography 
@@ -552,22 +573,21 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>Attendee</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>Ticket Type</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>Wallet Address</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>NFT Status</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>Check-in Time</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontFamily: 'Manrope, sans-serif' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={4} align="center">
                     <LinearProgress />
                   </TableCell>
                 </TableRow>
               ) : filteredAttendees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={4} align="center">
                     <Box sx={{ py: 8 }}>
                       <Typography 
                         variant="h6" 
@@ -577,7 +597,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                           mb: 1
                         }}
                       >
-                        {selectedEvent ? 'No attendees found' : 'Select an event to view attendees'}
+                        {selectedEvent ? 'No check-ins yet' : 'Select an event to view check-ins'}
                       </Typography>
                       <Typography 
                         variant="body2" 
@@ -586,7 +606,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                           fontFamily: 'Manrope, sans-serif'
                         }}
                       >
-                        {selectedEvent ? 'Try adjusting your search or refresh the list' : 'Choose an event from the dropdown above'}
+                        {selectedEvent ? 'Check-ins will appear here when attendees check in via Luma' : 'Choose an event from the dropdown above'}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -625,81 +645,54 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                               fontFamily: 'Manrope, sans-serif'
                             }}
                           >
-                            {attendee.email}
+                            {attendee.ticketType}
                           </Typography>
                         </Box>
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={attendee.ticketType}
-                        size="small"
-                        color={attendee.ticketType === 'VIP' ? 'secondary' : 'default'}
-                        sx={{ fontFamily: 'Manrope, sans-serif' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {attendee.checkInTime ? (
-                        <Chip
-                          icon={<CheckCircleIcon />}
-                          label="Checked In"
-                          color="success"
-                          size="small"
-                          sx={{ fontFamily: 'Manrope, sans-serif' }}
-                        />
-                      ) : (
-                        <Chip
-                          icon={<CancelIcon />}
-                          label="Not Checked In"
-                          color="default"
-                          size="small"
-                          sx={{ fontFamily: 'Manrope, sans-serif' }}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {attendee.checkInTime ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <TimeIcon fontSize="small" color="action" />
-                          <Typography 
-                            variant="body2"
-                            sx={{ fontFamily: 'Manrope, sans-serif' }}
-                          >
-                            {new Date(attendee.checkInTime).toLocaleString()}
-                          </Typography>
-                        </Box>
-                      ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <WalletIcon sx={{ fontSize: 16, color: '#6B7280' }} />
                         <Typography 
                           variant="body2" 
                           sx={{ 
-                            color: (theme) => theme.palette.text.secondary,
-                            fontFamily: 'Manrope, sans-serif'
+                            fontFamily: 'monospace', 
+                            fontSize: '12px',
+                            color: (theme) => theme.palette.text.primary
                           }}
                         >
-                          —
+                          {truncateWalletAddress(attendee.walletAddress)}
                         </Typography>
-                      )}
+                        <IconButton onClick={() => copyToClipboard(attendee.walletAddress)} size="small">
+                          <CopyIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
                     </TableCell>
-                    <TableCell align="right">
-                      {!attendee.checkInTime && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleManualCheckIn(attendee)}
-                          sx={{
-                            textTransform: 'none',
-                            fontFamily: 'Manrope, sans-serif',
-                            borderColor: '#E6007A',
-                            color: '#E6007A',
-                            '&:hover': {
-                              borderColor: '#C50066',
-                              backgroundColor: 'rgba(230, 0, 122, 0.04)'
-                            }
-                          }}
+                    <TableCell>
+                      <Chip
+                        icon={<CheckCircleIcon />}
+                        label={attendee.nftStatus === 'minted' ? 'NFT Minted' : 'Pending'}
+                        size="small"
+                        sx={{
+                          backgroundColor: attendee.nftStatus === 'minted' ? '#DCFCE7' : '#FFFBEB',
+                          color: attendee.nftStatus === 'minted' ? '#15803D' : '#FF9800',
+                          fontFamily: 'Manrope, sans-serif',
+                          '& .MuiChip-icon': {
+                            color: attendee.nftStatus === 'minted' ? '#15803D' : '#FF9800',
+                          },
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TimeIcon fontSize="small" color="action" />
+                        <Typography 
+                          variant="body2"
+                          sx={{ fontFamily: 'Manrope, sans-serif' }}
                         >
-                          Check In
-                        </Button>
-                      )}
+                          {attendee.checkInTime}
+                        </Typography>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))

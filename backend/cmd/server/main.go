@@ -27,14 +27,24 @@ func main() {
 	cfg := config.Load()
 
 	// Create GORM database connection
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
-		cfg.Database.Host,
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.DBName,
-		cfg.Database.Port,
-		cfg.Database.SSLMode, // Now uses the environment variable
-	)
+	var dsn string
+	
+	// Check if DATABASE_URL is set (for cloud deployments)
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		dsn = databaseURL
+		log.Println("Using DATABASE_URL for database connection")
+	} else {
+		// Fall back to individual parameters
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+			cfg.Database.Host,
+			cfg.Database.User,
+			cfg.Database.Password,
+			cfg.Database.DBName,
+			cfg.Database.Port,
+			cfg.Database.SSLMode,
+		)
+		log.Println("Using individual database parameters")
+	}
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -58,12 +68,76 @@ func main() {
 		&database.UserSettings{}, // Added UserSettings migration
 		&database.EventPermission{},
 		&models.Event{},
+		&models.NFTDesign{}, // Added NFT Design model
+		&database.NFT{}, // Added NFT model
 		// Add other models here as needed
 	)
 	if err != nil {
 		log.Printf("Migration warning: %v", err) // Don't crash on migration warnings
 	}
 	log.Println("All database migrations completed")
+
+	// Add missing columns to events table if they don't exist
+	log.Println("Checking for missing columns in events table...")
+	
+	// Check and add last_synced_at column
+	var columnExists bool
+	err = gormDB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'events' 
+			AND column_name = 'last_synced_at'
+		)
+	`).Scan(&columnExists).Error
+	
+	if err == nil && !columnExists {
+		log.Println("Adding last_synced_at column to events table...")
+		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP`)
+	}
+	
+	// Check and add user_id column
+	err = gormDB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'events' 
+			AND column_name = 'user_id'
+		)
+	`).Scan(&columnExists).Error
+	
+	if err == nil && !columnExists {
+		log.Println("Adding user_id column to events table...")
+		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id VARCHAR(255)`)
+	}
+	
+	// Check and add luma_updated_at column
+	err = gormDB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'events' 
+			AND column_name = 'luma_updated_at'
+		)
+	`).Scan(&columnExists).Error
+	
+	if err == nil && !columnExists {
+		log.Println("Adding luma_updated_at column to events table...")
+		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS luma_updated_at VARCHAR(255)`)
+	}
+	
+	// Check and add is_deleted column
+	err = gormDB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'events' 
+			AND column_name = 'is_deleted'
+		)
+	`).Scan(&columnExists).Error
+	
+	if err == nil && !columnExists {
+		log.Println("Adding is_deleted column to events table...")
+		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`)
+	}
+
+	log.Println("Column check completed")
 
 	// Initialize repositories
 	userRepo := database.NewUserRepository(gormDB)
@@ -73,18 +147,26 @@ func main() {
 	eventRepo := database.NewEventRepository(gormDB)
 	log.Println("Event repository initialized with GORM")
 
-	// Initialize NFT repository as nil for now (still needs GORM migration)
-	var nftRepo *database.NFTRepository = nil
+	// Initialize NFT repository with database connection
+	// Create a new database connection for NFT repository
+	nftDB, err := database.New()
+	if err != nil {
+		log.Fatalf("Failed to create database connection for NFT repository: %v", err)
+	}
+	nftRepo := database.NewNFTRepository(nftDB)
+	log.Println("NFT repository initialized")
+	
+	// Initialize design repository
+	designRepo := database.NewDesignRepository(gormDB)
+	log.Println("Design repository initialized with GORM")
 
-	log.Println("User, Permission, and Event repositories initialized")
-	log.Println("NFT repository disabled (need GORM migration)")
+	log.Println("User, Permission, Event, NFT, and Design repositories initialized")
 
 	// Initialize Luma client
 	lumaClient := luma.NewClient("https://api.lu.ma/v2")
 
 	// Initialize sync service
-	// Initialize sync service
-	syncService := services.NewSyncService(lumaClient, eventRepo, userRepo)
+	syncService := services.NewSyncService(lumaClient, eventRepo, userRepo, nftRepo, client)
 
 	// Initialize and start event sync cron job
 	eventSyncCron := cron.NewEventSyncCron(syncService)
@@ -99,7 +181,7 @@ func main() {
 	client := polkadot.NewClient(cfg.PolkadotRPC, formattedAddress)
 
 	// Create and configure the router with all available repositories
-	router := api.NewRouter(cfg, client, eventRepo, nftRepo, userRepo, permRepo)
+	router := api.NewRouter(cfg, client, eventRepo, nftRepo, userRepo, permRepo, designRepo)
 
 	// Create HTTP server
 	srv := &http.Server{
@@ -132,13 +214,18 @@ func main() {
 	}
 
 	// Close database connection
-	sqlDB, err := gormDB.DB()
+	gormSQLDB, err := gormDB.DB()
 	if err != nil {
 		log.Printf("Error getting underlying DB: %v", err)
 	} else {
-		if err := sqlDB.Close(); err != nil {
-			log.Printf("Error closing database connection: %v", err)
+		if err := gormSQLDB.Close(); err != nil {
+			log.Printf("Error closing GORM database connection: %v", err)
 		}
+	}
+
+	// Close NFT database connection
+	if err := nftDB.Close(); err != nil {
+		log.Printf("Error closing NFT database connection: %v", err)
 	}
 
 	log.Println("Server exited gracefully")

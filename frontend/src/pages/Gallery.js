@@ -2,26 +2,22 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid, 
   FormControl, Select, MenuItem, TextField, InputAdornment,
-  useTheme
+  CircularProgress, Alert
 } from '@mui/material';
-import { Link } from 'react-router-dom';
 import {
-  ContentCopy, Share
+  ContentCopy
 } from '@mui/icons-material';
 import { api } from '../services/api';
-import PageHeader from '../components/ui/PageHeader';
 import UploadDesignModal from '../components/ui/UploadDesignModal';
 
-function Gallery({ mode, toggleDarkMode }) {
-  const theme = useTheme();
+function Gallery() {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState('');
   const [loading, setLoading] = useState(true);
   const [publicUrl, setPublicUrl] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
   const [error, setError] = useState(null);
-  const [nfts, setNfts] = useState([]);
+  const [designs, setDesigns] = useState([]);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
@@ -50,23 +46,24 @@ function Gallery({ mode, toggleDarkMode }) {
       const baseUrl = window.location.origin;
       setPublicUrl(`${baseUrl}/public/gallery/${selectedEvent}`);
       
-      // Mock NFT data - replace with actual API call
-      const mockNfts = Array.from({ length: 5 }, (_, i) => ({
-        id: i + 1,
-        metadata: {
-          name: `Attendance #${i + 1}`,
-          event_name: 'PolkaDot Connect',
-          event_date: '25.05.2025',
-          location: 'Virtual',
-          attendee: `User ${i + 1}`,
-          image: '/images/nft-character.png'
-        },
-        owner: `125oca134cwqgv128${i}g231286${i}`,
-        created_at: new Date().toISOString()
-      }));
-      setNfts(mockNfts);
+      // Fetch real designs for the selected event
+      fetchEventDesigns(selectedEvent);
     }
   }, [selectedEvent]);
+  
+  const fetchEventDesigns = async (eventId) => {
+    try {
+      setLoading(true);
+      const response = await api.getEventDesigns(eventId);
+      setDesigns(response.designs || []);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching designs:', error);
+      setError('Failed to load designs');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleEventChange = (event) => {
     setSelectedEvent(event.target.value);
@@ -95,11 +92,53 @@ function Gallery({ mode, toggleDarkMode }) {
     }
   };
 
-  const handleUploadComplete = (designData) => {
-    // Handle the uploaded design data
-    console.log('Design uploaded:', designData);
-    // You can add logic here to save the design, update NFTs, etc.
-    setUploadModalOpen(false);
+  const handleUploadComplete = async (designData) => {
+    try {
+      // Use fileData if available (from saved draft), otherwise convert file to base64
+      let base64;
+      if (designData.fileData) {
+        base64 = designData.fileData;
+      } else if (designData.file) {
+        base64 = await fileToBase64(designData.file);
+      } else {
+        throw new Error('No image data available');
+      }
+      
+      // Prepare design data for API
+      const designPayload = {
+        event_id: selectedEvent,
+        title: designData.title,
+        description: designData.description,
+        traits: designData.traits,
+        image_data: base64,
+        metadata: designData.metadata
+      };
+      
+      // Save design to database
+      await api.createDesign(designPayload);
+      
+      // Refresh designs list
+      await fetchEventDesigns(selectedEvent);
+      
+      // Close modal
+      setUploadModalOpen(false);
+      
+      // Show success message (you could add a snackbar here)
+      console.log('Design uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading design:', error);
+      setError('Failed to upload design');
+    }
+  };
+  
+  // Helper function to convert file to base64
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
   };
 
   return (
@@ -377,120 +416,170 @@ function Gallery({ mode, toggleDarkMode }) {
 
       {/* NFT Grid */}
       <Box sx={{ px: 4, py: 2, flex: 1 }}>
-        <Grid container spacing={3}>
-          {nfts.map((nft) => (
-            <Grid item xs={12} sm={6} md={3} key={nft.id}>
-              <Card 
-                sx={{ 
-                  borderRadius: 3,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                  }
-                }}
-              >
-                {/* NFT Image */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {designs.length === 0 ? (
+              <Grid item xs={12}>
                 <Box 
                   sx={{ 
-                    height: 200,
-                    background: 'linear-gradient(135deg, #00D4AA 0%, #00B894 100%)',
-                    borderRadius: '12px 12px 0 0',
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    textAlign: 'center', 
+                    py: 8,
+                    color: (theme) => theme.palette.text.secondary
                   }}
                 >
-                  <Box
-                    component="img"
-                    src="/images/nft-character.png"
-                    alt="NFT Character"
-                    sx={{
-                      width: 120,
-                      height: 120,
-                      objectFit: 'contain'
-                    }}
-                  />
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    No designs uploaded yet
+                  </Typography>
+                  <Typography variant="body2">
+                    Click "Upload new design" to add your first NFT design
+                  </Typography>
                 </Box>
-                
-                <CardContent sx={{ p: 2 }}>
-                  {/* NFT Label */}
-                  <Typography 
-                    variant="caption" 
+              </Grid>
+            ) : (
+              designs.map((design) => (
+                <Grid item xs={12} sm={6} md={3} key={design.id}>
+                  <Card 
                     sx={{ 
-                      color: (theme) => theme.palette.text.secondary,
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      mb: 1,
-                      display: 'block'
-                    }}
-                  >
-                    Attendance NFT
-                  </Typography>
-                  
-                  {/* NFT Title */}
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600,
-                      fontSize: '16px',
-                      color: (theme) => theme.palette.text.primary,
-                      mb: 2
-                    }}
-                  >
-                    {nft.metadata?.name || 'Attendance #1'}
-                  </Typography>
-
-                  {/* Owner Info */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        color: (theme) => theme.palette.text.secondary,
-                        fontSize: '11px',
-                        display: 'block',
-                        mb: 0.5
-                      }}
-                    >
-                      Owned by
-                    </Typography>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        color: (theme) => theme.palette.text.secondary,
-                        fontSize: '11px',
-                        wordBreak: 'break-all'
-                      }}
-                    >
-                      {nft.owner}
-                    </Typography>
-                  </Box>
-
-                  {/* View NFT Button */}
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{
-                      borderColor: '#FF2670',
-                      color: '#FF2670',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontWeight: 500,
+                      borderRadius: 3,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
                       '&:hover': {
-                        borderColor: '#E91E63',
-                        backgroundColor: 'rgba(255, 38, 112, 0.04)',
-                      },
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      }
                     }}
                   >
-                    View NFT
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                    {/* NFT Image */}
+                    <Box 
+                      sx={{ 
+                        height: 200,
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        backgroundColor: (theme) => theme.palette.action.hover
+                      }}
+                    >
+                      <img
+                        src={design.image_data}
+                        alt={design.title}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </Box>
+                    
+                    <CardContent sx={{ p: 2 }}>
+                      {/* NFT Label */}
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: (theme) => theme.palette.text.secondary,
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          mb: 1,
+                          display: 'block'
+                        }}
+                      >
+                        NFT Design
+                      </Typography>
+                      
+                      {/* NFT Title */}
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 600,
+                          fontSize: '16px',
+                          color: (theme) => theme.palette.text.primary,
+                          mb: 2
+                        }}
+                      >
+                        {design.title}
+                      </Typography>
+
+                      {/* Design Info */}
+                      <Box sx={{ mb: 2 }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: (theme) => theme.palette.text.secondary,
+                            fontSize: '11px',
+                            display: 'block',
+                            mb: 0.5
+                          }}
+                        >
+                          Created by
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: (theme) => theme.palette.text.secondary,
+                            fontSize: '11px',
+                            wordBreak: 'break-all'
+                          }}
+                        >
+                          {design.created_by ? `${design.created_by.slice(0, 6)}...${design.created_by.slice(-4)}` : 'Unknown'}
+                        </Typography>
+                      </Box>
+
+                      {/* Action Buttons */}
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          sx={{
+                            borderColor: '#FF2670',
+                            color: '#FF2670',
+                            borderRadius: '8px',
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            fontSize: '12px',
+                            '&:hover': {
+                              borderColor: '#E91E63',
+                              backgroundColor: 'rgba(255, 38, 112, 0.04)',
+                            },
+                          }}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          sx={{
+                            backgroundColor: '#FF2670',
+                            color: 'white',
+                            borderRadius: '8px',
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            fontSize: '12px',
+                            '&:hover': {
+                              backgroundColor: '#E91E63',
+                            },
+                          }}
+                        >
+                          Use Design
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            )}
+          </Grid>
+        )}
       </Box>
 
       {/* Upload Design Modal */}

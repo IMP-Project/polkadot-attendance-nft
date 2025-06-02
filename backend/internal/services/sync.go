@@ -8,13 +8,16 @@ import (
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
+	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
 )
 
 // SyncService handles synchronization between Luma and local database
 type SyncService struct {
-	lumaClient *luma.Client
-	eventRepo  *database.EventRepository
-	userRepo   *database.UserRepository
+	lumaClient     *luma.Client
+	eventRepo      *database.EventRepository
+	userRepo       *database.UserRepository
+	nftRepo        *database.NFTRepository
+	polkadotClient *polkadot.Client
 }
 
 // NewSyncService creates a new sync service instance
@@ -22,11 +25,15 @@ func NewSyncService(
 	lumaClient *luma.Client,
 	eventRepo *database.EventRepository,
 	userRepo *database.UserRepository,
+	nftRepo *database.NFTRepository,
+	polkadotClient *polkadot.Client,
 ) *SyncService {
 	return &SyncService{
-		lumaClient: lumaClient,
-		eventRepo:  eventRepo,
-		userRepo:   userRepo,
+		lumaClient:     lumaClient,
+		eventRepo:      eventRepo,
+		userRepo:       userRepo,
+		nftRepo:        nftRepo,
+		polkadotClient: polkadotClient,
 	}
 }
 
@@ -157,6 +164,181 @@ func (s *SyncService) SyncAllUsers() error {
 	}
 
 	log.Println("Sync completed for all users")
+	return nil
+}
+
+// SyncEventCheckIns syncs check-ins for a specific event
+func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
+	log.Printf("Starting check-in sync for event %s", eventID)
+
+	// Get all guests for this event
+	guests, err := s.lumaClient.GetEventGuests(apiKey, eventID)
+	if err != nil {
+		return fmt.Errorf("failed to get event guests: %w", err)
+	}
+
+	log.Printf("Found %d guests for event %s", len(guests), eventID)
+
+	// Get existing NFTs for this event to avoid duplicates
+	existingNFTs, err := s.nftRepo.GetAllByEventID(eventID)
+	if err != nil {
+		return fmt.Errorf("failed to get existing NFTs: %w", err)
+	}
+
+	// Create a map of existing NFTs by wallet address
+	existingNFTMap := make(map[string]bool)
+	for _, nft := range existingNFTs {
+		existingNFTMap[nft.Owner] = true
+	}
+
+	// Process each guest
+	checkedInCount := 0
+	mintedCount := 0
+	
+	for i, guest := range guests {
+		// Log first guest structure to understand available fields
+		if i == 0 && len(guests) > 0 {
+			log.Printf("Sample guest data structure: %+v", guest)
+		}
+		
+		// Check if guest has checked in
+		checkedIn, ok := guest["checked_in"].(bool)
+		if !ok || !checkedIn {
+			continue // Skip guests who haven't checked in
+		}
+		
+		checkedInCount++
+
+		// Log checked-in guest details
+		log.Printf("Found checked-in guest: %+v", guest)
+
+		// Get wallet address from guest data
+		// Check various possible fields where wallet might be stored
+		walletAddress := ""
+		
+		// Check if wallet is in a custom field
+		if customData, ok := guest["custom_data"].(map[string]interface{}); ok {
+			if wallet, ok := customData["wallet_address"].(string); ok {
+				walletAddress = wallet
+			}
+		}
+		
+		// Check if wallet is in answers/form responses
+		if answers, ok := guest["answers"].([]interface{}); ok {
+			for _, answer := range answers {
+				if answerMap, ok := answer.(map[string]interface{}); ok {
+					if question, ok := answerMap["question"].(string); ok {
+						if question == "Wallet Address" || question == "Polkadot Wallet" {
+							if value, ok := answerMap["value"].(string); ok {
+								walletAddress = value
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		// If still no wallet, check email and log it
+		email := ""
+		if e, ok := guest["email"].(string); ok {
+			email = e
+		}
+		
+		if walletAddress == "" {
+			log.Printf("Guest %s (email: %s) has checked in but no wallet address found in guest data", 
+				guest["name"], email)
+			continue
+		}
+
+		// Skip if NFT already minted for this wallet
+		if existingNFTMap[walletAddress] {
+			log.Printf("NFT already exists for wallet %s", walletAddress)
+			continue
+		}
+
+		// Get guest name
+		name := "Unknown"
+		if n, ok := guest["name"].(string); ok {
+			name = n
+		}
+
+		// Create NFT metadata
+		metadata := map[string]interface{}{
+			"name":        fmt.Sprintf("Attendance: %s", eventID),
+			"description": fmt.Sprintf("Proof of attendance for event"),
+			"event_id":    eventID,
+			"attendee":    name,
+			"attributes": []map[string]interface{}{
+				{"trait_type": "Event ID", "value": eventID},
+				{"trait_type": "Attendee", "value": name},
+				{"trait_type": "Check-in Time", "value": time.Now().Format(time.RFC3339)},
+			},
+		}
+
+		// Create NFT record
+		nft := &models.NFT{
+			EventID:  eventID,
+			Owner:    walletAddress,
+			Metadata: metadata,
+		}
+
+		if err := s.nftRepo.Create(nft); err != nil {
+			log.Printf("Failed to create NFT for %s: %v", walletAddress, err)
+			continue
+		}
+
+		// Mint NFT on blockchain
+		if s.polkadotClient != nil {
+			success, err := s.polkadotClient.MintNFT(eventID, walletAddress, metadata)
+			if err != nil {
+				log.Printf("Failed to mint NFT on blockchain for %s: %v", walletAddress, err)
+				// Continue anyway - we have the database record
+			} else if !success {
+				log.Printf("NFT minting returned false for %s", walletAddress)
+			} else {
+				log.Printf("Successfully minted NFT on blockchain for %s", walletAddress)
+			}
+		}
+
+		mintedCount++
+		log.Printf("Created NFT for checked-in attendee: %s", name)
+	}
+
+	log.Printf("Check-in sync completed for event %s: %d checked in, %d NFTs minted", 
+		eventID, checkedInCount, mintedCount)
+
+	return nil
+}
+
+// SyncAllCheckIns syncs check-ins for all active events
+func (s *SyncService) SyncAllCheckIns() error {
+	log.Println("Starting check-in sync for all events")
+
+	// Get all users with API keys
+	users, err := s.userRepo.GetUsersWithLumaAPIKey()
+	if err != nil {
+		return fmt.Errorf("failed to get users with API keys: %w", err)
+	}
+
+	// For each user, sync check-ins for their events
+	for _, user := range users {
+		// Get user's active events
+		events, err := s.eventRepo.GetActiveByUserID(fmt.Sprintf("%d", user.ID))
+		if err != nil {
+			log.Printf("Failed to get events for user %d: %v", user.ID, err)
+			continue
+		}
+
+		// Sync check-ins for each event
+		for _, event := range events {
+			if err := s.SyncEventCheckIns(event.ID, user.LumaAPIKey); err != nil {
+				log.Printf("Failed to sync check-ins for event %s: %v", event.ID, err)
+			}
+		}
+	}
+
+	log.Println("Check-in sync completed for all events")
 	return nil
 }
 

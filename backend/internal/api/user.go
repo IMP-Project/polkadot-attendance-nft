@@ -19,6 +19,7 @@ type UserHandler struct {
     eventRepo      *database.EventRepository
     nftRepo        *database.NFTRepository
     userRepo       *database.UserRepository
+    designRepo     *database.DesignRepository
     JWTSecret      string
 }
 
@@ -28,6 +29,7 @@ func NewUserHandler(
     eventRepo *database.EventRepository,
     nftRepo *database.NFTRepository,
     userRepo *database.UserRepository,
+    designRepo *database.DesignRepository,
     jwtSecret string,
 ) *UserHandler {
     return &UserHandler{
@@ -35,6 +37,7 @@ func NewUserHandler(
         eventRepo:      eventRepo,
         nftRepo:        nftRepo,
         userRepo:       userRepo,
+        designRepo:     designRepo,
         JWTSecret:      jwtSecret,
     }
 }
@@ -249,14 +252,14 @@ func (h *UserHandler) CreateEvent(c *gin.Context) {
     // Set the organizer to the authenticated user's wallet address
     event.Organizer = user.WalletAddress
 
-    if h.eventRepo != nil {
-        if err := h.eventRepo.Create(&event); err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event"})
-            return
-        }
-    } else {
-        // Mock response when eventRepo is nil
-        event.ID = strconv.FormatUint(uint64(time.Now().Unix()), 10)
+    if h.eventRepo == nil {
+        c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Event repository not available"})
+        return
+    }
+    
+    if err := h.eventRepo.Create(&event); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event"})
+        return
     }
 
     c.JSON(http.StatusCreated, event)
@@ -490,5 +493,234 @@ func (h *UserHandler) DeleteLumaApiKey(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Luma API key deleted successfully"})
+}
+
+// GetEventCheckInCount returns the count of check-ins (NFTs minted) for an event
+func (h *UserHandler) GetEventCheckInCount(c *gin.Context) {
+	// Get event ID from params
+	eventID := c.Param("id")
+	if eventID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+		return
+	}
+
+	// Count NFTs for this event
+	count, err := h.eventRepo.GetCheckInCount(eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get check-in count"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"event_id": eventID,
+		"check_in_count": count,
+	})
+}
+
+// GetAllEventCheckInCounts returns check-in counts for all user's events
+func (h *UserHandler) GetAllEventCheckInCounts(c *gin.Context) {
+	userID, err := h.getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get user's events
+	events, err := h.eventRepo.GetByUserID(fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get events"})
+		return
+	}
+
+	// Get check-in counts for each event
+	counts := make(map[string]int)
+	for _, event := range events {
+		count, _ := h.eventRepo.GetCheckInCount(event.ID)
+		counts[event.ID] = count
+	}
+
+	c.JSON(http.StatusOK, gin.H{"check_in_counts": counts})
+}
+
+// GetEventNFTs returns all NFTs minted for a specific event
+func (h *UserHandler) GetEventNFTs(c *gin.Context) {
+	eventID := c.Param("id")
+	if eventID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+		return
+	}
+
+	// Verify the user owns this event
+	userID, err := h.getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get the event to verify ownership
+	event, err := h.eventRepo.GetByID(eventID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+
+	// Check if user owns the event
+	if event.UserID != fmt.Sprintf("%v", userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to view this event's NFTs"})
+		return
+	}
+
+	// Get NFTs for this event - using string eventID directly
+	nfts, err := h.nftRepo.GetAllByEventID(eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get NFTs"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"nfts": nfts})
+}
+
+// CreateDesign creates a new NFT design for an event
+func (h *UserHandler) CreateDesign(c *gin.Context) {
+	userID, err := h.getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	type CreateDesignRequest struct {
+		EventID     string                 `json:"event_id"`
+		Title       string                 `json:"title"`
+		Description string                 `json:"description"`
+		Traits      string                 `json:"traits"`
+		ImageData   string                 `json:"image_data"`
+		Metadata    map[string]interface{} `json:"metadata"`
+	}
+
+	var req CreateDesignRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid design data"})
+		return
+	}
+
+	// Validate required fields
+	if req.EventID == "" || req.Title == "" || req.ImageData == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID, title, and image data are required"})
+		return
+	}
+
+	// Create the design
+	design := &models.NFTDesign{
+		EventID:     req.EventID,
+		Title:       req.Title,
+		Description: req.Description,
+		Traits:      req.Traits,
+		ImageData:   req.ImageData,
+		Metadata:    req.Metadata,
+		CreatedBy:   user.WalletAddress,
+	}
+
+	if h.designRepo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+		return
+	}
+	
+	if err := h.designRepo.Create(design); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create design"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, design)
+}
+
+// GetEventDesigns gets all designs for an event
+func (h *UserHandler) GetEventDesigns(c *gin.Context) {
+	eventID := c.Param("id")
+	if eventID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+		return
+	}
+
+	if h.designRepo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+		return
+	}
+	
+	designs, err := h.designRepo.GetByEventID(eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get designs"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"designs": designs})
+}
+
+// GetDesign gets a specific design by ID
+func (h *UserHandler) GetDesign(c *gin.Context) {
+	designID := c.Param("designId")
+	if designID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Design ID is required"})
+		return
+	}
+
+	if h.designRepo != nil {
+		design, err := h.designRepo.GetByID(designID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Design not found"})
+			return
+		}
+		c.JSON(http.StatusOK, design)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Design repository not available"})
+	}
+}
+
+// DeleteDesign soft deletes a design
+func (h *UserHandler) DeleteDesign(c *gin.Context) {
+	userID, err := h.getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	designID := c.Param("designId")
+	if designID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Design ID is required"})
+		return
+	}
+
+	if h.designRepo != nil {
+		// Check if user owns the design
+		design, err := h.designRepo.GetByID(designID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Design not found"})
+			return
+		}
+
+		if design.CreatedBy != user.WalletAddress {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this design"})
+			return
+		}
+
+		if err := h.designRepo.Delete(designID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete design"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Design deleted successfully"})
+	} else {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+	}
 }
 

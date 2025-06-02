@@ -1,11 +1,16 @@
 package models
 
+import "time"
+
 // NFT represents an attendance NFT
 type NFT struct {
-	ID       uint64                 `json:"id"`
-	EventID  string                 `json:"event_id"`
-	Owner    string                 `json:"owner"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID              uint64                 `json:"id"`
+	EventID         string                 `json:"event_id"`
+	Owner           string                 `json:"owner"`
+	Metadata        map[string]interface{} `json:"metadata"`
+	TransactionHash string                 `json:"transaction_hash,omitempty"`
+	Confirmed       bool                   `json:"confirmed"`
+	CreatedAt       time.Time              `json:"created_at"`
 }
 
 // CheckInEvent represents a Luma check-in event webhook payload
