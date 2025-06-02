@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,7 +32,8 @@ func main() {
 	
 	// Check if DATABASE_URL is set (for cloud deployments)
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
-		dsn = databaseURL
+		// Clean the URL to remove any trailing newlines or spaces
+		dsn = strings.TrimSpace(databaseURL)
 		log.Println("Using DATABASE_URL for database connection")
 	} else {
 		// Fall back to individual parameters
