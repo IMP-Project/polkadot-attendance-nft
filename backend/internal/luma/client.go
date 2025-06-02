@@ -318,13 +318,13 @@ func extractWalletAddress(guest map[string]interface{}) string {
 		for _, answer := range answers {
 			if answerMap, ok := answer.(map[string]interface{}); ok {
     if question, ok := answerMap["label"].(string); ok {  // ← Changed "question" to "label"
-        // Look for wallet-related questions
-        if question == "Wallet Address" ||                    
-           question == "Polkadot Wallet" ||                   
-           question == "Wallet" ||                            
-           question == "DOT Wallet Address" ||
-           question == "Polkadot Address" {                   // ← Added this since your logs show "Polkadot Address"
-            if value, ok := answerMap["answer"].(string); ok && value != "" {  // ← Changed "value" to "answer"
+	// Look for wallet-related questions
+	if question == "Wallet Address" ||                    
+	   question == "Polkadot Wallet" ||                   
+	   question == "Wallet" ||                            
+	   question == "DOT Wallet Address" ||
+	   question == "Polkadot Address" {                   // ← Added this since your logs show "Polkadot Address"
+		if value, ok := answerMap["answer"].(string); ok && value != "" {  // ← Changed "value" to "answer"
 							return value
 						}
 					}
