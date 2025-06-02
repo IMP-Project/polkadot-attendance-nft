@@ -268,7 +268,7 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 // GetEventGuests fetches all guests (attendees) for an event, including check-in status
 func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]interface{}, error) {
 	// According to Luma API docs, we can get guests with their check-in status
-	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/guests?event_api_id=%s&pagination_limit=500", eventID)
+	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get-guests?event_api_id=%s&pagination_limit=500", eventID)
 	
 	fmt.Printf("Fetching event guests from URL: %s\n", url)
 	
