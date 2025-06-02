@@ -217,6 +217,14 @@ export const api = {
     return response.data;
   },
 
+  // Add this to the api object
+getEventCheckIns: async (eventId) => {
+  return apiCallWithRetry(async () => {
+    const response = await apiClient.get(`/user/events/${eventId}/check-ins`);
+    return response.data;
+  });
+},
+
   // Design API methods
   async createDesign(designData) {
     return apiCallWithRetry(async () => {

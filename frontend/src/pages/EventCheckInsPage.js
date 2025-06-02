@@ -95,32 +95,32 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
   };
 
   const fetchAttendees = async (eventId) => {
-    setLoading(true);
-    try {
-      // Fetch NFTs for this event (check-ins are tracked via NFTs)
-      const nfts = await api.getNFTsByEvent(eventId);
-      
-      // Transform NFT data to attendee format
-      const attendeeData = nfts.map(nft => ({
-        id: nft.id,
-        name: nft.metadata?.attributes?.find(attr => attr.trait_type === 'Attendee')?.value || 'Unknown Attendee',
-        email: nft.metadata?.email || 'Not provided',
-        checkInTime: new Date(nft.created_at).toLocaleString(),
-        walletAddress: nft.owner,
-        ticketType: nft.metadata?.ticket_type || 'General Admission',
-        nftId: nft.id,
-        nftStatus: nft.transaction_hash ? 'minted' : 'pending',
-        transactionHash: nft.transaction_hash || null
-      }));
-      
-      setAttendees(attendeeData);
-    } catch (error) {
-      console.error('Error fetching attendees:', error);
-      setAttendees([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    // Call the new check-ins endpoint (CORRECT)
+    const checkInsData = await api.getEventCheckIns(eventId);
+    
+    // Transform the data to match the expected format
+    const attendeeData = checkInsData.check_ins.map(checkIn => ({
+      id: `checkin-${checkIn.wallet}`, // Create a unique ID
+      name: checkIn.attendee,
+      email: 'Check-in via Luma', // Could be enhanced later
+      checkInTime: new Date(checkIn.checked_in_at).toLocaleString(),
+      walletAddress: checkIn.wallet,
+      ticketType: 'General Admission',
+      nftId: null,
+      nftStatus: checkIn.nft_status ? 'minted' : 'pending',
+      transactionHash: null
+    }));
+    
+    setAttendees(attendeeData);
+  } catch (error) {
+    console.error('Error fetching attendees:', error);
+    setAttendees([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRefresh = async () => {
     if (selectedEvent) {
