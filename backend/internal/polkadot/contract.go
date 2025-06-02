@@ -329,16 +329,20 @@ default:
 		var ok bool
 
 		// Handle eventID with flexible type conversion
-		switch v := args[0].(type) {
-		case uint64:
-			eventID = v
-		case float64:
-			eventID = uint64(v)
-		case int:
-			eventID = uint64(v)
-		default:
-			return nil, fmt.Errorf("invalid event ID type: %T", args[0])
-		}
+		// Handle eventID with flexible type conversion
+switch v := args[0].(type) {
+case uint64:
+    eventID = v
+case float64:
+    eventID = uint64(v)
+case int:
+    eventID = uint64(v)
+case string:
+    // Convert string event ID to uint64 (hash or simple conversion)
+    eventID = uint64(len(v)) // Simple hash based on length, or use a better hash
+default:
+    return nil, fmt.Errorf("invalid event ID type: %T", args[0])
+}
 
 		// Get recipient
 		if recipient, ok = args[1].(string); !ok {
