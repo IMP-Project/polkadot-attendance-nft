@@ -383,27 +383,28 @@ func (s *SyncService) extractWalletAddress(guest map[string]interface{}) string 
 	
 	// Strategy 2: Check answers/form responses
 	if answers, ok := guest["registration_answers"].([]interface{}); ok {
-		for _, answer := range answers {
-			if answerMap, ok := answer.(map[string]interface{}); ok {
-				if question, ok := answerMap["question"].(string); ok {
-					// Look for wallet-related questions (case insensitive)
-					walletQuestions := []string{
-						"Wallet Address", "Polkadot Wallet", "Wallet", 
-						"DOT Wallet Address", "wallet address", "polkadot wallet",
-						"Substrate Wallet", "Kusama Wallet", "DOT Address",
-					}
-					
-					for _, wq := range walletQuestions {
-						if strings.EqualFold(question, wq) {
-							if value, ok := answerMap["value"].(string); ok && value != "" {
-								return value
-							}
+	for _, answer := range answers {
+		if answerMap, ok := answer.(map[string]interface{}); ok {
+			if question, ok := answerMap["label"].(string); ok {  // ← Changed "question" to "label"
+				// Look for wallet-related questions (case insensitive)
+				walletQuestions := []string{
+					"Wallet Address", "Polkadot Wallet", "Wallet", 
+					"DOT Wallet Address", "wallet address", "polkadot wallet",
+					"Substrate Wallet", "Kusama Wallet", "DOT Address",
+					"Polkadot Address",  // ← Added this since your logs show "Polkadot Address"
+				}
+				
+				for _, wq := range walletQuestions {
+					if strings.EqualFold(question, wq) {
+						if value, ok := answerMap["answer"].(string); ok && value != "" {  // ← Changed "value" to "answer"
+							return value
 						}
 					}
 				}
 			}
 		}
 	}
+}
 	
 	// Strategy 3: Check direct fields on guest object
 	walletFields := []string{"wallet_address", "polkadot_wallet", "wallet", "dot_wallet", "substrate_wallet"}
