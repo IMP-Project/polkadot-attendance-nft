@@ -231,7 +231,7 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 		}
 		
 		// Check if guest has checked in
-		checkedIn, ok := guest["checked_in"].(bool)
+		checkedIn, ok := guest["checked_in_at"].(bool)
 		if !ok {
 			log.Printf("Guest %d: no check-in status field found", i+1)
 			continue
