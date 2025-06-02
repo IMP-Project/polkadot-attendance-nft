@@ -8,7 +8,7 @@ import (
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/services"
 )
 
-// EventSyncCron manages the periodic synchronization of Luma events
+// EventSyncCron handles periodic syncing of events and check-ins from Luma
 type EventSyncCron struct {
 	cron        *cron.Cron
 	syncService *services.SyncService
@@ -16,57 +16,88 @@ type EventSyncCron struct {
 
 // NewEventSyncCron creates a new event sync cron job
 func NewEventSyncCron(syncService *services.SyncService) *EventSyncCron {
+	// Create cron with second precision and logging
+	c := cron.New(cron.WithSeconds(), cron.WithLogger(cron.VerbosePrintfLogger(log.New(log.Writer(), "CRON: ", log.LstdFlags))))
+	
 	return &EventSyncCron{
-		cron:        cron.New(),
+		cron:        c,
 		syncService: syncService,
 	}
 }
 
-// Start begins the cron job
+// Start begins the cron job scheduling
 func (e *EventSyncCron) Start() error {
-	// Run sync immediately on startup
-	log.Println("Running initial Luma event sync...")
-	go e.runSync()
+	log.Println("Initializing Luma sync cron jobs...")
 
-	// Schedule to run every 5 minutes
-	_, err := e.cron.AddFunc("*/5 * * * *", e.runSync)
+	// Schedule event sync every 1 minute
+	// Format: "0 * * * * *" = every minute at second 0
+	_, err := e.cron.AddFunc("0 * * * * *", func() {
+		e.syncEvents()
+	})
 	if err != nil {
 		return err
 	}
+	log.Println("Event sync scheduled: every 1 minute")
+
+	// Schedule check-in sync every 1 minute (30 seconds offset to avoid overlap)
+	// Format: "30 * * * * *" = every minute at second 30
+	_, err = e.cron.AddFunc("30 * * * * *", func() {
+		e.syncCheckIns()
+	})
+	if err != nil {
+		return err
+	}
+	log.Println("Check-in sync scheduled: every 1 minute (30s offset)")
 
 	// Start the cron scheduler
 	e.cron.Start()
-	log.Println("Luma event sync cron job started (runs every 5 minutes)")
-	
+	log.Println("Luma sync cron jobs started successfully")
+
+	// Run initial sync immediately
+	go func() {
+		log.Println("Running initial Luma event and check-in sync...")
+		e.syncEvents()
+		// Wait 5 seconds before running check-in sync to avoid API rate limits
+		time.Sleep(5 * time.Second)
+		e.syncCheckIns()
+	}()
+
 	return nil
 }
 
-// Stop gracefully stops the cron job
+// Stop stops the cron job
 func (e *EventSyncCron) Stop() {
-	log.Println("Stopping Luma event sync cron job...")
-	ctx := e.cron.Stop()
-	<-ctx.Done()
-	log.Println("Luma event sync cron job stopped")
+	if e.cron != nil {
+		log.Println("Stopping Luma sync cron jobs...")
+		e.cron.Stop()
+		log.Println("Luma sync cron jobs stopped")
+	}
 }
 
-// runSync executes the sync process
-func (e *EventSyncCron) runSync() {
-	start := time.Now()
+// syncEvents handles the periodic event synchronization
+func (e *EventSyncCron) syncEvents() {
+	startTime := time.Now()
 	log.Println("Starting Luma event sync...")
-	
-	// First sync events
-	err := e.syncService.SyncAllUsers()
-	if err != nil {
-		log.Printf("Error during Luma event sync: %v", err)
+
+	if err := e.syncService.SyncAllUsers(); err != nil {
+		log.Printf("Event sync failed: %v", err)
+		return
 	}
-	
-	// Then sync check-ins for all events
-	log.Println("Starting check-in sync...")
-	err = e.syncService.SyncAllCheckIns()
-	if err != nil {
-		log.Printf("Error during check-in sync: %v", err)
+
+	duration := time.Since(startTime)
+	log.Printf("Luma event sync completed successfully in %v", duration)
+}
+
+// syncCheckIns handles the periodic check-in synchronization and NFT minting
+func (e *EventSyncCron) syncCheckIns() {
+	startTime := time.Now()
+	log.Println("Starting Luma check-in sync...")
+
+	if err := e.syncService.SyncAllCheckIns(); err != nil {
+		log.Printf("Check-in sync failed: %v", err)
+		return
 	}
-	
-	duration := time.Since(start)
-	log.Printf("Luma sync completed in %v", duration)
+
+	duration := time.Since(startTime)
+	log.Printf("Luma check-in sync completed successfully in %v", duration)
 }

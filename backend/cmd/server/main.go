@@ -163,9 +163,13 @@ func main() {
 	log.Println("User, Permission, Event, NFT, and Design repositories initialized")
 
 	// Initialize Luma client
-	lumaClient := luma.NewClient("https://api.lu.ma/v2")
+	lumaClient := luma.NewClient("")
 
-	// Initialize sync service
+	// Validate contract address and initialize Polkadot client BEFORE sync service
+	formattedAddress := api.ValidateContractAddress(cfg.ContractAddress)
+	client := polkadot.NewClient(cfg.PolkadotRPC, formattedAddress)
+
+	// Initialize sync service (now client is defined)
 	syncService := services.NewSyncService(lumaClient, eventRepo, userRepo, nftRepo, client)
 
 	// Initialize and start event sync cron job
@@ -173,12 +177,6 @@ func main() {
 	if err := eventSyncCron.Start(); err != nil {
 		log.Fatalf("Failed to start event sync cron: %v", err)
 	}
-
-	// Validate contract address
-	formattedAddress := api.ValidateContractAddress(cfg.ContractAddress)
-
-	// Initialize Polkadot client
-	client := polkadot.NewClient(cfg.PolkadotRPC, formattedAddress)
 
 	// Create and configure the router with all available repositories
 	router := api.NewRouter(cfg, client, eventRepo, nftRepo, userRepo, permRepo, designRepo)
