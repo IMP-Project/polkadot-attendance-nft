@@ -255,6 +255,24 @@ func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 		}
 	}
 
+	// Get the importing user's wallet address
+var importingUserWallet string
+if request.UserID != "" {
+    userID, err := strconv.ParseUint(request.UserID, 10, 64)
+    if err == nil {
+        user, err := h.userRepo.GetByID(userID)
+        if err == nil && user != nil {
+            importingUserWallet = user.WalletAddress
+        }
+    }
+}
+
+// Fallback if no wallet address found
+if importingUserWallet == "" {
+    fmt.Printf("Warning: Could not find wallet address for user %s\n", request.UserID)
+    // You could either skip import or use a default/placeholder
+}
+
 	// Get all events from Luma
 	lumaEvents, err := h.lumaClient.ListEvents(request.APIKey)
 	if err != nil {
@@ -276,7 +294,7 @@ func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 			Date:          getStringValue(lumaEvent, "start_at"),
 			Location:      getLocationFromEvent(lumaEvent),
 			URL:           getStringValue(lumaEvent, "url"),
-			Organizer:     getStringValue(lumaEvent, "user_api_id"),
+			Organizer:     importingUserWallet,
 			UserID:        request.UserID, // Add UserID for sync tracking
 			LastSyncedAt:  time.Now(),     // Set initial sync time
 			LumaUpdatedAt: getStringValue(lumaEvent, "updated_at"), // Track Luma's update time

@@ -543,41 +543,48 @@ func (h *UserHandler) GetAllEventCheckInCounts(c *gin.Context) {
 }
 
 // GetEventNFTs returns all NFTs minted for a specific event
+// GetEventNFTs returns all NFTs minted for a specific event
 func (h *UserHandler) GetEventNFTs(c *gin.Context) {
-	eventID := c.Param("id")
-	if eventID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
-		return
-	}
+   eventID := c.Param("id")
+   if eventID == "" {
+   	c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+   	return
+   }
 
-	// Verify the user owns this event
-	userID, err := h.getUserIDFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+   // Verify the user owns this event
+   userID, err := h.getUserIDFromContext(c)
+   if err != nil {
+   	c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+   	return
+   }
 
-	// Get the event to verify ownership
-	event, err := h.eventRepo.GetByID(eventID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
-		return
-	}
+   // Get the event to verify ownership
+   event, err := h.eventRepo.GetByID(eventID)
+   if err != nil {
+   	c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+   	return
+   }
 
-	// Check if user owns the event
-	if event.UserID != fmt.Sprintf("%v", userID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to view this event's NFTs"})
-		return
-	}
+   // Check if user owns the event (use Organizer field instead of UserID)
+   user, err := h.userRepo.GetByID(userID)
+   if err != nil {
+   	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+   	return
+   }
 
-	// Get NFTs for this event - using string eventID directly
-	nfts, err := h.nftRepo.GetAllByEventID(eventID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get NFTs"})
-		return
-	}
+   if event.Organizer != user.WalletAddress {
+   	c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to view this event's NFTs"})
+   	return
+   }
 
-	c.JSON(http.StatusOK, gin.H{"nfts": nfts})
+   // Get NFTs for this event - using string eventID directly
+   nfts, err := h.nftRepo.GetAllByEventID(eventID)
+   if err != nil {
+   	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get NFTs"})
+   	return
+   }
+
+   c.JSON(http.StatusOK, gin.H{"nfts": nfts})
 }
 
 // CreateDesign creates a new NFT design for an event
