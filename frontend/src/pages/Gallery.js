@@ -30,11 +30,10 @@ function Gallery() {
         setEvents(eventsData);
         
         if (eventsData.length > 0) {
-          console.log('🎉 Events loaded:', eventsData);
-  console.log('🔍 First event FULL structure:', JSON.stringify(eventsData[0], null, 2));
-  console.log('📋 First event keys:', Object.keys(eventsData[0]));
-          setSelectedEvent(eventsData[0].id);
-        }
+  console.log('🎉 Events loaded:', eventsData);
+  console.log('🎯 Setting initial event to:', eventsData[0].api_id);
+  setSelectedEvent(eventsData[0].api_id);
+}
       } catch (error) {
         console.error('Error fetching events:', error);
         setError('Failed to load events');
@@ -716,7 +715,7 @@ function Gallery() {
             </Typography>
             <FormControl size="small" sx={{ minWidth: '200px' }}>
               <Select
-  value={selectedEvent || events[0]?.id || ''}
+  value={selectedEvent || events[0]?.api_id || ''}
   onChange={handleEventChange}
   displayEmpty
   MenuProps={{
@@ -745,10 +744,10 @@ function Gallery() {
   }}
 >
   {events.map(event => (
-    <MenuItem key={event.id} value={event.id}>
-      {event.name}
-    </MenuItem>
-  ))}
+  <MenuItem key={event.api_id} value={event.api_id}>
+    {event.name}
+  </MenuItem>
+))}
 </Select>
             </FormControl>
           </Box>
