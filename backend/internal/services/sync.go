@@ -384,7 +384,7 @@ func (s *SyncService) extractWalletAddress(guest map[string]interface{}) string 
 	}
 	
 	// Strategy 2: Check answers/form responses
-	if answers, ok := guest["answers"].([]interface{}); ok {
+	if answers, ok := guest["registration_answers"].([]interface{}); ok {
 		for _, answer := range answers {
 			if answerMap, ok := answer.(map[string]interface{}); ok {
 				if question, ok := answerMap["question"].(string); ok {

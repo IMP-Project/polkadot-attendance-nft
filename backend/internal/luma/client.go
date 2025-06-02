@@ -283,7 +283,7 @@ func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]int
 		log.Printf("Guest %d: %+v", i+1, guest)
 		
 		// Check if guest has checked in
-		if checkedIn, ok := guest["checked_in"].(bool); ok {
+		if checkedIn, ok := guest["checked_in_at"].(bool); ok {
 			log.Printf("Guest %d checked in status: %v", i+1, checkedIn)
 		} else {
 			log.Printf("Guest %d: no check-in status found", i+1)
@@ -314,16 +314,17 @@ func extractWalletAddress(guest map[string]interface{}) string {
 	}
 	
 	// Check answers/form responses
-	if answers, ok := guest["answers"].([]interface{}); ok {
+	if answers, ok := guest["registration_answers"].([]interface{}); ok {
 		for _, answer := range answers {
 			if answerMap, ok := answer.(map[string]interface{}); ok {
-				if question, ok := answerMap["question"].(string); ok {
-					// Look for wallet-related questions
-					if question == "Wallet Address" || 
-					   question == "Polkadot Wallet" || 
-					   question == "Wallet" ||
-					   question == "DOT Wallet Address" {
-						if value, ok := answerMap["value"].(string); ok && value != "" {
+    if question, ok := answerMap["label"].(string); ok {  // ← Changed "question" to "label"
+        // Look for wallet-related questions
+        if question == "Wallet Address" ||                    
+           question == "Polkadot Wallet" ||                   
+           question == "Wallet" ||                            
+           question == "DOT Wallet Address" ||
+           question == "Polkadot Address" {                   // ← Added this since your logs show "Polkadot Address"
+            if value, ok := answerMap["answer"].(string); ok && value != "" {  // ← Changed "value" to "answer"
 							return value
 						}
 					}
