@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const EventsContext = createContext();
 
+// API Base URL - Updated to use your Render deployment
+const API_BASE_URL = 'https://polkadot-attendance-nft-api-bpa5.onrender.com';
+
 export const useEvents = () => {
   const context = useContext(EventsContext);
   if (!context) {
@@ -70,7 +73,7 @@ export const EventsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:8080/api/user/events', {
+      const response = await fetch(`${API_BASE_URL}/api/user/events`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -117,7 +120,7 @@ export const EventsProvider = ({ children }) => {
   const checkSyncStatus = async (authToken, currentEventCount) => {
     try {
       // Get saved API key
-      const apiKeyResponse = await fetch('http://localhost:8080/api/user/luma-api-key', {
+      const apiKeyResponse = await fetch(`${API_BASE_URL}/api/user/luma-api-key`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -130,7 +133,7 @@ export const EventsProvider = ({ children }) => {
 
         if (lumaApiKey) {
           // Get Luma events count
-          const lumaResponse = await fetch('http://localhost:8080/api/list-luma-events', {
+          const lumaResponse = await fetch(`${API_BASE_URL}/api/list-luma-events`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -210,7 +213,7 @@ export const EventsProvider = ({ children }) => {
     // Try to delete from database
     if (authToken) {
       try {
-        const response = await fetch(`http://localhost:8080/api/user/events/${eventId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/user/events/${eventId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -247,7 +250,7 @@ export const EventsProvider = ({ children }) => {
     // Try to update in database
     if (authToken) {
       try {
-        const response = await fetch(`http://localhost:8080/api/user/events/${eventId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/user/events/${eventId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${authToken}`,
