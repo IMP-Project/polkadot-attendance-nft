@@ -255,17 +255,31 @@ func (h *LumaHandler) BulkImportEvents(c *gin.Context) {
 		}
 	}
 
-	// Get the importing user's wallet address
+// Get the importing user's wallet address
 var importingUserWallet string
 if request.UserID != "" {
+    fmt.Printf("DEBUG: Looking up user ID: %s\n", request.UserID)
     userID, err := strconv.ParseUint(request.UserID, 10, 64)
     if err == nil {
+        fmt.Printf("DEBUG: Parsed user ID: %d\n", userID)
         user, err := h.userRepo.GetByID(userID)
         if err == nil && user != nil {
             importingUserWallet = user.WalletAddress
+            fmt.Printf("DEBUG: Found wallet address: %s\n", importingUserWallet)
+        } else {
+            fmt.Printf("DEBUG: Failed to get user or user is nil. Error: %v\n", err)
         }
+    } else {
+        fmt.Printf("DEBUG: Failed to parse user ID: %v\n", err)
     }
 }
+
+// Fallback if no wallet address found
+if importingUserWallet == "" {
+    fmt.Printf("Warning: Could not find wallet address for user %s\n", request.UserID)
+}
+
+fmt.Printf("DEBUG: Final importingUserWallet value: '%s'\n", importingUserWallet)
 
 // Fallback if no wallet address found
 if importingUserWallet == "" {
