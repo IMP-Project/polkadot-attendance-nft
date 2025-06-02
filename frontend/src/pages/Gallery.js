@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid, 
   FormControl, Select, MenuItem, TextField, InputAdornment,
-  CircularProgress, Alert
+  CircularProgress, Alert, Tabs, Tab, Chip
 } from '@mui/material';
 import {
-  ContentCopy
+  ContentCopy, Image, Token
 } from '@mui/icons-material';
 import { api } from '../services/api';
 import UploadDesignModal from '../components/ui/UploadDesignModal';
@@ -18,7 +18,9 @@ function Gallery() {
   const [urlCopied, setUrlCopied] = useState(false);
   const [error, setError] = useState(null);
   const [designs, setDesigns] = useState([]);
+  const [mintedNFTs, setMintedNFTs] = useState([]);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(0); // 0 = Design Templates, 1 = Minted NFTs
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -46,22 +48,29 @@ function Gallery() {
       const baseUrl = window.location.origin;
       setPublicUrl(`${baseUrl}/public/gallery/${selectedEvent}`);
       
-      // Fetch real designs for the selected event
+      // Fetch both designs and minted NFTs for the selected event
       fetchEventDesigns(selectedEvent);
+      fetchMintedNFTs(selectedEvent);
     }
   }, [selectedEvent]);
   
   const fetchEventDesigns = async (eventId) => {
     try {
-      setLoading(true);
       const response = await api.getEventDesigns(eventId);
       setDesigns(response.designs || []);
-      setError(null);
     } catch (error) {
       console.error('Error fetching designs:', error);
-      setError('Failed to load designs');
-    } finally {
-      setLoading(false);
+      setDesigns([]);
+    }
+  };
+
+  const fetchMintedNFTs = async (eventId) => {
+    try {
+      const nftsData = await api.getNFTsByEvent(eventId);
+      setMintedNFTs(nftsData || []);
+    } catch (error) {
+      console.error('Error fetching minted NFTs:', error);
+      setMintedNFTs([]);
     }
   };
   
@@ -90,6 +99,10 @@ function Gallery() {
     } else {
       handleCopyUrl();
     }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   const handleUploadComplete = async (designData) => {
@@ -141,6 +154,373 @@ function Gallery() {
     });
   };
 
+  // Render Design Templates
+  const renderDesignTemplates = () => (
+    <Grid container spacing={3}>
+      {designs.length === 0 ? (
+        <Grid item xs={12}>
+          <Box 
+            sx={{ 
+              textAlign: 'center', 
+              py: 8,
+              color: (theme) => theme.palette.text.secondary
+            }}
+          >
+            <Image sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              No design templates yet
+            </Typography>
+            <Typography variant="body2">
+              Click "Upload new design" to add your first NFT design template
+            </Typography>
+          </Box>
+        </Grid>
+      ) : (
+        designs.map((design) => (
+          <Grid item xs={12} sm={6} md={3} key={design.id}>
+            <Card 
+              sx={{ 
+                borderRadius: 3,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                }
+              }}
+            >
+              {/* Design Image */}
+              <Box 
+                sx={{ 
+                  height: 200,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: (theme) => theme.palette.action.hover
+                }}
+              >
+                <img
+                  src={design.image_data}
+                  alt={design.title}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+                <Chip 
+                  label="Template" 
+                  size="small" 
+                  sx={{ 
+                    position: 'absolute', 
+                    top: 8, 
+                    right: 8,
+                    backgroundColor: '#4CAF50',
+                    color: 'white'
+                  }} 
+                />
+              </Box>
+              
+              <CardContent sx={{ p: 2 }}>
+                {/* Template Label */}
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: (theme) => theme.palette.text.secondary,
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    mb: 1,
+                    display: 'block'
+                  }}
+                >
+                  Design Template
+                </Typography>
+                
+                {/* Template Title */}
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: '16px',
+                    color: (theme) => theme.palette.text.primary,
+                    mb: 2
+                  }}
+                >
+                  {design.title}
+                </Typography>
+
+                {/* Design Info */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: (theme) => theme.palette.text.secondary,
+                      fontSize: '11px',
+                      display: 'block',
+                      mb: 0.5
+                    }}
+                  >
+                    Created by
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: (theme) => theme.palette.text.secondary,
+                      fontSize: '11px',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {design.created_by ? `${design.created_by.slice(0, 6)}...${design.created_by.slice(-4)}` : 'Unknown'}
+                  </Typography>
+                </Box>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    sx={{
+                      borderColor: '#FF2670',
+                      color: '#FF2670',
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      '&:hover': {
+                        borderColor: '#E91E63',
+                        backgroundColor: 'rgba(255, 38, 112, 0.04)',
+                      },
+                    }}
+                  >
+                    View
+                  </Button>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{
+                      backgroundColor: '#FF2670',
+                      color: 'white',
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      '&:hover': {
+                        backgroundColor: '#E91E63',
+                      },
+                    }}
+                  >
+                    Use Design
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))
+      )}
+    </Grid>
+  );
+
+  // Render Minted NFTs
+  const renderMintedNFTs = () => (
+    <Grid container spacing={3}>
+      {mintedNFTs.length === 0 ? (
+        <Grid item xs={12}>
+          <Box 
+            sx={{ 
+              textAlign: 'center', 
+              py: 8,
+              color: (theme) => theme.palette.text.secondary
+            }}
+          >
+            <Token sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              No NFTs minted yet
+            </Typography>
+            <Typography variant="body2">
+              NFTs will appear here when attendees check in to your events
+            </Typography>
+          </Box>
+        </Grid>
+      ) : (
+        mintedNFTs.map((nft) => (
+          <Grid item xs={12} sm={6} md={3} key={nft.id}>
+            <Card 
+              sx={{ 
+                borderRadius: 3,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                }
+              }}
+            >
+              {/* NFT Image */}
+              <Box 
+                sx={{ 
+                  height: 200,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: (theme) => theme.palette.action.hover
+                }}
+              >
+                {nft.metadata?.image_data ? (
+                  <img
+                    src={nft.metadata.image_data}
+                    alt={nft.metadata?.event_name || 'NFT'}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                ) : (
+                  <Token sx={{ fontSize: 64, color: '#FF2670' }} />
+                )}
+                <Chip 
+                  label="Minted" 
+                  size="small" 
+                  sx={{ 
+                    position: 'absolute', 
+                    top: 8, 
+                    right: 8,
+                    backgroundColor: '#FF2670',
+                    color: 'white'
+                  }} 
+                />
+              </Box>
+              
+              <CardContent sx={{ p: 2 }}>
+                {/* NFT Label */}
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: (theme) => theme.palette.text.secondary,
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    mb: 1,
+                    display: 'block'
+                  }}
+                >
+                  Minted NFT #{nft.id}
+                </Typography>
+                
+                {/* NFT Title */}
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: '16px',
+                    color: (theme) => theme.palette.text.primary,
+                    mb: 2
+                  }}
+                >
+                  {nft.metadata?.event_name || 'Event NFT'}
+                </Typography>
+
+                {/* Owner Info */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: (theme) => theme.palette.text.secondary,
+                      fontSize: '11px',
+                      display: 'block',
+                      mb: 0.5
+                    }}
+                  >
+                    Owner
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: (theme) => theme.palette.text.secondary,
+                      fontSize: '11px',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {nft.owner ? `${nft.owner.slice(0, 6)}...${nft.owner.slice(-4)}` : 'Unknown'}
+                  </Typography>
+                </Box>
+
+                {/* Attendee Info */}
+                {nft.metadata?.attendee && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: (theme) => theme.palette.text.secondary,
+                        fontSize: '11px',
+                        display: 'block',
+                        mb: 0.5
+                      }}
+                    >
+                      Attendee
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: (theme) => theme.palette.text.primary,
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      {nft.metadata.attendee}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    sx={{
+                      borderColor: '#FF2670',
+                      color: '#FF2670',
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      '&:hover': {
+                        borderColor: '#E91E63',
+                        backgroundColor: 'rgba(255, 38, 112, 0.04)',
+                      },
+                    }}
+                  >
+                    View Details
+                  </Button>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{
+                      backgroundColor: '#4CAF50',
+                      color: 'white',
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      '&:hover': {
+                        backgroundColor: '#45a049',
+                      },
+                    }}
+                  >
+                    View on Chain
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))
+      )}
+    </Grid>
+  );
+
   return (
     <Box
       sx={{
@@ -183,7 +563,7 @@ function Gallery() {
               color: (theme) => theme.palette.text.secondary,
             }}
           >
-            Create and manage the visual identity of your event NFTs
+            Manage design templates and view minted NFTs for your events
           </Typography>
         </Box>
         
@@ -250,34 +630,36 @@ function Gallery() {
             Share Gallery
           </Button>
                    
-          {/* Upload new design Button */}
-          <Button
-            onClick={handleUploadNewDesign}
-            sx={{
-              backgroundColor: '#FF2670',
-              color: 'white',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              textTransform: 'none',
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 500,
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              '&:hover': {
-                backgroundColor: '#E91E63',
-              },
-            }}
-          >
-            <Box
-              component="img"
-              src="/images/plus-icon.png"
-              alt="Upload"
-              sx={{ width: 16, height: 16 }}
-            />
-            Upload new design
-          </Button>
+          {/* Upload new design Button - only show on Design Templates tab */}
+          {activeTab === 0 && (
+            <Button
+              onClick={handleUploadNewDesign}
+              sx={{
+                backgroundColor: '#FF2670',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                textTransform: 'none',
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 500,
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                '&:hover': {
+                  backgroundColor: '#E91E63',
+                },
+              }}
+            >
+              <Box
+                component="img"
+                src="/images/plus-icon.png"
+                alt="Upload"
+                sx={{ width: 16, height: 16 }}
+              />
+              Upload new design
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -414,7 +796,41 @@ function Gallery() {
         </Box>
       </Box>
 
-      {/* NFT Grid */}
+      {/* Tabs */}
+      <Box sx={{ px: 4, borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          sx={{
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 500,
+              fontSize: '14px',
+              minHeight: 48,
+            }
+          }}
+        >
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Image fontSize="small" />
+                Design Templates ({designs.length})
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Token fontSize="small" />
+                Minted NFTs ({mintedNFTs.length})
+              </Box>
+            } 
+          />
+        </Tabs>
+      </Box>
+
+      {/* Content */}
       <Box sx={{ px: 4, py: 2, flex: 1 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -427,158 +843,7 @@ function Gallery() {
             <CircularProgress />
           </Box>
         ) : (
-          <Grid container spacing={3}>
-            {designs.length === 0 ? (
-              <Grid item xs={12}>
-                <Box 
-                  sx={{ 
-                    textAlign: 'center', 
-                    py: 8,
-                    color: (theme) => theme.palette.text.secondary
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    No designs uploaded yet
-                  </Typography>
-                  <Typography variant="body2">
-                    Click "Upload new design" to add your first NFT design
-                  </Typography>
-                </Box>
-              </Grid>
-            ) : (
-              designs.map((design) => (
-                <Grid item xs={12} sm={6} md={3} key={design.id}>
-                  <Card 
-                    sx={{ 
-                      borderRadius: 3,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                      }
-                    }}
-                  >
-                    {/* NFT Image */}
-                    <Box 
-                      sx={{ 
-                        height: 200,
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                        backgroundColor: (theme) => theme.palette.action.hover
-                      }}
-                    >
-                      <img
-                        src={design.image_data}
-                        alt={design.title}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    </Box>
-                    
-                    <CardContent sx={{ p: 2 }}>
-                      {/* NFT Label */}
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          color: (theme) => theme.palette.text.secondary,
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          mb: 1,
-                          display: 'block'
-                        }}
-                      >
-                        NFT Design
-                      </Typography>
-                      
-                      {/* NFT Title */}
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: 600,
-                          fontSize: '16px',
-                          color: (theme) => theme.palette.text.primary,
-                          mb: 2
-                        }}
-                      >
-                        {design.title}
-                      </Typography>
-
-                      {/* Design Info */}
-                      <Box sx={{ mb: 2 }}>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: (theme) => theme.palette.text.secondary,
-                            fontSize: '11px',
-                            display: 'block',
-                            mb: 0.5
-                          }}
-                        >
-                          Created by
-                        </Typography>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: (theme) => theme.palette.text.secondary,
-                            fontSize: '11px',
-                            wordBreak: 'break-all'
-                          }}
-                        >
-                          {design.created_by ? `${design.created_by.slice(0, 6)}...${design.created_by.slice(-4)}` : 'Unknown'}
-                        </Typography>
-                      </Box>
-
-                      {/* Action Buttons */}
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          variant="outlined"
-                          fullWidth
-                          sx={{
-                            borderColor: '#FF2670',
-                            color: '#FF2670',
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            fontSize: '12px',
-                            '&:hover': {
-                              borderColor: '#E91E63',
-                              backgroundColor: 'rgba(255, 38, 112, 0.04)',
-                            },
-                          }}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="contained"
-                          fullWidth
-                          sx={{
-                            backgroundColor: '#FF2670',
-                            color: 'white',
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            fontSize: '12px',
-                            '&:hover': {
-                              backgroundColor: '#E91E63',
-                            },
-                          }}
-                        >
-                          Use Design
-                        </Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
-            )}
-          </Grid>
+          activeTab === 0 ? renderDesignTemplates() : renderMintedNFTs()
         )}
       </Box>
 
