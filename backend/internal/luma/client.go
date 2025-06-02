@@ -87,7 +87,7 @@ func NewClient(apiKey string) *Client {
 }
 
 // makeAPIRequest makes a rate-limited request to the Luma API with retry logic
-func (c *Client) makeAPIRequest(method, url string) ([]byte, error) {
+func (c *Client) makeAPIRequest(method, url, apiKey string) ([]byte, error) {
 	var lastErr error
 	
 	for attempt := 0; attempt <= c.rateLimiter.maxRetries; attempt++ {
@@ -99,7 +99,7 @@ func (c *Client) makeAPIRequest(method, url string) ([]byte, error) {
 			return nil, fmt.Errorf("error creating request: %w", err)
 		}
 		
-		req.Header.Set("x-luma-api-key", c.apiKey)
+		req.Header.Set("x-luma-api-key", apiKey)
 		req.Header.Set("Content-Type", "application/json")
 		
 		resp, err := c.httpClient.Do(req)
@@ -181,7 +181,7 @@ func (c *Client) GetEvent(eventID string) (*models.Event, error) {
 func (c *Client) FetchSingleEvent(apiKey string, eventID string) (*models.Event, error) {
 	url := fmt.Sprintf("https://api.lu.ma/public/v1/event/get?api_id=%s", eventID)
 	
-	body, err := c.makeAPIRequest("GET", url)
+	body, err := c.makeAPIRequest("GET", url, apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (c *Client) TestAPIKey(apiKey string) error {
 	url := "https://api.lu.ma/public/v1/user/get-self"
 	log.Printf("Testing API key with URL: %s", url)
 
-	body, err := c.makeAPIRequest("GET", url)
+	body, err := c.makeAPIRequest("GET", url, apiKey)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (c *Client) ListEvents(apiKey string) ([]map[string]interface{}, error) {
 	
 	log.Printf("Fetching events from URL: %s", url)
 	
-	body, err := c.makeAPIRequest("GET", url)
+	body, err := c.makeAPIRequest("GET", url, apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]int
 	
 	log.Printf("Fetching event guests from URL: %s", url)
 	
-	body, err := c.makeAPIRequest("GET", url)
+	body, err := c.makeAPIRequest("GET", url, apiKey)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ type LumaAPIResponse struct {
 func (c *Client) fetchFromAPI(method, endpoint string, body []byte) (json.RawMessage, error) {
 	url := c.baseURL + endpoint
 	
-	responseBody, err := c.makeAPIRequest(method, url)
+	responseBody, err := c.makeAPIRequest(method, url, c.apiKey)
 	if err != nil {
 		return nil, err
 	}
