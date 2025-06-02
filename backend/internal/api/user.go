@@ -11,6 +11,7 @@ import (
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
+    "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma"  
 )
 
 // UserHandler handles user-related API endpoints
@@ -744,3 +745,133 @@ func (h *UserHandler) DeleteDesign(c *gin.Context) {
 	}
 }
 
+// GetEventCheckIns returns detailed check-in information for an event (live from Luma)
+func (h *UserHandler) GetEventCheckIns(c *gin.Context) {
+	eventID := c.Param("id")
+	if eventID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID is required"})
+		return
+	}
+
+	// Verify the user owns this event
+	userID, err := h.getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get user to access their Luma API key
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	// Get user's Luma API key
+	apiKey, err := h.userRepo.GetLumaApiKey(userID)
+	if err != nil || apiKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Luma API key not found"})
+		return
+	}
+
+	// Verify event ownership
+	event, err := h.eventRepo.GetByID(eventID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+
+	if event.Organizer != user.WalletAddress {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to view this event's check-ins"})
+		return
+	}
+
+	// Get NFT status map for quick lookup
+	nfts, err := h.nftRepo.GetAllByEventID(eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get NFTs"})
+		return
+	}
+
+	nftStatusMap := make(map[string]bool)
+	for _, nft := range nfts {
+		nftStatusMap[nft.Owner] = true
+	}
+
+	// Fetch live data from Luma API (reuse existing client logic)
+	lumaClient := luma.NewClient(apiKey)
+	guests, err := lumaClient.GetEventGuests(apiKey, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch guest data from Luma"})
+		return
+	}
+
+	// Process guest data into check-in format
+	var checkIns []map[string]interface{}
+	for _, guest := range guests {
+		// Extract check-in time
+		checkedInAt, hasCheckedIn := guest["checked_in_at"]
+		if !hasCheckedIn || checkedInAt == nil {
+			continue // Skip guests who haven't checked in
+		}
+
+		// Extract attendee name
+		name, _ := guest["name"].(string)
+		if name == "" {
+			name, _ = guest["user_name"].(string)
+		}
+
+		// Extract wallet address (reuse existing logic)
+		walletAddress := extractWalletAddress(guest)
+
+		// Determine NFT status
+		nftStatus := nftStatusMap[walletAddress]
+
+		checkIn := map[string]interface{}{
+			"attendee":      name,
+			"wallet":        walletAddress,
+			"nft_status":    nftStatus,
+			"checked_in_at": checkedInAt,
+		}
+
+		checkIns = append(checkIns, checkIn)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"event_id":   eventID,
+		"check_ins":  checkIns,
+	})
+}
+
+// extractWalletAddress tries to extract wallet address from guest data
+func extractWalletAddress(guest map[string]interface{}) string {
+	// Check answers/form responses
+	if answers, ok := guest["registration_answers"].([]interface{}); ok {
+		for _, answer := range answers {
+			if answerMap, ok := answer.(map[string]interface{}); ok {
+				if question, ok := answerMap["label"].(string); ok {
+					// Look for wallet-related questions
+					if question == "Wallet Address" ||
+						question == "Polkadot Wallet" ||
+						question == "Wallet" ||
+						question == "DOT Wallet Address" ||
+						question == "Polkadot Address" {
+						if value, ok := answerMap["answer"].(string); ok && value != "" {
+							return value
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	// Check direct fields
+	if wallet, ok := guest["wallet_address"].(string); ok && wallet != "" {
+		return wallet
+	}
+	if wallet, ok := guest["polkadot_wallet"].(string); ok && wallet != "" {
+		return wallet
+	}
+	
+	return ""
+}

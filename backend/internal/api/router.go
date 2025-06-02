@@ -96,6 +96,9 @@ func NewRouter(
 		user.GET("/events/:id/check-ins/count", userHandler.GetEventCheckInCount)
 		user.GET("/events/check-ins/counts", userHandler.GetAllEventCheckInCounts)
 		
+		// Check-in details (NEW - returns full attendee data)
+		user.GET("/events/:id/check-ins", userHandler.GetEventCheckIns)
+		
 		// NFTs by event
 		user.GET("/events/:id/nfts", userHandler.GetEventNFTs)
 		
