@@ -87,8 +87,8 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
       
       // If no pre-selected event from navigation, select the first one
       if (!localStorage.getItem('selectedEventId') && eventsData.length > 0) {
-        setSelectedEvent(eventsData[0].id);
-      }
+  setSelectedEvent(eventsData[0].api_id);
+}
     } catch (error) {
       console.error('Error fetching events:', error);
     }
@@ -287,10 +287,10 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
               >
                 <MenuItem value="" disabled>Select an event</MenuItem>
                 {events.map(event => (
-                  <MenuItem key={event.id} value={event.id}>
-                    {event.name}
-                  </MenuItem>
-                ))}
+  <MenuItem key={event.api_id} value={event.api_id}>
+    {event.name}
+  </MenuItem>
+))}
               </Select>
             </FormControl>
           </Box>
