@@ -64,82 +64,23 @@ func main() {
 		log.Println("UserSettings table migration completed")
 	}
 
-	// Then run all migrations
+	// Then run all migrations with updated models
 	err = gormDB.AutoMigrate(
 		&models.User{},
-		&database.UserSettings{}, // Added UserSettings migration
+		&database.UserSettings{}, 
 		&database.EventPermission{},
-		&models.Event{},
-		&models.NFTDesign{}, // Added NFT Design model
-		&database.NFT{}, // Added NFT model
-		// Add other models here as needed
+		&models.Event{},        // This will use your updated Event model
+		&models.NFT{},          // Changed from &database.NFT{} to &models.NFT{}
+		&models.Attendee{},     // Added the Attendee model
+		&models.NFTDesign{},    
 	)
 	if err != nil {
-		log.Printf("Migration warning: %v", err) // Don't crash on migration warnings
+		log.Printf("Migration warning: %v", err)
 	}
 	log.Println("All database migrations completed")
 
-	// Add missing columns to events table if they don't exist
-	log.Println("Checking for missing columns in events table...")
-	
-	// Check and add last_synced_at column
-	var columnExists bool
-	err = gormDB.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
-			WHERE table_name = 'events' 
-			AND column_name = 'last_synced_at'
-		)
-	`).Scan(&columnExists).Error
-	
-	if err == nil && !columnExists {
-		log.Println("Adding last_synced_at column to events table...")
-		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP`)
-	}
-	
-	// Check and add user_id column
-	err = gormDB.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
-			WHERE table_name = 'events' 
-			AND column_name = 'user_id'
-		)
-	`).Scan(&columnExists).Error
-	
-	if err == nil && !columnExists {
-		log.Println("Adding user_id column to events table...")
-		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id VARCHAR(255)`)
-	}
-	
-	// Check and add luma_updated_at column
-	err = gormDB.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
-			WHERE table_name = 'events' 
-			AND column_name = 'luma_updated_at'
-		)
-	`).Scan(&columnExists).Error
-	
-	if err == nil && !columnExists {
-		log.Println("Adding luma_updated_at column to events table...")
-		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS luma_updated_at VARCHAR(255)`)
-	}
-	
-	// Check and add is_deleted column
-	err = gormDB.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
-			WHERE table_name = 'events' 
-			AND column_name = 'is_deleted'
-		)
-	`).Scan(&columnExists).Error
-	
-	if err == nil && !columnExists {
-		log.Println("Adding is_deleted column to events table...")
-		gormDB.Exec(`ALTER TABLE events ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`)
-	}
-
-	log.Println("Column check completed")
+	// Migration completed - new model structure handles all required columns
+	log.Println("Migration completed - new model structure will handle all required columns")
 
 	// Initialize repositories
 	userRepo := database.NewUserRepository(gormDB)
