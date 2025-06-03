@@ -302,3 +302,38 @@ func (r *NFTRepository) UpdateConfirmation(id uint64, confirmed bool) error {
 
 	return nil
 } 
+
+// UpdateNFTsWithDesign updates all NFTs for an event to use a specific design image
+func (r *NFTRepository) UpdateNFTsWithDesign(eventID string, designImageURL string) error {
+    // Get all NFTs for this event
+    nfts, err := r.GetAllByEventID(eventID)
+    if err != nil {
+        return fmt.Errorf("failed to get NFTs for event: %w", err)
+    }
+
+    // Update each NFT's metadata to include the new design image
+    for _, nft := range nfts {
+        // Update the image_data field in metadata
+        nft.Metadata["image_data"] = designImageURL
+
+        // Convert metadata to JSON
+        metadataJSON, err := json.Marshal(nft.Metadata)
+        if err != nil {
+            continue // Skip this NFT if JSON marshaling fails
+        }
+
+        // Update the NFT record using raw SQL
+        query := `
+            UPDATE nfts 
+            SET metadata = $1, updated_at = NOW()
+            WHERE id = $2
+        `
+        
+        _, err = r.db.Exec(query, metadataJSON, nft.ID)
+        if err != nil {
+            return fmt.Errorf("failed to update NFT %d: %w", nft.ID, err)
+        }
+    }
+
+    return nil
+}

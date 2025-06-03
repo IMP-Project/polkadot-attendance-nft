@@ -1074,3 +1074,59 @@ func (h *UserHandler) GetUserDesigns(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"designs": designs})
 }
+
+// ApplyDesignToEvent applies a design template to all NFTs in an event
+func (h *UserHandler) ApplyDesignToEvent(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    eventID := c.Param("eventId")
+    designID := c.Param("designId")
+    
+    if eventID == "" || designID == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID and Design ID are required"})
+        return
+    }
+
+    // Verify user owns the event
+    user, err := h.userRepo.GetByID(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+        return
+    }
+
+    event, err := h.eventRepo.GetByID(eventID)
+    if err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+        return
+    }
+
+    if event.Organizer != user.WalletAddress {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to modify this event"})
+        return
+    }
+
+    // Get the design to apply
+    design, err := h.designRepo.GetByID(designID)
+    if err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Design not found"})
+        return
+    }
+
+    // Update all NFTs for this event to use this design
+    err = h.nftRepo.UpdateNFTsWithDesign(eventID, design.ImageURL)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to apply design to NFTs"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Design applied successfully",
+        "event_id": eventID,
+        "design_id": designID,
+        "design_url": design.ImageURL,
+    })
+}

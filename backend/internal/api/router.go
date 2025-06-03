@@ -40,16 +40,15 @@ func NewRouter(
 	lumaHandler := NewLumaHandler(lumaClient, polkadotClient, nftRepo, eventRepo, userRepo)
 	
 	// Initialize Cloudinary service
-	// Initialize Cloudinary service
-cloudinaryService, err := services.NewCloudinaryService()
-if err != nil {
-    // Log error but don't crash - continue with nil cloudinaryService
-    println("Warning: Cloudinary service initialization failed:", err.Error())
-    println("Image upload functionality will be disabled")
-    cloudinaryService = nil
-}
+	cloudinaryService, err := services.NewCloudinaryService()
+	if err != nil {
+		// Log error but don't crash - continue with nil cloudinaryService
+		println("Warning: Cloudinary service initialization failed:", err.Error())
+		println("Image upload functionality will be disabled")
+		cloudinaryService = nil
+	}
 
-userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, designRepo, cloudinaryService, cfg.JWTSecret)
+	userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, designRepo, cloudinaryService, cfg.JWTSecret)
 
 	// Public routes
 	{
@@ -122,6 +121,9 @@ userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, desi
 		user.PUT("/designs/:designId", userHandler.UpdateDesign)                // Update design details
 		user.DELETE("/designs/:designId", userHandler.DeleteDesign)             // Delete design (and Cloudinary image)
 		user.GET("/designs", userHandler.GetUserDesigns)                        // Get all designs by user
+		
+		// Apply design to event NFTs (NEW ENDPOINT)
+		user.POST("/events/:eventId/apply-design/:designId", userHandler.ApplyDesignToEvent)  // Apply design template to all NFTs in an event
 	}
 
 	return r
