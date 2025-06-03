@@ -270,7 +270,7 @@ async uploadDesignImage(file) {
 
 async applyDesignToEvent(eventId, designId) {
   return apiCallWithRetry(async () => {
-    const response = await apiClient.post(`/user/events/${eventId}/apply-design/${designId}`);
+    const response = await apiClient.post(`/user/apply-design/${eventId}/${designId}`);
     return response.data;
   });
 },
