@@ -152,6 +152,23 @@ function Gallery() {
   }
 };  
   
+const handleUseDesign = async (design) => {
+  try {
+    // Logic to apply design to NFTs for this event
+    // This could involve updating NFT metadata to use this design
+    console.log('Using design:', design);
+    
+    // Refresh minted NFTs to show the updated design
+    await fetchMintedNFTs(selectedEvent);
+    
+    // Show success message
+    console.log('Design applied successfully!');
+  } catch (error) {
+    console.error('Error applying design:', error);
+    setError('Failed to apply design');
+  }
+};
+
   // Render Design Templates
   const renderDesignTemplates = () => (
     <Grid container spacing={3}>
@@ -275,43 +292,26 @@ function Gallery() {
                 </Box>
 
                 {/* Action Buttons */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{
-                      borderColor: '#FF2670',
-                      color: '#FF2670',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      fontSize: '12px',
-                      '&:hover': {
-                        borderColor: '#E91E63',
-                        backgroundColor: 'rgba(255, 38, 112, 0.04)',
-                      },
-                    }}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    sx={{
-                      backgroundColor: '#FF2670',
-                      color: 'white',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      fontSize: '12px',
-                      '&:hover': {
-                        backgroundColor: '#E91E63',
-                      },
-                    }}
-                  >
-                    Use Design
-                  </Button>
-                </Box>
+<Box>
+  <Button
+    variant="contained"
+    fullWidth
+    onClick={() => handleUseDesign(design)}
+    sx={{
+      backgroundColor: '#FF2670',
+      color: 'white',
+      borderRadius: '8px',
+      textTransform: 'none',
+      fontWeight: 500,
+      fontSize: '12px',
+      '&:hover': {
+        backgroundColor: '#E91E63',
+      },
+    }}
+  >
+    Use Design
+  </Button>
+</Box>
               </CardContent>
             </Card>
           </Grid>
@@ -474,43 +474,25 @@ function Gallery() {
                 )}
 
                 {/* Action Buttons */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{
-                      borderColor: '#FF2670',
-                      color: '#FF2670',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      fontSize: '12px',
-                      '&:hover': {
-                        borderColor: '#E91E63',
-                        backgroundColor: 'rgba(255, 38, 112, 0.04)',
-                      },
-                    }}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    sx={{
-                      backgroundColor: '#4CAF50',
-                      color: 'white',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      fontSize: '12px',
-                      '&:hover': {
-                        backgroundColor: '#45a049',
-                      },
-                    }}
-                  >
-                    View on Chain
-                  </Button>
-                </Box>
+<Box>
+  <Button
+    variant="contained"
+    fullWidth
+    sx={{
+      backgroundColor: '#4CAF50',
+      color: 'white',
+      borderRadius: '8px',
+      textTransform: 'none',
+      fontWeight: 500,
+      fontSize: '12px',
+      '&:hover': {
+        backgroundColor: '#45a049',
+      },
+    }}
+  >
+    View on Chain
+  </Button>
+</Box>
               </CardContent>
             </Card>
           </Grid>
