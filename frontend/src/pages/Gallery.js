@@ -154,14 +154,14 @@ function Gallery() {
   
 const handleUseDesign = async (design) => {
   try {
-    // Logic to apply design to NFTs for this event
-    // This could involve updating NFT metadata to use this design
     console.log('Using design:', design);
+    
+    // Call the new API endpoint to apply design to event NFTs
+    await api.applyDesignToEvent(selectedEvent, design.id);
     
     // Refresh minted NFTs to show the updated design
     await fetchMintedNFTs(selectedEvent);
     
-    // Show success message
     console.log('Design applied successfully!');
   } catch (error) {
     console.error('Error applying design:', error);
