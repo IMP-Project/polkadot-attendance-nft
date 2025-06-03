@@ -311,14 +311,19 @@ func (r *NFTRepository) UpdateNFTsWithDesign(eventID string, designImageURL stri
         return fmt.Errorf("failed to get NFTs for event: %w", err)
     }
 
+    fmt.Printf("DEBUG: Found %d NFTs for event %s\n", len(nfts), eventID)
+
     // Update each NFT's metadata to include the new design image
     for _, nft := range nfts {
+        fmt.Printf("DEBUG: Updating NFT %d with design URL: %s\n", nft.ID, designImageURL)
+        
         // Update the image_data field in metadata
         nft.Metadata["image_data"] = designImageURL
 
         // Convert metadata to JSON
         metadataJSON, err := json.Marshal(nft.Metadata)
         if err != nil {
+            fmt.Printf("DEBUG: JSON marshal error for NFT %d: %v\n", nft.ID, err)
             continue // Skip this NFT if JSON marshaling fails
         }
 
@@ -331,9 +336,13 @@ func (r *NFTRepository) UpdateNFTsWithDesign(eventID string, designImageURL stri
         
         _, err = r.db.Exec(query, metadataJSON, nft.ID)
         if err != nil {
+            fmt.Printf("DEBUG: SQL update error for NFT %d: %v\n", nft.ID, err)
             return fmt.Errorf("failed to update NFT %d: %w", nft.ID, err)
         }
+        
+        fmt.Printf("DEBUG: Successfully updated NFT %d\n", nft.ID)
     }
 
+    fmt.Printf("DEBUG: Finished updating all NFTs\n")
     return nil
 }
