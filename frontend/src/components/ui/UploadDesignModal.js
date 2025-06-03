@@ -72,15 +72,13 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
     }
   }, []);
 
-  // Convert file to base64 and store it
-  const processFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setUploadedFileData(e.target.result);
-    };
-    reader.readAsDataURL(file);
-    setUploadedFile(file);
-  };
+  // NEW - Just store the file, no base64 conversion:
+const processFile = (file) => {
+  setUploadedFile(file);
+  // Create preview URL for display
+  const previewUrl = URL.createObjectURL(file);
+  setUploadedFileData(previewUrl);
+};
 
   // Handle drop
   const handleDrop = useCallback((e) => {
@@ -127,15 +125,13 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
       return;
     }
 
-    // Create design data object
-    const designData = {
-      file: uploadedFile,
-      fileData: uploadedFileData, // Include base64 data
-      title: nftTitle,
-      description: description || 'This NFT serves as verifiable proof of attendance at {event_name}. Minted on the Polkadot blockchain, it commemorates your participation and may unlock special perks, access, or exclusive content within the ecosystem.',
-      traits: traits || 'VIP',
-      metadata: metadata
-    };
+   const designData = {
+  file: uploadedFile,           // Just the File object, no base64
+  title: nftTitle,
+  description: description || 'This NFT serves as verifiable proof of attendance at {event_name}. Minted on the Polkadot blockchain, it commemorates your participation and may unlock special perks, access, or exclusive content within the ecosystem.',
+  traits: traits || 'VIP',
+  metadata: metadata
+};
 
     // Call the onUpload callback with the design data
     if (onUpload) {
@@ -151,6 +147,12 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
 
   // Handle close
   const handleClose = () => {
+
+    // Add this to handleClose to prevent memory leaks:
+if (uploadedFileData && uploadedFileData.startsWith('blob:')) {
+  URL.revokeObjectURL(uploadedFileData);
+}
+
     // Ask user if they want to save draft before closing
     if ((nftTitle || description || traits || uploadedFileData) && open) {
       const shouldClearDraft = window.confirm('Do you want to discard your changes? Your draft will be saved for later.');
