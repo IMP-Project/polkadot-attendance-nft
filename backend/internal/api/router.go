@@ -123,7 +123,7 @@ func NewRouter(
 		user.GET("/designs", userHandler.GetUserDesigns)                        // Get all designs by user
 		
 		// Apply design to event NFTs (NEW ENDPOINT)
-		user.POST("/events/:eventId/apply-design/:designId", userHandler.ApplyDesignToEvent)  // Apply design template to all NFTs in an event
+		user.POST("/apply-design/:eventId/:designId", userHandler.ApplyDesignToEvent)  // Apply design template to all NFTs in an event
 	}
 
 	return r
