@@ -252,5 +252,20 @@ getEventCheckIns: async (eventId) => {
       const response = await apiClient.delete(`/user/designs/${designId}`);
       return response.data;
     });
-  }
+  },
+  
+async uploadDesignImage(file) {
+  return apiCallWithRetry(async () => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const response = await apiClient.post('/user/designs/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  });
+},
+
 };

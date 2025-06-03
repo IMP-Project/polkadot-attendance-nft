@@ -119,54 +119,39 @@ function Gallery() {
   };
 
   const handleUploadComplete = async (designData) => {
-    try {
-      // Use fileData if available (from saved draft), otherwise convert file to base64
-      let base64;
-      if (designData.fileData) {
-        base64 = designData.fileData;
-      } else if (designData.file) {
-        base64 = await fileToBase64(designData.file);
-      } else {
-        throw new Error('No image data available');
-      }
-      
-      // Prepare design data for API
-      const designPayload = {
-        event_id: selectedEvent,
-        title: designData.title,
-        description: designData.description,
-        traits: designData.traits,
-        image_data: base64,
-        metadata: designData.metadata
-      };
-      
-      // Save design to database
-      await api.createDesign(designPayload);
-      
-      // Refresh designs list
-      await fetchEventDesigns(selectedEvent);
-      
-      // Close modal
-      setUploadModalOpen(false);
-      
-      // Show success message (you could add a snackbar here)
-      console.log('Design uploaded successfully!');
-    } catch (error) {
-      console.error('Error uploading design:', error);
-      setError('Failed to upload design');
-    }
-  };
+  try {
+    // Step 1: Upload image to Cloudinary
+    const uploadResponse = await api.uploadDesignImage(designData.file);
+    
+    // Step 2: Create design with Cloudinary details
+    const designPayload = {
+      event_id: selectedEvent,
+      title: designData.title,
+      description: designData.description,
+      traits: designData.traits,
+      image_url: uploadResponse.image_url,
+      cloudinary_id: uploadResponse.cloudinary_id,
+      file_size: uploadResponse.file_size,
+      mime_type: uploadResponse.mime_type,
+      metadata: designData.metadata
+    };
+    
+    // Step 3: Save design to database
+    await api.createDesign(designPayload);
+    
+    // Step 4: Refresh designs list
+    await fetchEventDesigns(selectedEvent);
+    
+    // Step 5: Close modal
+    setUploadModalOpen(false);
+    
+    console.log('Design uploaded successfully!');
+  } catch (error) {
+    console.error('Error uploading design:', error);
+    setError('Failed to upload design');
+  }
+};  
   
-  // Helper function to convert file to base64
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   // Render Design Templates
   const renderDesignTemplates = () => (
     <Grid container spacing={3}>
@@ -215,7 +200,7 @@ function Gallery() {
                 }}
               >
                 <img
-                  src={design.image_data}
+                  src={design.image_url}
                   alt={design.title}
                   style={{
                     width: '100%',
