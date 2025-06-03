@@ -253,7 +253,7 @@ getEventCheckIns: async (eventId) => {
       return response.data;
     });
   },
-  
+
 async uploadDesignImage(file) {
   return apiCallWithRetry(async () => {
     const formData = new FormData();
@@ -264,6 +264,13 @@ async uploadDesignImage(file) {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  });
+},
+
+async applyDesignToEvent(eventId, designId) {
+  return apiCallWithRetry(async () => {
+    const response = await apiClient.post(`/user/events/${eventId}/apply-design/${designId}`);
     return response.data;
   });
 },
