@@ -169,6 +169,21 @@ const handleUseDesign = async (design) => {
   }
 };
 
+const handleViewOnChain = (nft) => {
+  if (!nft.transaction_hash) {
+    alert('Transaction hash not available for this NFT');
+    return;
+  }
+
+  const explorerUrl = getExplorerUrl(nft.transaction_hash);
+  window.open(explorerUrl, '_blank');
+};
+
+const getExplorerUrl = (txHash) => {
+  // Aleph Zero Testnet Explorer
+  return `https://test.azero.dev/#/explorer/query/${txHash}`;
+};
+
   // Render Design Templates
   const renderDesignTemplates = () => (
     <Grid container spacing={3}>
@@ -476,22 +491,23 @@ const handleUseDesign = async (design) => {
                 {/* Action Buttons */}
 <Box>
   <Button
-    variant="contained"
-    fullWidth
-    sx={{
-      backgroundColor: '#4CAF50',
-      color: 'white',
-      borderRadius: '8px',
-      textTransform: 'none',
-      fontWeight: 500,
-      fontSize: '12px',
-      '&:hover': {
-        backgroundColor: '#45a049',
-      },
-    }}
-  >
-    View on Chain
-  </Button>
+  variant="contained"
+  fullWidth
+  onClick={() => handleViewOnChain(nft)}
+  sx={{
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    borderRadius: '8px',
+    textTransform: 'none',
+    fontWeight: 500,
+    fontSize: '12px',
+    '&:hover': {
+      backgroundColor: '#45a049',
+    },
+  }}
+>
+  View on Chain
+</Button>
 </Box>
               </CardContent>
             </Card>
