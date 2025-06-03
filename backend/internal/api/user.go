@@ -11,7 +11,8 @@ import (
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
-    "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma"  
+    "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma" 
+    "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/services" 
 )
 
 // UserHandler handles user-related API endpoints
@@ -21,6 +22,7 @@ type UserHandler struct {
     nftRepo        *database.NFTRepository
     userRepo       *database.UserRepository
     designRepo     *database.DesignRepository
+    cloudinaryService *services.CloudinaryService
     JWTSecret      string
 }
 
@@ -31,6 +33,7 @@ func NewUserHandler(
     nftRepo *database.NFTRepository,
     userRepo *database.UserRepository,
     designRepo *database.DesignRepository,
+    cloudinaryService *services.CloudinaryService, 
     jwtSecret string,
 ) *UserHandler {
     return &UserHandler{
@@ -39,6 +42,7 @@ func NewUserHandler(
         nftRepo:        nftRepo,
         userRepo:       userRepo,
         designRepo:     designRepo,
+        cloudinaryService: cloudinaryService, 
         JWTSecret:      jwtSecret,
     }
 }
@@ -601,63 +605,69 @@ func (h *UserHandler) GetEventNFTs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"nfts": nfts})
 }
 
-// CreateDesign creates a new NFT design for an event
+// CreateDesign creates a new NFT design for an event (updated for Cloudinary)
 func (h *UserHandler) CreateDesign(c *gin.Context) {
-	userID, err := h.getUserIDFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
 
-	user, err := h.userRepo.GetByID(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
-		return
-	}
+    user, err := h.userRepo.GetByID(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+        return
+    }
 
-	type CreateDesignRequest struct {
-		EventID     string                 `json:"event_id"`
-		Title       string                 `json:"title"`
-		Description string                 `json:"description"`
-		Traits      string                 `json:"traits"`
-		ImageData   string                 `json:"image_data"`
-		Metadata    map[string]interface{} `json:"metadata"`
-	}
+    type CreateDesignRequest struct {
+        EventID      string                 `json:"event_id"`
+        Title        string                 `json:"title"`
+        Description  string                 `json:"description"`
+        Traits       string                 `json:"traits"`
+        ImageURL     string                 `json:"image_url"`
+        CloudinaryID string                 `json:"cloudinary_id"`
+        FileSize     int64                  `json:"file_size"`
+        MimeType     string                 `json:"mime_type"`
+        Metadata     map[string]interface{} `json:"metadata"`
+    }
 
-	var req CreateDesignRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid design data"})
-		return
-	}
+    var req CreateDesignRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid design data"})
+        return
+    }
 
-	// Validate required fields
-	if req.EventID == "" || req.Title == "" || req.ImageData == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID, title, and image data are required"})
-		return
-	}
+    // Validate required fields
+    if req.EventID == "" || req.Title == "" || req.ImageURL == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Event ID, title, and image URL are required"})
+        return
+    }
 
-	// Create the design
-	design := &models.NFTDesign{
-		EventID:     req.EventID,
-		Title:       req.Title,
-		Description: req.Description,
-		Traits:      req.Traits,
-		ImageData:   req.ImageData,
-		Metadata:    req.Metadata,
-		CreatedBy:   user.WalletAddress,
-	}
+    // Create the design
+    design := &models.NFTDesign{
+        EventID:      req.EventID,
+        Title:        req.Title,
+        Description:  req.Description,
+        Traits:       req.Traits,
+        ImageURL:     req.ImageURL,
+        CloudinaryID: req.CloudinaryID,
+        FileSize:     req.FileSize,
+        MimeType:     req.MimeType,
+        Metadata:     req.Metadata,
+        CreatedBy:    user.WalletAddress,
+    }
 
-	if h.designRepo == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
-		return
-	}
-	
-	if err := h.designRepo.Create(design); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create design"})
-		return
-	}
+    if h.designRepo == nil {
+        c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+        return
+    }
+    
+    if err := h.designRepo.Create(design); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create design"})
+        return
+    }
 
-	c.JSON(http.StatusCreated, design)
+    c.JSON(http.StatusCreated, design)
 }
 
 // GetEventDesigns gets all designs for an event
@@ -701,48 +711,58 @@ func (h *UserHandler) GetDesign(c *gin.Context) {
 	}
 }
 
-// DeleteDesign soft deletes a design
+// DeleteDesign soft deletes a design and removes image from Cloudinary
 func (h *UserHandler) DeleteDesign(c *gin.Context) {
-	userID, err := h.getUserIDFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
 
-	user, err := h.userRepo.GetByID(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
-		return
-	}
+    user, err := h.userRepo.GetByID(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+        return
+    }
 
-	designID := c.Param("designId")
-	if designID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Design ID is required"})
-		return
-	}
+    designID := c.Param("designId")
+    if designID == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Design ID is required"})
+        return
+    }
 
-	if h.designRepo != nil {
-		// Check if user owns the design
-		design, err := h.designRepo.GetByID(designID)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Design not found"})
-			return
-		}
+    if h.designRepo == nil {
+        c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+        return
+    }
 
-		if design.CreatedBy != user.WalletAddress {
-			c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this design"})
-			return
-		}
+    // Check if user owns the design
+    design, err := h.designRepo.GetByID(designID)
+    if err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Design not found"})
+        return
+    }
 
-		if err := h.designRepo.Delete(designID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete design"})
-			return
-		}
+    if design.CreatedBy != user.WalletAddress {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this design"})
+        return
+    }
 
-		c.JSON(http.StatusOK, gin.H{"message": "Design deleted successfully"})
-	} else {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
-	}
+    // Delete image from Cloudinary
+    if design.CloudinaryID != "" && h.cloudinaryService != nil {
+        if err := h.cloudinaryService.DeleteImage(design.CloudinaryID); err != nil {
+            log.Printf("Failed to delete image from Cloudinary: %v", err)
+            // Continue with design deletion even if Cloudinary deletion fails
+        }
+    }
+
+    // Delete design from database
+    if err := h.designRepo.Delete(designID); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete design"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Design deleted successfully"})
 }
 
 // GetEventCheckIns returns detailed check-in information for an event (live from Luma)
@@ -874,4 +894,178 @@ func extractWalletAddress(guest map[string]interface{}) string {
 	}
 	
 	return ""
+}
+
+// UploadDesignImage handles image upload to Cloudinary
+func (h *UserHandler) UploadDesignImage(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    // Parse multipart form
+    err = c.Request.ParseMultipartForm(10 << 20) // 10MB max
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
+        return
+    }
+
+    // Get file from form
+    file, fileHeader, err := c.Request.FormFile("image")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
+        return
+    }
+    defer file.Close()
+
+    // Validate file type
+    contentType := fileHeader.Header.Get("Content-Type")
+    if contentType != "image/png" && contentType != "image/jpeg" && contentType != "image/jpg" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Only PNG and JPEG images are allowed"})
+        return
+    }
+
+    // Validate file size (max 5MB)
+    if fileHeader.Size > 5*1024*1024 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "File size too large (max 5MB)"})
+        return
+    }
+
+    if h.cloudinaryService == nil {
+        c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Image upload service not available"})
+        return
+    }
+
+    // Generate unique filename
+    filename := fmt.Sprintf("design_%d_%d", userID, time.Now().Unix())
+
+    // Upload to Cloudinary
+    imageURL, cloudinaryID, err := h.cloudinaryService.UploadImage(file, filename)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "image_url":     imageURL,
+        "cloudinary_id": cloudinaryID,
+        "file_size":     fileHeader.Size,
+        "mime_type":     contentType,
+    })
+}
+
+// UpdateDesign updates an existing design
+func (h *UserHandler) UpdateDesign(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    user, err := h.userRepo.GetByID(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+        return
+    }
+
+    designID := c.Param("designId")
+    if designID == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Design ID is required"})
+        return
+    }
+
+    if h.designRepo == nil {
+        c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+        return
+    }
+
+    // Get existing design
+    design, err := h.designRepo.GetByID(designID)
+    if err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Design not found"})
+        return
+    }
+
+    // Check ownership
+    if design.CreatedBy != user.WalletAddress {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to update this design"})
+        return
+    }
+
+    type UpdateDesignRequest struct {
+        Title       string                 `json:"title"`
+        Description string                 `json:"description"`
+        Traits      string                 `json:"traits"`
+        ImageURL    string                 `json:"image_url"`
+        CloudinaryID string                `json:"cloudinary_id"`
+        FileSize    int64                  `json:"file_size"`
+        MimeType    string                 `json:"mime_type"`
+        Metadata    map[string]interface{} `json:"metadata"`
+    }
+
+    var req UpdateDesignRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid design data"})
+        return
+    }
+
+    // Update fields
+    if req.Title != "" {
+        design.Title = req.Title
+    }
+    if req.Description != "" {
+        design.Description = req.Description
+    }
+    if req.Traits != "" {
+        design.Traits = req.Traits
+    }
+    if req.ImageURL != "" {
+        // If updating image, delete old one from Cloudinary
+        if design.CloudinaryID != "" && h.cloudinaryService != nil {
+            _ = h.cloudinaryService.DeleteImage(design.CloudinaryID)
+        }
+        design.ImageURL = req.ImageURL
+        design.CloudinaryID = req.CloudinaryID
+        design.FileSize = req.FileSize
+        design.MimeType = req.MimeType
+    }
+    if req.Metadata != nil {
+        design.Metadata = req.Metadata
+    }
+
+    if err := h.designRepo.Update(design); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update design"})
+        return
+    }
+
+    c.JSON(http.StatusOK, design)
+}
+
+// GetUserDesigns gets all designs created by the user
+func (h *UserHandler) GetUserDesigns(c *gin.Context) {
+    userID, err := h.getUserIDFromContext(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    user, err := h.userRepo.GetByID(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+        return
+    }
+
+    if h.designRepo == nil {
+        c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
+        return
+    }
+
+    designs, err := h.designRepo.GetAllByUser(user.WalletAddress)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get designs"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"designs": designs})
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/luma"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/polkadot"
+	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/services"
 )
 
 // NewRouter creates a new gin router with configured routes
@@ -37,7 +38,18 @@ func NewRouter(
 	// Initialize shared handlers
 	lumaClient := luma.NewClient(cfg.LumaAPIKey)
 	lumaHandler := NewLumaHandler(lumaClient, polkadotClient, nftRepo, eventRepo, userRepo)
-	userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, designRepo, cfg.JWTSecret)
+	
+	// Initialize Cloudinary service
+	// Initialize Cloudinary service
+cloudinaryService, err := services.NewCloudinaryService()
+if err != nil {
+    // Log error but don't crash - continue with nil cloudinaryService
+    println("Warning: Cloudinary service initialization failed:", err.Error())
+    println("Image upload functionality will be disabled")
+    cloudinaryService = nil
+}
+
+userHandler := NewUserHandler(polkadotClient, eventRepo, nftRepo, userRepo, designRepo, cloudinaryService, cfg.JWTSecret)
 
 	// Public routes
 	{
@@ -103,10 +115,13 @@ func NewRouter(
 		user.GET("/events/:id/nfts", userHandler.GetEventNFTs)
 		
 		// NFT Design routes
-		user.POST("/designs", userHandler.CreateDesign)                          // Create new design
+		user.POST("/designs", userHandler.CreateDesign)                          // Create new design with file upload
+		user.POST("/designs/upload", userHandler.UploadDesignImage)              // Upload design image to Cloudinary
 		user.GET("/events/:id/designs", userHandler.GetEventDesigns)            // Get designs for event
 		user.GET("/designs/:designId", userHandler.GetDesign)                   // Get specific design
-		user.DELETE("/designs/:designId", userHandler.DeleteDesign)             // Delete design
+		user.PUT("/designs/:designId", userHandler.UpdateDesign)                // Update design details
+		user.DELETE("/designs/:designId", userHandler.DeleteDesign)             // Delete design (and Cloudinary image)
+		user.GET("/designs", userHandler.GetUserDesigns)                        // Get all designs by user
 	}
 
 	return r
