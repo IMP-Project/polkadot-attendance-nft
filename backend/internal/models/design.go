@@ -15,7 +15,7 @@ type NFTDesign struct {
 	CloudinaryID string                 `json:"cloudinary_id" gorm:"not null"` // For deletion
 	FileSize     int64                  `json:"file_size"`                     // In bytes
 	MimeType     string                 `json:"mime_type"`                     // image/png, image/jpeg
-	Metadata     map[string]interface{} `json:"metadata" gorm:"type:json"`
+	Metadata     string 				`json:"metadata" gorm:"type:text"`
 	CreatedBy    string                 `json:"created_by"` // User wallet address
 	CreatedAt    time.Time              `json:"created_at"`
 	UpdatedAt    time.Time              `json:"updated_at"`

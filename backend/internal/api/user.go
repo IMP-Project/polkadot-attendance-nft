@@ -6,6 +6,7 @@ import (
     "strconv"
     "time"
     "log"
+    "encoding/json"
     "github.com/gin-gonic/gin"
     "github.com/golang-jwt/jwt/v5"
     "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/database"
@@ -643,19 +644,22 @@ func (h *UserHandler) CreateDesign(c *gin.Context) {
         return
     }
 
-    // Create the design
-    design := &models.NFTDesign{
-        EventID:      req.EventID,
-        Title:        req.Title,
-        Description:  req.Description,
-        Traits:       req.Traits,
-        ImageURL:     req.ImageURL,
-        CloudinaryID: req.CloudinaryID,
-        FileSize:     req.FileSize,
-        MimeType:     req.MimeType,
-        Metadata:     req.Metadata,
-        CreatedBy:    user.WalletAddress,
-    }
+    // Marshal metadata to JSON string
+metadataJSON, _ := json.Marshal(req.Metadata)
+
+// Create the design
+design := &models.NFTDesign{
+    EventID:      req.EventID,
+    Title:        req.Title,
+    Description:  req.Description,
+    Traits:       req.Traits,
+    ImageURL:     req.ImageURL,
+    CloudinaryID: req.CloudinaryID,
+    FileSize:     req.FileSize,
+    MimeType:     req.MimeType,
+    Metadata:     string(metadataJSON),  // <- UPDATED TO STRING
+    CreatedBy:    user.WalletAddress,
+}
 
     if h.designRepo == nil {
         c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Design repository not available"})
@@ -1031,8 +1035,9 @@ func (h *UserHandler) UpdateDesign(c *gin.Context) {
         design.MimeType = req.MimeType
     }
     if req.Metadata != nil {
-        design.Metadata = req.Metadata
-    }
+    metadataJSON, _ := json.Marshal(req.Metadata)
+    design.Metadata = string(metadataJSON)
+}
 
     if err := h.designRepo.Update(design); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update design"})

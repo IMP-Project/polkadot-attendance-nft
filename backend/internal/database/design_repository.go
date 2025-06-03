@@ -90,3 +90,4 @@ func (r *DesignRepository) GetActiveDesignForEvent(eventID string) (*models.NFTD
 	}
 	return &design, nil
 } 
+
