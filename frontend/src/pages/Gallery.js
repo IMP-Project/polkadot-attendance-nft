@@ -589,42 +589,6 @@ const getExplorerUrl = (txHash) => {
               filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
             }}
           />
-
-          {/* Share Gallery Button */}
-          <Button
-            onClick={handleShareGallery}
-            sx={{
-              backgroundColor: 'transparent',
-              color: (theme) => theme.palette.text.primary,
-              borderRadius: '8px',
-              padding: '12px 16px',
-              textTransform: 'none',
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 500,
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              border: '1px solid',
-              borderColor: (theme) => theme.palette.divider,
-              '&:hover': {
-                backgroundColor: (theme) => theme.palette.action.hover,
-                borderColor: (theme) => theme.palette.text.secondary,
-              },
-            }}
-          >
-            <Box
-              component="img"
-              src="/images/share-icon.png"
-              alt="Share"
-              sx={{ 
-                width: 16, 
-                height: 16,
-                filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
-              }}
-            />
-            Share Gallery
-          </Button>
                    
           {/* Upload new design Button - only show on Design Templates tab */}
           {activeTab === 0 && (

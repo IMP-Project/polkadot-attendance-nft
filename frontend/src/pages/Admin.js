@@ -436,7 +436,6 @@ function Admin({ mode, toggleDarkMode }) {
     switch (currentPage) {
       case 'dashboard': return <Dashboard onCreateEvent={() => setConnectToLumaModalOpen(true)} mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} />;
       case 'events': return <EventsPage onConnectToLuma={() => setConnectToLumaModalOpen(true)} mode={mode} toggleDarkMode={toggleDarkMode} setCurrentPage={setCurrentPage} />;
-      case 'nft-design': return <NFTDesignPage nfts={nfts} events={events} mode={mode} toggleDarkMode={toggleDarkMode} />;
       case 'nft-gallery': return <Gallery mode={mode} toggleDarkMode={toggleDarkMode} />;
       case 'check-ins': return <EventCheckInsPage mode={mode} toggleDarkMode={toggleDarkMode} />;
       case 'settings': return <SettingsPage mode={mode} toggleDarkMode={toggleDarkMode} />;

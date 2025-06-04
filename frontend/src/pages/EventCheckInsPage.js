@@ -232,22 +232,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
         overflowY: 'auto',
       }}
     >
-      {/* Page Header */}
-      <PageHeader 
-        title="Check-ins"
-        subtitle="Scan attendee QR codes to check them in and mint attendance NFTs"
-        buttonText="Scan QR Code"
-        buttonIcon={<QrCodeScannerIcon />}
-        onButtonClick={handleQRScan}
-        mode={mode}
-        toggleDarkMode={toggleDarkMode}
-        sx={{
-          '& .MuiButton-root': {
-            backgroundColor: '#E6007A',
-            '&:hover': { backgroundColor: '#C50066' }
-          }
-        }}
-      />
+      
 
       {/* Filter Bar */}
       <Box 
