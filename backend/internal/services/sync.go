@@ -207,18 +207,6 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 		return nil // Don't treat as error, just log for debugging
 	}
 
-	// Get existing NFTs for this event to avoid duplicates
-	existingNFTs, err := s.nftRepo.GetAllByEventID(eventID)
-	if err != nil {
-		return fmt.Errorf("failed to get existing NFTs: %w", err)
-	}
-
-	// Create a map of existing NFTs by wallet address
-	existingNFTMap := make(map[string]bool)
-	for _, nft := range existingNFTs {
-		existingNFTMap[nft.Owner] = true
-	}
-
 	// Process each guest with enhanced debugging
 	checkedInCount := 0
 	mintedCount := 0
@@ -230,18 +218,17 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 			log.Printf("Sample guest data structure: %+v", guest)
 		}
 		
-		// Check if guest has checked in
 		// Check if guest has checked in (checked_in_at contains timestamp string)
-checkedInAt, ok := guest["checked_in_at"].(string)
-if !ok || checkedInAt == "" {
-	log.Printf("Guest %d: no check-in status found", i+1)
-	continue
-}
+		checkedInAt, ok := guest["checked_in_at"].(string)
+		if !ok || checkedInAt == "" {
+			log.Printf("Guest %d: no check-in status found", i+1)
+			continue
+		}
 
-log.Printf("Guest %d: checked in at %s", i+1, checkedInAt)
+		log.Printf("Guest %d: checked in at %s", i+1, checkedInAt)
 
-checkedInCount++
-log.Printf("Found checked-in guest %d: %+v", i+1, guest)
+		checkedInCount++
+		log.Printf("Found checked-in guest %d: %+v", i+1, guest)
 
 		// Get wallet address from guest data using enhanced extraction
 		walletAddress := s.extractWalletAddress(guest)
@@ -264,8 +251,13 @@ log.Printf("Found checked-in guest %d: %+v", i+1, guest)
 			continue
 		}
 
-		// Skip if NFT already minted for this wallet
-		if existingNFTMap[walletAddress] {
+		// FIXED: Use the new function to check if NFT already exists for this wallet and event
+		exists, err := s.nftRepo.ExistsByEventAndWallet(eventID, walletAddress)
+		if err != nil {
+			log.Printf("Error checking NFT existence for wallet %s: %v", walletAddress, err)
+			continue
+		}
+		if exists {
 			log.Printf("NFT already exists for wallet %s (guest: %s)", walletAddress, name)
 			continue
 		}

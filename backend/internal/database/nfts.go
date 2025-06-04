@@ -346,3 +346,21 @@ func (r *NFTRepository) UpdateNFTsWithDesign(eventID string, designImageURL stri
     fmt.Printf("DEBUG: Finished updating all NFTs\n")
     return nil
 }
+
+// ExistsByEventAndWallet checks if an NFT exists for a specific event and wallet
+func (r *NFTRepository) ExistsByEventAndWallet(eventID, walletAddress string) (bool, error) {
+    query := `
+        SELECT EXISTS(
+            SELECT 1 FROM nfts 
+            WHERE event_id = $1 AND owner = $2
+        )
+    `
+    
+    var exists bool
+    err := r.db.QueryRow(query, eventID, walletAddress).Scan(&exists)
+    if err != nil {
+        return false, fmt.Errorf("failed to check NFT existence: %w", err)
+    }
+    
+    return exists, nil
+}
