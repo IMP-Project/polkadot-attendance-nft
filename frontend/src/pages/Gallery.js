@@ -180,8 +180,8 @@ const handleViewOnChain = (nft) => {
 };
 
 const getExplorerUrl = (txHash) => {
-  // Aleph Zero Testnet Explorer
-  return `https://test.azero.dev/#/explorer/query/${txHash}`;
+  // Westend Explorer (for testing)
+  return `https://westend.subscan.io/extrinsic/${txHash}`;
 };
 
   // Render Design Templates

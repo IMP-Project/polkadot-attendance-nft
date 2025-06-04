@@ -191,7 +191,6 @@ function Admin({ mode, toggleDarkMode }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '/images/dashboard-icon.png' },
     { id: 'events', label: 'Events', icon: '/images/events-icon.png' },
-    { id: 'nft-design', label: 'NFT Design', icon: '/images/nft-icon.png' },
     { id: 'nft-gallery', label: 'NFT Gallery', icon: '/images/gallery-icon.png' },
     { id: 'check-ins', label: 'Check-ins', icon: '/images/check-ins-icon.png' },
   ];
