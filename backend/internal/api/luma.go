@@ -103,22 +103,35 @@ func (h *LumaHandler) CheckInWebhook(c *gin.Context) {
 	}
 
 	// Mint NFT on blockchain
-	success, err := h.polkadotClient.MintNFT(eventDetails.ID, attendee.WalletAddress, metadata)
+	mintResult, err := h.polkadotClient.MintNFT(eventDetails.ID, attendee.WalletAddress, metadata)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to mint NFT: %v", err)})
 		return
 	}
 
-	if !success {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mint NFT on blockchain"})
+	if !mintResult.Success {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":     "Failed to mint NFT on blockchain",
+			"details":   mintResult.Error,
+		})
 		return
+	}
+
+	// Update the NFT record with the transaction hash if available
+	if mintResult.TransactionHash != "" {
+		err = h.nftRepo.UpdateTxHash(nft.ID, mintResult.TransactionHash)
+		if err != nil {
+			// Log the error but don't fail the whole operation
+			fmt.Printf("Failed to update NFT transaction hash: %v\n", err)
+		}
 	}
 
 	// Return success response
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"nft_id":  nft.ID,
-		"message": fmt.Sprintf("Successfully minted NFT for %s at %s", attendee.Name, eventDetails.Name),
+		"success":          true,
+		"nft_id":           nft.ID,
+		"transaction_hash": mintResult.TransactionHash,
+		"message":          fmt.Sprintf("Successfully minted NFT for %s at %s", attendee.Name, eventDetails.Name),
 	})
 }
 

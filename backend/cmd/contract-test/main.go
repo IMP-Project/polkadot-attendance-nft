@@ -136,16 +136,17 @@ func main() {
 		"timestamp":  "2025-05-20T10:00:00Z",
 	}
 	
-	success, err := client.MintNFT(fmt.Sprintf("%d", eventID), recipient, metadata)
+	mintResult, err := client.MintNFT(fmt.Sprintf("%d", eventID), recipient, metadata)
 	if err != nil {
 		log.Fatalf("Failed to mint NFT: %v", err)
 	}
 	
-	if !success {
-		log.Fatalf("NFT minting returned false")
+	if !mintResult.Success {
+		log.Fatalf("NFT minting returned false: %s", mintResult.Error)
 	}
 	
 	log.Printf("NFT minted successfully for recipient: %s", recipient)
+	log.Printf("Transaction hash: %s", mintResult.TransactionHash)
 	
 	// Test 5: List events
 	log.Println("Test 5: Listing all events...")

@@ -13,6 +13,13 @@ import (
  "github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
+// MintResult holds the result of an NFT minting operation
+type MintResult struct {
+	Success         bool   `json:"success"`
+	TransactionHash string `json:"transaction_hash"`
+	Error           string `json:"error,omitempty"`
+}
+
 // Client handles interactions with the Polkadot blockchain
 type Client struct {
 	api            *gsrpc.SubstrateAPI
@@ -218,44 +225,68 @@ func (c *Client) ListEvents() ([]models.Event, error) {
 }
 
 // MintNFT mints a new NFT for an attendee
-func (c *Client) MintNFT(eventID string, recipient string, metadata map[string]interface{}) (bool, error) {
+func (c *Client) MintNFT(eventID string, recipient string, metadata map[string]interface{}) (*MintResult, error) {
 	log.Printf("Minting NFT for event %s to recipient %s", eventID, recipient)
 		
 	// Validate recipient address
 	if recipient == "" {
-		return false, fmt.Errorf("recipient address is required")
+		return &MintResult{Success: false, Error: "recipient address is required"}, fmt.Errorf("recipient address is required")
 	}
 	
 	// Validate event ID
 	if eventID == "" {
-		return false, fmt.Errorf("invalid event ID")
+		return &MintResult{Success: false, Error: "invalid event ID"}, fmt.Errorf("invalid event ID")
 	}
 	
 	// Convert metadata to JSON string
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
-		return false, fmt.Errorf("failed to marshal metadata: %v", err)
+		return &MintResult{Success: false, Error: "failed to marshal metadata"}, fmt.Errorf("failed to marshal metadata: %v", err)
 	}
 
 	// Call the smart contract
 	result, err := c.contractCaller.Call("mint_nft", eventID, recipient, string(metadataJSON))
 	if err != nil {
-		return false, fmt.Errorf("failed to mint NFT: %v", err)
+		return &MintResult{Success: false, Error: err.Error()}, fmt.Errorf("failed to mint NFT: %v", err)
 	}
 
-	// Parse result
-	var success bool
-	if err := json.Unmarshal(result, &success); err != nil {
-		return false, fmt.Errorf("failed to parse result: %v", err)
+	// Parse result - the contract now returns a JSON object with success and transaction_hash
+	var contractResponse map[string]interface{}
+	if err := json.Unmarshal(result, &contractResponse); err != nil {
+		return &MintResult{Success: false, Error: "failed to parse contract response"}, fmt.Errorf("failed to parse result: %v", err)
+	}
+
+	// Extract success status
+	success, ok := contractResponse["success"].(bool)
+	if !ok {
+		return &MintResult{Success: false, Error: "invalid contract response format"}, fmt.Errorf("invalid contract response format")
+	}
+
+	// Extract transaction hash if available
+	var txHash string
+	if txHashInterface, exists := contractResponse["transaction_hash"]; exists {
+		if txHashStr, ok := txHashInterface.(string); ok {
+			txHash = txHashStr
+		}
+	}
+
+	mintResult := &MintResult{
+		Success:         success,
+		TransactionHash: txHash,
 	}
 
 	if success {
-		log.Printf("NFT minted successfully")
+		log.Printf("✅ NFT minted successfully with transaction hash: %s", txHash)
 	} else {
-		log.Printf("NFT minting failed")
+		log.Printf("❌ NFT minting failed")
+		if errorMsg, exists := contractResponse["error"]; exists {
+			if errorStr, ok := errorMsg.(string); ok {
+				mintResult.Error = errorStr
+			}
+		}
 	}
 	
-	return success, nil
+	return mintResult, nil
 }
 
 // ListNFTs lists all NFTs
