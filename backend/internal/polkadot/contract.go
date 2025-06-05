@@ -606,7 +606,7 @@ func NewRealContractCaller(endpoint string, mnemonic string) (*RealContractCalle
     }, nil
 }
 
-// Real ink! contract integration - Replace your submitContractTransaction function
+// Fixed submitContractTransaction with proper SS58 address handling
 func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metadata string) (string, error) {
 	log.Printf("🚀 MINTING REAL NFT ON WESTEND BLOCKCHAIN!")
 	log.Printf("📋 Event: %s, Recipient: %s", eventID, recipient)
@@ -620,20 +620,14 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 		log.Printf("🔄 Converted event ID '%s' to u64: %d", eventID, eventIDNum)
 	}
 
-	// Convert recipient address to AccountID
-	recipientBytes, err := hex.DecodeString(strings.TrimPrefix(recipient, "0x"))
+	// Convert recipient SS58 address to AccountID using subkey
+	_, recipientPubKey, err := subkey.SS58Decode(recipient)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode recipient address: %v", err)
+		return "", fmt.Errorf("failed to decode recipient SS58 address: %v", err)
 	}
 	
-	// Ensure we have exactly 32 bytes for AccountID
 	var recipientAccountID types.AccountID
-	if len(recipientBytes) >= 32 {
-		copy(recipientAccountID[:], recipientBytes[:32])
-	} else {
-		// Pad with zeros if shorter
-		copy(recipientAccountID[:], recipientBytes)
-	}
+	copy(recipientAccountID[:], recipientPubKey)
 
 	// Get metadata for transaction
 	meta, err := c.api.RPC.State.GetMetadataLatest()
@@ -653,19 +647,15 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 		return "", fmt.Errorf("failed to get account info: %v", err)
 	}
 
-	// Prepare contract address (convert string to AccountID)
+	// Convert contract SS58 address to AccountID using subkey
 	contractAddrStr := "5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28"
-	contractBytes, err := hex.DecodeString(strings.TrimPrefix(contractAddrStr, "0x"))
+	_, contractPubKey, err := subkey.SS58Decode(contractAddrStr)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode contract address: %v", err)
+		return "", fmt.Errorf("failed to decode contract SS58 address: %v", err)
 	}
 	
 	var contractAccountID types.AccountID
-	if len(contractBytes) >= 32 {
-		copy(contractAccountID[:], contractBytes[:32])
-	} else {
-		copy(contractAccountID[:], contractBytes)
-	}
+	copy(contractAccountID[:], contractPubKey)
 
 	// Prepare contract call data for mint_nft
 	selector := []byte{0xa5, 0xa4, 0xf7, 0x78} // mint_nft selector from your ABI
@@ -694,6 +684,8 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 	callData = append(callData, metadataBytes...)
 
 	log.Printf("📋 Contract call data prepared: %d bytes", len(callData))
+	log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
+	log.Printf("📋 Recipient AccountID: %x", recipientAccountID[:8])
 
 	// Create contract call
 	call, err := types.NewCall(meta, "Contracts.call", 
