@@ -289,14 +289,24 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 
 		// Mint NFT on blockchain
 		if s.polkadotClient != nil {
-			success, err := s.polkadotClient.MintNFT(eventID, walletAddress, metadata)
+			mintResult, err := s.polkadotClient.MintNFT(eventID, walletAddress, metadata)
 			if err != nil {
 				log.Printf("Failed to mint NFT on blockchain for %s: %v", walletAddress, err)
 				// Continue anyway - we have the database record
-			} else if !success {
-				log.Printf("NFT minting returned false for %s", walletAddress)
+			} else if !mintResult.Success {
+				log.Printf("NFT minting returned false for %s: %s", walletAddress, mintResult.Error)
 			} else {
-				log.Printf("Successfully minted NFT on blockchain for %s", walletAddress)
+				log.Printf("Successfully minted NFT on blockchain for %s with transaction hash: %s", walletAddress, mintResult.TransactionHash)
+				
+				// Update the NFT record with the transaction hash
+				if mintResult.TransactionHash != "" {
+					err = s.nftRepo.UpdateTxHash(nft.ID, mintResult.TransactionHash)
+					if err != nil {
+						log.Printf("Failed to update NFT transaction hash for %s: %v", walletAddress, err)
+					} else {
+						log.Printf("✅ Updated NFT %d with transaction hash: %s", nft.ID, mintResult.TransactionHash)
+					}
+				}
 			}
 		}
 
