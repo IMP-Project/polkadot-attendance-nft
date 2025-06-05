@@ -606,8 +606,18 @@ func NewRealContractCaller(endpoint string, mnemonic string) (*RealContractCalle
     }, nil
 }
 
-// Fixed submitContractTransaction with proper SS58 address handling
+// Complete Real Blockchain Integration with Debug Logging
 func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metadata string) (string, error) {
+	log.Printf("🚀 STARTING submitContractTransaction")
+	log.Printf("📋 Input - EventID: %s, Recipient: %s", eventID, recipient)
+	
+	// Test the API connection first
+	if c.api == nil {
+		log.Printf("❌ CRITICAL: API is nil!")
+		return "", fmt.Errorf("API connection is nil")
+	}
+	log.Printf("✅ API connection exists")
+
 	log.Printf("🚀 MINTING REAL NFT ON WESTEND BLOCKCHAIN!")
 	log.Printf("📋 Event: %s, Recipient: %s", eventID, recipient)
 
@@ -619,46 +629,63 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 		eventIDNum = binary.BigEndian.Uint64(hash[:8])
 		log.Printf("🔄 Converted event ID '%s' to u64: %d", eventID, eventIDNum)
 	}
+	log.Printf("✅ Event ID processed: %d", eventIDNum)
 
 	// Convert recipient SS58 address to AccountID using subkey
+	log.Printf("🔍 DEBUG: Decoding recipient SS58 address: %s", recipient)
 	_, recipientPubKey, err := subkey.SS58Decode(recipient)
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to decode recipient SS58 address %s: %v", recipient, err)
 		return "", fmt.Errorf("failed to decode recipient SS58 address: %v", err)
 	}
+	log.Printf("✅ Successfully decoded recipient address")
 	
 	var recipientAccountID types.AccountID
 	copy(recipientAccountID[:], recipientPubKey)
+	log.Printf("📋 Recipient AccountID: %x", recipientAccountID[:8])
 
 	// Get metadata for transaction
+	log.Printf("🔍 DEBUG: Getting metadata...")
 	meta, err := c.api.RPC.State.GetMetadataLatest()
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to get metadata: %v", err)
 		return "", fmt.Errorf("failed to get metadata: %v", err)
 	}
+	log.Printf("✅ Metadata retrieved successfully")
 
 	// Get account info for nonce
+	log.Printf("🔍 DEBUG: Getting account info for nonce...")
 	key, err := types.CreateStorageKey(meta, "System", "Account", c.signer.PublicKey)
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to create storage key: %v", err)
 		return "", fmt.Errorf("failed to create storage key: %v", err)
 	}
 
 	var accountInfo types.AccountInfo
 	ok, err := c.api.RPC.State.GetStorageLatest(key, &accountInfo)
 	if err != nil || !ok {
+		log.Printf("❌ CRITICAL: Failed to get account info: %v", err)
 		return "", fmt.Errorf("failed to get account info: %v", err)
 	}
+	log.Printf("✅ Account info retrieved, nonce: %d", accountInfo.Nonce)
 
 	// Convert contract SS58 address to AccountID using subkey
 	contractAddrStr := "5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28"
+	log.Printf("🔍 DEBUG: Decoding contract SS58 address: %s", contractAddrStr)
 	_, contractPubKey, err := subkey.SS58Decode(contractAddrStr)
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to decode contract SS58 address: %v", err)
 		return "", fmt.Errorf("failed to decode contract SS58 address: %v", err)
 	}
+	log.Printf("✅ Successfully decoded contract address")
 	
 	var contractAccountID types.AccountID
 	copy(contractAccountID[:], contractPubKey)
+	log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 
 	// Prepare contract call data for mint_nft
 	selector := []byte{0xa5, 0xa4, 0xf7, 0x78} // mint_nft selector from your ABI
+	log.Printf("🔍 DEBUG: Using selector: %x", selector)
 	
 	var callData []byte
 	callData = append(callData, selector...)
@@ -684,36 +711,46 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 	callData = append(callData, metadataBytes...)
 
 	log.Printf("📋 Contract call data prepared: %d bytes", len(callData))
-	log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
-	log.Printf("📋 Recipient AccountID: %x", recipientAccountID[:8])
+	log.Printf("📋 Call data preview: %x", callData[:min(len(callData), 64)])
 
-	// Create contract call
-	// REPLACE THIS SECTION (around line where you create the call):
-call, err := types.NewCall(meta, "Contracts.call", 
-    types.MultiAddress{IsID: true, AsID: contractAccountID}, // ✅ Wrap in MultiAddress
-    types.NewUCompactFromUInt(0),          
-    types.NewUCompactFromUInt(5000000000000), 
-    types.Option[types.UCompact]{},        // ✅ Use Option type for storage_deposit_limit
-    callData)                              // data: encoded call
+	// Create contract call with FIXED parameters
+	log.Printf("🔍 DEBUG: Creating contract call...")
+	call, err := types.NewCall(meta, "Contracts.call", 
+		types.MultiAddress{IsID: true, AsID: contractAccountID}, // ✅ Wrap in MultiAddress
+		types.NewUCompactFromUInt(0),                            // value: 0 (no payment)
+		types.NewUCompactFromUInt(5000000000000),               // gas_limit: 5T 
+		types.Option[types.UCompact]{},                         // ✅ Use Option type for storage_deposit_limit
+		callData)                                               // data: encoded call
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to create call: %v", err)
 		return "", fmt.Errorf("failed to create call: %v", err)
 	}
+	log.Printf("✅ Contract call created successfully")
 
 	// Create extrinsic
+	log.Printf("🔍 DEBUG: Creating extrinsic...")
 	ext := types.NewExtrinsic(call)
+	log.Printf("✅ Extrinsic created")
 
 	// Get genesis hash and runtime version
+	log.Printf("🔍 DEBUG: Getting genesis hash...")
 	genesisHash, err := c.api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to get genesis hash: %v", err)
 		return "", fmt.Errorf("failed to get genesis hash: %v", err)
 	}
+	log.Printf("✅ Genesis hash: %x", genesisHash[:8])
 
+	log.Printf("🔍 DEBUG: Getting runtime version...")
 	rv, err := c.api.RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to get runtime version: %v", err)
 		return "", fmt.Errorf("failed to get runtime version: %v", err)
 	}
+	log.Printf("✅ Runtime version - Spec: %d, Transaction: %d", rv.SpecVersion, rv.TransactionVersion)
 
 	// Sign the extrinsic
+	log.Printf("🔍 DEBUG: Signing extrinsic...")
 	signatureOptions := types.SignatureOptions{
 		BlockHash:          genesisHash,
 		Era:                types.ExtrinsicEra{IsMortalEra: false},
@@ -726,14 +763,18 @@ call, err := types.NewCall(meta, "Contracts.call",
 
 	err = ext.Sign(c.signer, signatureOptions)
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to sign extrinsic: %v", err)
 		return "", fmt.Errorf("failed to sign extrinsic: %v", err)
 	}
+	log.Printf("✅ Extrinsic signed successfully")
 
 	log.Printf("📡 Submitting REAL contract transaction to Westend...")
 
 	// Submit the extrinsic
+	log.Printf("🔍 DEBUG: Submitting to blockchain...")
 	hash, err := c.api.RPC.Author.SubmitExtrinsic(ext)
 	if err != nil {
+		log.Printf("❌ CRITICAL: Failed to submit extrinsic to blockchain: %v", err)
 		return "", fmt.Errorf("failed to submit extrinsic: %v", err)
 	}
 
@@ -743,8 +784,17 @@ call, err := types.NewCall(meta, "Contracts.call",
 	log.Printf("🌐 View on Westend Explorer: https://westend.subscan.io/extrinsic/%s", hashStr)
 	log.Printf("📋 Contract Address: %s", contractAddrStr)
 	log.Printf("📋 Event ID: %d, Recipient: %s", eventIDNum, recipient)
+	log.Printf("✅ submitContractTransaction completed successfully!")
 
 	return hashStr, nil
+}
+
+// Helper function for min operation
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Keep existing enhanced simulation method as fallback
