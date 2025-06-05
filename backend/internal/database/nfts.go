@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
+	"log"
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
@@ -349,6 +349,29 @@ func (r *NFTRepository) UpdateNFTsWithDesign(eventID string, designImageURL stri
 
 // ExistsByEventAndWallet checks if an NFT exists for a specific event and wallet
 func (r *NFTRepository) ExistsByEventAndWallet(eventID, walletAddress string) (bool, error) {
+    // Add debug logging
+    log.Printf("DEBUG: Checking NFT existence - EventID: '%s', Wallet: '%s'", eventID, walletAddress)
+    
+    // First, let's see what NFTs actually exist in the database
+    debugQuery := `SELECT id, event_id, owner FROM nfts WHERE event_id = $1 LIMIT 10`
+    rows, err := r.db.Query(debugQuery, eventID)
+    if err != nil {
+        log.Printf("DEBUG: Error querying existing NFTs: %v", err)
+    } else {
+        log.Printf("DEBUG: Existing NFTs for event %s:", eventID)
+        defer rows.Close()
+        count := 0
+        for rows.Next() {
+            var id, event_id, owner string
+            if err := rows.Scan(&id, &event_id, &owner); err == nil {
+                log.Printf("DEBUG: NFT %d - ID: %s, EventID: %s, Owner: %s", count+1, id, event_id, owner)
+                count++
+            }
+        }
+        log.Printf("DEBUG: Total NFTs found: %d", count)
+    }
+    
+    // Now check the original query
     query := `
         SELECT EXISTS(
             SELECT 1 FROM nfts 
@@ -356,11 +379,16 @@ func (r *NFTRepository) ExistsByEventAndWallet(eventID, walletAddress string) (b
         )
     `
     
+    log.Printf("DEBUG: Running query: %s", query)
+    log.Printf("DEBUG: With parameters: eventID='%s', walletAddress='%s'", eventID, walletAddress)
+    
     var exists bool
-    err := r.db.QueryRow(query, eventID, walletAddress).Scan(&exists)
+    err = r.db.QueryRow(query, eventID, walletAddress).Scan(&exists)
     if err != nil {
+        log.Printf("DEBUG: Query error: %v", err)
         return false, fmt.Errorf("failed to check NFT existence: %w", err)
     }
     
+    log.Printf("DEBUG: Query result - EXISTS: %v", exists)
     return exists, nil
 }
