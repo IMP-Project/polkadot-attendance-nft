@@ -67,7 +67,7 @@ func (r *NFTRepository) Create(nft *models.NFT) error {
 // GetByID gets an NFT by ID
 func (r *NFTRepository) GetByID(id uint64) (*models.NFT, error) {
 	query := `
-		SELECT id, event_id, owner, metadata, tx_hash, confirmed
+		SELECT id, event_id, owner, metadata, transaction_hash, confirmed
 		FROM nfts
 		WHERE id = $1
 	`
@@ -105,7 +105,7 @@ func (r *NFTRepository) GetByID(id uint64) (*models.NFT, error) {
 // GetAllByEventID gets all NFTs for an event
 func (r *NFTRepository) GetAllByEventID(eventID string) ([]models.NFT, error) {
 	query := `
-		SELECT id, event_id, owner, metadata, tx_hash, confirmed, created_at
+		SELECT id, event_id, owner, metadata, transaction_hash, confirmed, created_at
 		FROM nfts
 		WHERE event_id = $1
 		ORDER BY created_at DESC
@@ -159,7 +159,7 @@ func (r *NFTRepository) GetAllByEventID(eventID string) ([]models.NFT, error) {
 // GetAll gets all NFTs
 func (r *NFTRepository) GetAll() ([]models.NFT, error) {
 	query := `
-		SELECT id, event_id, owner, metadata, tx_hash, confirmed
+		SELECT id, event_id, owner, metadata,transaction_hash, confirmed
 		FROM nfts
 		ORDER BY id
 	`
@@ -207,7 +207,7 @@ func (r *NFTRepository) GetAll() ([]models.NFT, error) {
 // GetAllByOwner gets all NFTs for an owner
 func (r *NFTRepository) GetAllByOwner(owner string) ([]models.NFT, error) {
 	query := `
-		SELECT id, event_id, owner, metadata, tx_hash, confirmed
+		SELECT id, event_id, owner, metadata, transaction_hash, confirmed
 		FROM nfts
 		WHERE owner = $1
 		ORDER BY id
@@ -257,7 +257,7 @@ func (r *NFTRepository) GetAllByOwner(owner string) ([]models.NFT, error) {
 func (r *NFTRepository) UpdateTxHash(id uint64, txHash string) error {
 	query := `
 		UPDATE nfts
-		SET tx_hash = $1
+		SET transaction_hash = $1
 		WHERE id = $2
 	`
 
