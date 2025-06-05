@@ -302,7 +302,7 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 			EventID:         eventID,
 			Owner:          walletAddress,
 			Metadata:       metadata,
-			TransactionHash: transactionHash,  // Set transaction hash immediately
+			// TransactionHash: transactionHash,  // Set transaction hash immediately
 		}
 
 		if err := s.nftRepo.Create(nft); err != nil {
