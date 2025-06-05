@@ -283,11 +283,11 @@ func (c *Client) GetEventGuests(apiKey string, eventID string) ([]map[string]int
 		log.Printf("Guest %d: %+v", i+1, guest)
 		
 		// Check if guest has checked in
-		if checkedIn, ok := guest["checked_in_at"].(bool); ok {
-			log.Printf("Guest %d checked in status: %v", i+1, checkedIn)
-		} else {
-			log.Printf("Guest %d: no check-in status found", i+1)
-		}
+if checkedInAt, ok := guest["checked_in_at"].(string); ok && checkedInAt != "" {
+    log.Printf("Guest %d checked in at: %s", i+1, checkedInAt)
+} else {
+    log.Printf("Guest %d: no check-in status found", i+1)
+}
 		
 		// Look for wallet address in various fields
 		walletAddress := extractWalletAddress(guest)
