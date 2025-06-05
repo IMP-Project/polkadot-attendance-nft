@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"strings" 
+	"strings"
+	"strconv" 
 	"encoding/hex"
 	"crypto/sha256"
 	"encoding/binary"
@@ -605,34 +606,152 @@ func NewRealContractCaller(endpoint string, mnemonic string) (*RealContractCalle
     }, nil
 }
 
-// Simplified transaction submission for real blockchain integration
+// Real ink! contract integration - Replace your submitContractTransaction function
 func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metadata string) (string, error) {
 	log.Printf("🚀 MINTING REAL NFT ON WESTEND BLOCKCHAIN!")
 	log.Printf("📋 Event: %s, Recipient: %s", eventID, recipient)
 
-	// For now, use a simplified approach without complex address parsing
-	// This is a stepping stone to full integration
-	log.Printf("📋 Creating enhanced simulation with real blockchain state")
-
-	// Get current block hash for real blockchain connection
-	blockHash, err := c.api.RPC.Chain.GetFinalizedHead()
+	// Parse event ID to u64 for contract
+	eventIDNum, err := strconv.ParseUint(eventID, 10, 64)
 	if err != nil {
-		return "", fmt.Errorf("failed to get finalized head: %v", err)
+		// If eventID is not numeric, create a hash-based u64
+		hash := sha256.Sum256([]byte(eventID))
+		eventIDNum = binary.BigEndian.Uint64(hash[:8])
+		log.Printf("🔄 Converted event ID '%s' to u64: %d", eventID, eventIDNum)
 	}
 
-	log.Printf("📡 Using real Westend block hash: %x", blockHash)
+	// Convert recipient address to AccountID
+	recipientBytes, err := hex.DecodeString(strings.TrimPrefix(recipient, "0x"))
+	if err != nil {
+		return "", fmt.Errorf("failed to decode recipient address: %v", err)
+	}
+	
+	// Ensure we have exactly 32 bytes for AccountID
+	var recipientAccountID types.AccountID
+	if len(recipientBytes) >= 32 {
+		copy(recipientAccountID[:], recipientBytes[:32])
+	} else {
+		// Pad with zeros if shorter
+		copy(recipientAccountID[:], recipientBytes)
+	}
 
-	// Create a realistic transaction hash based on actual blockchain state
-	timestamp := fmt.Sprintf("%d", blockHash[0])
-	hashInput := fmt.Sprintf("%x_%s_%s_%s_%s", 
-		blockHash, c.signer.PublicKey, eventID, recipient, timestamp)
-	hash := sha256.Sum256([]byte(hashInput))
-	txHash := fmt.Sprintf("0x%x", hash[:32])
+	// Get metadata for transaction
+	meta, err := c.api.RPC.State.GetMetadataLatest()
+	if err != nil {
+		return "", fmt.Errorf("failed to get metadata: %v", err)
+	}
 
-	log.Printf("🎉 ENHANCED REAL NFT TRANSACTION! Hash: %s", txHash)
-	log.Printf("🔗 Based on real Westend blockchain state")
+	// Get account info for nonce
+	key, err := types.CreateStorageKey(meta, "System", "Account", c.signer.PublicKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to create storage key: %v", err)
+	}
 
-	return txHash, nil
+	var accountInfo types.AccountInfo
+	ok, err := c.api.RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil || !ok {
+		return "", fmt.Errorf("failed to get account info: %v", err)
+	}
+
+	// Prepare contract address (convert string to AccountID)
+	contractAddrStr := "5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28"
+	contractBytes, err := hex.DecodeString(strings.TrimPrefix(contractAddrStr, "0x"))
+	if err != nil {
+		return "", fmt.Errorf("failed to decode contract address: %v", err)
+	}
+	
+	var contractAccountID types.AccountID
+	if len(contractBytes) >= 32 {
+		copy(contractAccountID[:], contractBytes[:32])
+	} else {
+		copy(contractAccountID[:], contractBytes)
+	}
+
+	// Prepare contract call data for mint_nft
+	selector := []byte{0xa5, 0xa4, 0xf7, 0x78} // mint_nft selector from your ABI
+	
+	var callData []byte
+	callData = append(callData, selector...)
+	
+	// Encode event_id as u64 (8 bytes, little endian)
+	eventIDBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(eventIDBytes, eventIDNum)
+	callData = append(callData, eventIDBytes...)
+	
+	// Encode recipient AccountId (32 bytes)
+	callData = append(callData, recipientAccountID[:]...)
+	
+	// Encode metadata string
+	metadataBytes := []byte(metadata)
+	// Use compact encoding for string length
+	if len(metadataBytes) < 64 {
+		callData = append(callData, byte(len(metadataBytes)<<2)) // Compact encoding
+	} else {
+		// For longer strings, use proper compact encoding
+		callData = append(callData, 0x01) // Compact marker
+		callData = append(callData, byte(len(metadataBytes)))
+	}
+	callData = append(callData, metadataBytes...)
+
+	log.Printf("📋 Contract call data prepared: %d bytes", len(callData))
+
+	// Create contract call
+	call, err := types.NewCall(meta, "Contracts.call", 
+		contractAccountID,                      // dest: contract address
+		types.NewUCompactFromUInt(0),          // value: 0 (no payment)
+		types.NewUCompactFromUInt(5000000000000), // gas_limit: 5T (increased for safety)
+		types.NewUCompactFromUInt(0),          // storage_deposit_limit: None
+		callData)                              // data: encoded call
+	if err != nil {
+		return "", fmt.Errorf("failed to create call: %v", err)
+	}
+
+	// Create extrinsic
+	ext := types.NewExtrinsic(call)
+
+	// Get genesis hash and runtime version
+	genesisHash, err := c.api.RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return "", fmt.Errorf("failed to get genesis hash: %v", err)
+	}
+
+	rv, err := c.api.RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return "", fmt.Errorf("failed to get runtime version: %v", err)
+	}
+
+	// Sign the extrinsic
+	signatureOptions := types.SignatureOptions{
+		BlockHash:          genesisHash,
+		Era:                types.ExtrinsicEra{IsMortalEra: false},
+		GenesisHash:        genesisHash,
+		Nonce:              types.NewUCompactFromUInt(uint64(accountInfo.Nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                types.NewUCompactFromUInt(0),
+		TransactionVersion: rv.TransactionVersion,
+	}
+
+	err = ext.Sign(c.signer, signatureOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign extrinsic: %v", err)
+	}
+
+	log.Printf("📡 Submitting REAL contract transaction to Westend...")
+
+	// Submit the extrinsic
+	hash, err := c.api.RPC.Author.SubmitExtrinsic(ext)
+	if err != nil {
+		return "", fmt.Errorf("failed to submit extrinsic: %v", err)
+	}
+
+	hashStr := hash.Hex()
+	log.Printf("🎉 REAL NFT MINTED ON WESTEND BLOCKCHAIN!")
+	log.Printf("🔗 Transaction Hash: %s", hashStr)
+	log.Printf("🌐 View on Westend Explorer: https://westend.subscan.io/extrinsic/%s", hashStr)
+	log.Printf("📋 Contract Address: %s", contractAddrStr)
+	log.Printf("📋 Event ID: %d, Recipient: %s", eventIDNum, recipient)
+
+	return hashStr, nil
 }
 
 // Keep existing enhanced simulation method as fallback
