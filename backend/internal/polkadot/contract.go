@@ -688,12 +688,13 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 	log.Printf("📋 Recipient AccountID: %x", recipientAccountID[:8])
 
 	// Create contract call
-	call, err := types.NewCall(meta, "Contracts.call", 
-		contractAccountID,                      // dest: contract address
-		types.NewUCompactFromUInt(0),          // value: 0 (no payment)
-		types.NewUCompactFromUInt(5000000000000), // gas_limit: 5T (increased for safety)
-		types.NewUCompactFromUInt(0),          // storage_deposit_limit: None
-		callData)                              // data: encoded call
+	// REPLACE THIS SECTION (around line where you create the call):
+call, err := types.NewCall(meta, "Contracts.call", 
+    types.MultiAddress{IsID: true, AsID: contractAccountID}, // ✅ Wrap in MultiAddress
+    types.NewUCompactFromUInt(0),          
+    types.NewUCompactFromUInt(5000000000000), 
+    types.Option[types.UCompact]{},        // ✅ Use Option type for storage_deposit_limit
+    callData)                              // data: encoded call
 	if err != nil {
 		return "", fmt.Errorf("failed to create call: %v", err)
 	}
