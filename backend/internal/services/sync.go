@@ -187,7 +187,7 @@ func (s *SyncService) SyncAllUsers() error {
 
 // SyncEventCheckIns syncs check-ins for a specific event with enhanced debugging
 func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
-	log.Printf("Starting check-in sync for event %s", eventID)
+	log.Printf("🔧 USING NEW FIXED SYNC CODE - Starting check-in sync for event %s", eventID)
 
 	// Get all guests for this event
 	guests, err := s.lumaClient.GetEventGuests(apiKey, eventID)
@@ -251,7 +251,7 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 			continue
 		}
 
-		// Check if NFT already exists for this wallet and event
+		// FIXED: Check if NFT already exists for this wallet and event
 		exists, err := s.nftRepo.ExistsByEventAndWallet(eventID, walletAddress)
 		if err != nil {
 			log.Printf("Error checking NFT existence for wallet %s: %v", walletAddress, err)
@@ -297,17 +297,26 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 			transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
 		}
 
-		// FIXED: Only create NFT database record AFTER minting (with transaction hash)
+		// FIXED: Only create NFT database record AFTER blockchain minting attempt
 		nft := &models.NFT{
-			EventID:         eventID,
-			Owner:          walletAddress,
-			Metadata:       metadata,
-			// TransactionHash: transactionHash,  // Set transaction hash immediately
+			EventID:  eventID,
+			Owner:   walletAddress,
+			Metadata: metadata,
 		}
 
 		if err := s.nftRepo.Create(nft); err != nil {
 			log.Printf("Failed to create NFT database record for %s: %v", walletAddress, err)
 			continue
+		}
+
+		// FIXED: Update with transaction hash using existing UpdateTxHash method
+		if transactionHash != "" {
+			err = s.nftRepo.UpdateTxHash(nft.ID, transactionHash)
+			if err != nil {
+				log.Printf("Failed to update NFT transaction hash: %v", err)
+			} else {
+				log.Printf("✅ Updated NFT %d with transaction hash: %s", nft.ID, transactionHash)
+			}
 		}
 
 		mintedCount++
