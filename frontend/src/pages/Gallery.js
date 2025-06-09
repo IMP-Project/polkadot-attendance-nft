@@ -181,7 +181,7 @@ const handleViewOnChain = (nft) => {
 
 const getExplorerUrl = (txHash) => {
   // Westend Explorer (for testing)
-  return `https://westend.subscan.io/extrinsic/${txHash}`;
+  return `https://test.azero.dev/#/explorer/extrinsic/${txHash}`;
 };
 
   // Render Design Templates
