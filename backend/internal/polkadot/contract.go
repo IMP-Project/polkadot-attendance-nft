@@ -233,7 +233,7 @@ func (c *RealContractCaller) performRealMintNFT(args ...interface{}) ([]byte, er
 	
 	log.Printf("🚀✅ NFT SUCCESSFULLY MINTED ON REAL BLOCKCHAIN!")
 	log.Printf("🔗 Transaction Hash: %s", txHash)
-	log.Printf("🌐 View on Westend Explorer: https://westend.subscan.io/extrinsic/%s", txHash)
+	log.Printf("🌐 View on Westend Explorer: https://test.azero.dev/#/explorer/extrinsic/%s", txHash)
 	
 	// Return successful result with proper error handling
 	result := map[string]interface{}{
@@ -244,8 +244,8 @@ func (c *RealContractCaller) performRealMintNFT(args ...interface{}) ([]byte, er
 		"event_id":             eventID,
 		"original_event_id":    args[0],
 		"blockchain_confirmed": true,
-		"explorer_url":         fmt.Sprintf("https://westend.subscan.io/extrinsic/%s", txHash),
-		"contract_address":     "5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28",
+		"explorer_url":         fmt.Sprintf("https://test.azero.dev/#/explorer/extrinsic/%s", txHash),
+		"contract_address":     "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j",
 		"contract_type":        "ink! 4.3.0",
 		"method":               "mint_nft",
 		"real_blockchain":      true,
@@ -282,7 +282,7 @@ func GetSharedMockContractCaller() *MockContractCaller {
 				Name:      "Polkadot Meetup",
 				Date:      "2023-06-01",
 				Location:  "Berlin",
-				Organizer: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+				Organizer: "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j",
 			},
 		}
 		
@@ -344,7 +344,7 @@ func (c *MockContractCaller) Call(method string, args ...interface{}) ([]byte, e
 			Name:      name,
 			Date:      date,
 			Location:  location,
-			Organizer: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", // Mock organizer
+			Organizer: "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j", // Mock organizer
 		}
 		
 		log.Printf("Created mock event with ID %d: %s", eventID, name)
@@ -593,7 +593,7 @@ func NewRealContractCaller(endpoint string, mnemonic string) (*RealContractCalle
     }
 
     // Convert contract address string to AccountID using SS58 decoding
-    contractAddr := "5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28"
+    contractAddr := "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j"
     
     // For now, use a simpler approach - create an empty AccountID and assign the address
     var contractAccountID types.AccountID
@@ -618,7 +618,7 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 	}
 	log.Printf("✅ API connection exists")
 
-	log.Printf("🚀 MINTING REAL NFT ON WESTEND BLOCKCHAIN!")
+	log.Printf("🚀 MINTING REAL NFT ON ALEPH BLOCKCHAIN!")
 	log.Printf("📋 Event: %s, Recipient: %s", eventID, recipient)
 
 	// Parse event ID to u64 for contract
@@ -670,7 +670,7 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 	log.Printf("✅ Account info retrieved, nonce: %d", accountInfo.Nonce)
 
 	// Convert contract SS58 address to AccountID using subkey
-	contractAddrStr := "5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28"
+	contractAddrStr := "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j"
 	log.Printf("🔍 DEBUG: Decoding contract SS58 address: %s", contractAddrStr)
 	_, contractPubKey, err := subkey.SS58Decode(contractAddrStr)
 	if err != nil {
@@ -779,9 +779,9 @@ func (c *RealContractCaller) submitContractTransaction(eventID, recipient, metad
 	}
 
 	hashStr := hash.Hex()
-	log.Printf("🎉 REAL NFT MINTED ON WESTEND BLOCKCHAIN!")
+	log.Printf("🎉 REAL NFT MINTED ON ALEPH ZERO BLOCKCHAIN!")
 	log.Printf("🔗 Transaction Hash: %s", hashStr)
-	log.Printf("🌐 View on Westend Explorer: https://westend.subscan.io/extrinsic/%s", hashStr)
+	log.Printf("🌐 View on Westend Explorer: https://test.azero.dev/#/explorer/extrinsic/%s", hashStr)
 	log.Printf("📋 Contract Address: %s", contractAddrStr)
 	log.Printf("📋 Event ID: %d, Recipient: %s", eventIDNum, recipient)
 	log.Printf("✅ submitContractTransaction completed successfully!")
