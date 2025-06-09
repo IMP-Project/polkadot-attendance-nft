@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"strings"
 	"strconv" 
@@ -44,7 +45,11 @@ func NewContractCaller(api *gsrpc.SubstrateAPI, contractAddr types.AccountID) Co
 	// If we have a valid API and contract address, return a real caller
 	if api != nil && contractAddr != (types.AccountID{}) {
 		// Load the development keypair for testing
-		signer, err := signature.KeyringPairFromSecret("//Alice", 42)
+		signerMnemonic := os.Getenv("SIGNER_MNEMONIC")
+if signerMnemonic == "" {
+    signerMnemonic = "//Alice" // Fallback for development
+}
+signer, err := signature.KeyringPairFromSecret(signerMnemonic, 42)
 		if err != nil {
 			log.Printf("Failed to create signer: %v", err)
 			log.Printf("Falling back to mock implementation")
@@ -233,13 +238,13 @@ func (c *RealContractCaller) performRealMintNFT(args ...interface{}) ([]byte, er
 	
 	log.Printf("🚀✅ NFT SUCCESSFULLY MINTED ON REAL BLOCKCHAIN!")
 	log.Printf("🔗 Transaction Hash: %s", txHash)
-	log.Printf("🌐 View on Westend Explorer: https://test.azero.dev/#/explorer/extrinsic/%s", txHash)
+	log.Printf("🌐 View on Aleph Zero Explorer: https://test.azero.dev/#/explorer/extrinsic/%s", txHash)
 	
 	// Return successful result with proper error handling
 	result := map[string]interface{}{
 		"success":              true,
 		"transaction_hash":     txHash,
-		"network":              "Westend Testnet",
+		"network":              "Aleph Zero Testnet",
 		"recipient":            recipient,
 		"event_id":             eventID,
 		"original_event_id":    args[0],
@@ -258,6 +263,7 @@ func (c *RealContractCaller) performRealMintNFT(args ...interface{}) ([]byte, er
 	
 	return resultBytes, nil
 }
+
 func isReadOnlyMethod(method string) bool {
 	readOnlyMethods := map[string]bool{
 		"get_event":       true,
