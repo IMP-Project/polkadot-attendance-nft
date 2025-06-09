@@ -11,7 +11,7 @@ services:
       - key: GO_ENV
         value: production
       - key: CONTRACT_ADDRESS
-        value: 5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28
+        value: 5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j
       - key: API_KEY
         generateValue: true  # Generate a random value on first deploy
       - key: CORS_ORIGIN
