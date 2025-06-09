@@ -41,7 +41,7 @@ type Config struct {
 func Load() *Config {
 	cfg := &Config{
 		ServerAddress:   getEnv("SERVER_ADDRESS", ":8080"),
-		PolkadotRPC:     getEnv("POLKADOT_RPC", "wss://westend-rpc.polkadot.io"),
+		PolkadotRPC:     getEnv("POLKADOT_RPC_URL", "wss://ws.test.azero.dev"),
 		ContractAddress: getEnv("CONTRACT_ADDRESS", ""),
 		LumaAPIKey:      getEnv("LUMA_API_KEY", ""),
 		LumaWebhookKey:  getEnv("LUMA_WEBHOOK_KEY", ""),
