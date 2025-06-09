@@ -13,7 +13,6 @@ import { FontSizeProvider, useFontSize } from './contexts/FontSizeContext';
 import { EventsProvider } from './contexts/EventsContext';
 import Login from './pages/Login';
 import { api } from './services/api';
-import MockCheckInSimulator from './components/admin/MockCheckInSimulator';
 import ConnectToLumaModal from './components/ui/ConnectToLumaModal';
 
 // CheckIn page component
@@ -55,10 +54,9 @@ const CheckInPage = () => {
       <Box sx={{ mt: 4 }}>
         <Typography variant="h4" gutterBottom>Check-In: {event?.name || 'Unknown Event'}</Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Use this page to simulate attendee check-ins for this event. Each check-in will
-          generate an NFT for the attendee's wallet address.
+          Check-ins are managed through the Luma API integration. When attendees check in
+          at your event using Luma, they will automatically receive their attendance NFT.
         </Typography>
-        <MockCheckInSimulator eventId={eventId} />
       </Box>
     </Container>
   );

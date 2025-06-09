@@ -275,26 +275,24 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 			},
 		}
 
-		// FIXED: Try blockchain minting FIRST, before creating database record
+		// Try blockchain minting FIRST, before creating database record
 		var transactionHash string
 		if s.polkadotClient != nil {
 			log.Printf("Performing real NFT minting on blockchain for %s...", walletAddress)
 			mintResult, err := s.polkadotClient.MintNFT(eventID, walletAddress, metadata)
 			if err != nil {
-				log.Printf("Real minting failed for %s: %v. Using mock transaction.", walletAddress, err)
-				// Create a mock transaction hash for now - you can remove this later
-				transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
+				log.Printf("❌ Real minting failed for %s: %v", walletAddress, err)
+				continue // Skip this attendee if minting fails
 			} else if !mintResult.Success {
-				log.Printf("NFT minting returned false for %s: %s. Using mock transaction.", walletAddress, mintResult.Error)
-				// Create a mock transaction hash for now - you can remove this later
-				transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
+				log.Printf("❌ NFT minting returned false for %s: %s", walletAddress, mintResult.Error)
+				continue // Skip this attendee if minting fails
 			} else {
 				log.Printf("✅ NFT minted with transaction hash: %s", mintResult.TransactionHash)
 				transactionHash = mintResult.TransactionHash
 			}
 		} else {
-			log.Printf("Polkadot client not available, using mock transaction hash")
-			transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
+			log.Printf("❌ Polkadot client not available")
+			continue // Skip if no blockchain client
 		}
 
 		// FIXED: Only create NFT database record AFTER blockchain minting attempt

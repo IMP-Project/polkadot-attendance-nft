@@ -18,10 +18,7 @@ import (
 	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
 )
 
-// Global singleton mock instance to maintain state between calls
 var (
-	globalMockCaller *MockContractCaller
-	mockCallerMutex  sync.Mutex
 	contractMetadata *ContractMetadata
 )
 
@@ -39,33 +36,28 @@ type RealContractCaller struct {
 
 // NewContractCaller creates a new contract caller
 func NewContractCaller(api *gsrpc.SubstrateAPI, contractAddr types.AccountID) ContractCaller {
-	// Get the shared mock instance
-	sharedMock := GetSharedMockContractCaller()
-	
 	// If we have a valid API and contract address, return a real caller
 	if api != nil && contractAddr != (types.AccountID{}) {
-		// Load the development keypair for testing
+		// Load the signer keypair from environment
 		signerMnemonic := os.Getenv("SIGNER_MNEMONIC")
-if signerMnemonic == "" {
-    signerMnemonic = "//Alice" // Fallback for development
-}
-signer, err := signature.KeyringPairFromSecret(signerMnemonic, 42)
+		if signerMnemonic == "" {
+			return nil
+		}
+		signer, err := signature.KeyringPairFromSecret(signerMnemonic, 42)
 		if err != nil {
 			log.Printf("Failed to create signer: %v", err)
-			log.Printf("Falling back to mock implementation")
-			return sharedMock
+			return nil
 		}
 		
-		// Create simplified real contract caller
+		// Create real contract caller
 		return &RealContractCaller{
 			api:          api,
 			contractAddr: contractAddr,
-			signer:       signer,  // ← Fixed: no pointer
+			signer:       signer,
 		}
 	}
 
-	// Otherwise return a mock caller
-	return sharedMock
+	return nil
 }
 
 // Define the message struct type first
@@ -275,227 +267,6 @@ func isReadOnlyMethod(method string) bool {
 	return readOnlyMethods[method]
 }
 
-// GetSharedMockContractCaller returns the global mock contract caller instance
-func GetSharedMockContractCaller() *MockContractCaller {
-	mockCallerMutex.Lock()
-	defer mockCallerMutex.Unlock()
-	
-	if globalMockCaller == nil {
-		// Initialize with default data
-		events := map[uint64]models.Event{
-			1: {
-				ID:        "1",
-				Name:      "Polkadot Meetup",
-				Date:      "2023-06-01",
-				Location:  "Berlin",
-				Organizer: "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j",
-			},
-		}
-		
-		globalMockCaller = &MockContractCaller{
-			events:     events,
-			nfts:       make(map[uint64]models.NFT),
-			eventCount: 1,
-			nftCount:   0,
-		}
-		
-		log.Printf("Created global mock contract caller instance")
-	}
-	
-	return globalMockCaller
-}
-
-// NewMockContractCaller creates a new mock contract caller with some initial data
-func NewMockContractCaller() *MockContractCaller {
-	// Always return the shared instance
-	return GetSharedMockContractCaller()
-}
-
-// MockContractCaller provides a mock implementation for development
-type MockContractCaller struct {
-	events     map[uint64]models.Event
-	nfts       map[uint64]models.NFT
-	eventCount uint64
-	nftCount   uint64
-	mutex      sync.Mutex // To protect concurrent access
-}
-
-// Call mocks a smart contract method call but now returns realistic transaction hashes
-func (c *MockContractCaller) Call(method string, args ...interface{}) ([]byte, error) {
-	// Lock to prevent race conditions
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	
-	log.Printf("Mock contract caller (with realistic responses): %s with %d args", method, len(args))
-	
-	switch method {
-	case "create_event":
-		if len(args) < 3 {
-			return nil, fmt.Errorf("create_event requires 3 arguments")
-		}
-
-		name, ok1 := args[0].(string)
-		date, ok2 := args[1].(string)
-		location, ok3 := args[2].(string)
-
-		if !ok1 || !ok2 || !ok3 {
-			return nil, fmt.Errorf("invalid argument types")
-		}
-
-		c.eventCount++
-		eventID := c.eventCount
-
-		c.events[eventID] = models.Event{
-			ID: fmt.Sprintf("%d", eventID),
-			Name:      name,
-			Date:      date,
-			Location:  location,
-			Organizer: "5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j", // Mock organizer
-		}
-		
-		log.Printf("Created mock event with ID %d: %s", eventID, name)
-
-		// Return with mock transaction hash
-		return json.Marshal(map[string]interface{}{
-			"success": true,
-			"event_id": eventID,
-			"transaction_hash": fmt.Sprintf("0x%032x", eventID*123456), // Mock but realistic looking hash
-		})
-
-	case "get_event":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("get_event requires 1 argument")
-		}
-
-		var id uint64
-		switch v := args[0].(type) {
-		case uint64:
-			id = v
-		case float64:
-			id = uint64(v)
-		case int:
-			id = uint64(v)
-		case json.Number:
-			val, err := v.Int64()
-			if err != nil {
-				return nil, fmt.Errorf("invalid event ID: %v", err)
-			}
-			id = uint64(val)
-		case string:
-			// For string event IDs, use a simple hash
-			id = uint64(len(v))
-		case map[string]interface{}:
-			// This handles the case where we're passing a marshaled callData object
-			if methodArgs, ok := v["args"].([]interface{}); ok && len(methodArgs) > 0 {
-				if idVal, ok := methodArgs[0].(float64); ok {
-					id = uint64(idVal)
-				} else {
-					return nil, fmt.Errorf("invalid event ID type in callData")
-				}
-			} else {
-				return nil, fmt.Errorf("invalid callData format")
-			}
-		default:
-			return nil, fmt.Errorf("invalid event ID type: %T", args[0])
-		}
-		log.Printf("Looking up event ID: %d (available: %v)", id, c.events)
-
-		event, exists := c.events[id]
-		if !exists {
-			log.Printf("Event %d not found in mock storage", id)
-			return []byte{}, nil
-		}
-		
-		log.Printf("Found event %d: %s", id, event.Name)
-
-		return json.Marshal(event)
-	
-	case "mint_nft":
-		if len(args) < 3 {
-			return nil, fmt.Errorf("mint_nft requires 3 arguments")
-		}
-
-		var eventID uint64
-		var recipient string
-		var metadataJSON string
-		var ok bool
-
-		// Handle eventID with flexible type conversion
-		switch v := args[0].(type) {
-		case uint64:
-			eventID = v
-		case float64:
-			eventID = uint64(v)
-		case int:
-			eventID = uint64(v)
-		case string:
-			// Convert string event ID to uint64 (hash or simple conversion)
-			eventID = uint64(len(v)) // Simple hash based on length, or use a better hash
-		default:
-			return nil, fmt.Errorf("invalid event ID type: %T", args[0])
-		}
-
-		// Get recipient
-		if recipient, ok = args[1].(string); !ok {
-			return nil, fmt.Errorf("invalid recipient type")
-		}
-
-		// Get metadata JSON
-		if metadataJSON, ok = args[2].(string); !ok {
-			return nil, fmt.Errorf("invalid metadata type")
-		}
-
-		// Check if event exists
-		_, exists := c.events[eventID]
-		if !exists {
-			log.Printf("Cannot mint NFT: Event %d not found", eventID)
-			return json.Marshal(map[string]interface{}{
-				"success": false,
-				"error": "Event not found",
-			})
-		}
-
-		// Parse metadata
-		var metadata map[string]interface{}
-		if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
-			return nil, fmt.Errorf("invalid metadata JSON: %v", err)
-		}
-
-		c.nftCount++
-		nftID := c.nftCount
-
-		c.nfts[nftID] = models.NFT{
-			ID:       nftID,
-			EventID: fmt.Sprintf("%d", eventID),
-			Owner:    recipient,
-			Metadata: metadata,
-		}
-		
-		// Generate a realistic looking transaction hash
-		mockTxHash := fmt.Sprintf("0x%064x", nftID*987654321)
-		
-		log.Printf("✅ Minted NFT %d for event %d, recipient %s (Mock TX: %s)", nftID, eventID, recipient, mockTxHash)
-
-		// Return with realistic transaction hash for frontend compatibility
-		return json.Marshal(map[string]interface{}{
-			"success": true,
-			"transaction_hash": mockTxHash,
-			"network": "Aleph Zero",
-			"nft_id": nftID,
-			"recipient": recipient,
-			"event_id": eventID,
-		})
-
-	case "get_nft_count":
-		return json.Marshal(c.nftCount)
-
-	case "get_event_count":
-		return json.Marshal(c.eventCount)
-
-	default:
-		return nil, fmt.Errorf("unknown method: %s", method)
-	}
-}
 
 // Helper function to convert address string to AccountID (simplified)
 func (c *RealContractCaller) convertAddressToAccountID(address string) (types.AccountID, error) {
@@ -723,19 +494,30 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	log.Printf("📋 Contract call data prepared: %d bytes", len(callData))
 	log.Printf("📋 Call data preview: %x", callData[:min(len(callData), 64)])
 
-	// Create contract call with FIXED parameters
+	// Create contract call with FIXED parameters for Aleph Zero
 	log.Printf("🔍 DEBUG: Creating contract call...")
+	
+	// Use reasonable gas limit for Aleph Zero (200M weight)
+	gasLimit := types.NewUCompactFromUInt(200000000000)
+	
+	// Create storage deposit limit with a reasonable value (0.1 AZERO)
+	storageDepositLimit := types.Option[types.UCompact]{
+		IsNone: false,
+		IsSome: true,
+		Value:  types.NewUCompactFromUInt(100000000000), // 0.1 AZERO
+	}
+	
 	call, err := types.NewCall(meta, "Contracts.call", 
 		types.MultiAddress{IsID: true, AsID: contractAccountID}, // ✅ Wrap in MultiAddress
 		types.NewUCompactFromUInt(0),                            // value: 0 (no payment)
-		types.NewUCompactFromUInt(5000000000000),               // gas_limit: 5T 
-		types.Option[types.UCompact]{},                         // ✅ Use Option type for storage_deposit_limit
+		gasLimit,                                                // gas_limit: 200M weight units
+		storageDepositLimit,                                     // storage_deposit_limit: 0.1 AZERO
 		callData)                                               // data: encoded call
 	if err != nil {
 		log.Printf("❌ CRITICAL: Failed to create call: %v", err)
 		return "", fmt.Errorf("failed to create call: %v", err)
 	}
-	log.Printf("✅ Contract call created successfully")
+	log.Printf("✅ Contract call created successfully with gas_limit=%v, storage_deposit=%v", gasLimit, storageDepositLimit)
 
 	// Create extrinsic
 	log.Printf("🔍 DEBUG: Creating extrinsic...")
@@ -778,7 +560,7 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	}
 	log.Printf("✅ Extrinsic signed successfully")
 
-	log.Printf("📡 Submitting REAL contract transaction to Westend...")
+	log.Printf("📡 Submitting REAL contract transaction to Aleph Zero testnet...")
 
 	// Submit the extrinsic
 	log.Printf("🔍 DEBUG: Submitting to blockchain...")
@@ -791,7 +573,7 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	hashStr := hash.Hex()
 	log.Printf("🎉 REAL NFT MINTED ON ALEPH ZERO BLOCKCHAIN!")
 	log.Printf("🔗 Transaction Hash: %s", hashStr)
-	log.Printf("🌐 View on Westend Explorer: https://test.azero.dev/#/explorer/extrinsic/%s", hashStr)
+	log.Printf("🌐 View on Aleph Zero Explorer: https://test.azero.dev/#/explorer/extrinsic/%s", hashStr)
 	log.Printf("📋 Contract Address: %s", contractAddrStr)
 	log.Printf("📋 Event ID: %d, Recipient: %s", eventIDNum, recipient)
 	log.Printf("✅ submitContractTransaction completed successfully!")

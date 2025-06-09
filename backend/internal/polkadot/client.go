@@ -36,13 +36,7 @@ func NewClient(rpcURL, contractAddress string) *Client {
 	api, err := gsrpc.NewSubstrateAPI(rpcURL)
 	if err != nil {
 		log.Printf("Failed to connect to Polkadot node: %v", err)
-		log.Printf("Using mock implementation for development")
-		// Create a mock API for development
-		return &Client{
-			contractCaller: NewMockContractCaller(),
-			useMock:        true,
-			chainName:      "Mock",
-		}
+		return nil
 	}
 
 	// Get chain name for logging
@@ -121,35 +115,27 @@ if len(addrBytes) == 32 {
 }
 		} else {
 			log.Printf("Unrecognized address format: %s", contractAddress)
-			log.Printf("Using mock implementation for development")
-			return &Client{
-				api:            api,
-				contractCaller: NewMockContractCaller(),
-				useMock:        true,
-				chainName:      chainName,
-			}
+			return nil
 		}
 	} else {
-		log.Printf("No contract address provided, using mock implementation")
+		log.Printf("No contract address provided")
+		return nil
 	}
 
 	// Create contract caller
 	caller := NewContractCaller(api, contractAddr)
-
-	// Check if we got a real or mock caller
-	useMock := false
-	if _, isMock := caller.(*MockContractCaller); isMock {
-		useMock = true
-		log.Printf("Using mock contract implementation")
-	} else {
-		log.Printf("Using real contract at address: %s", contractAddress)
+	if caller == nil {
+		log.Printf("Failed to create contract caller")
+		return nil
 	}
+
+	log.Printf("Using real contract at address: %s", contractAddress)
 
 	return &Client{
 		api:            api,
 		contractAddr:   contractAddr,
 		contractCaller: caller,
-		useMock:        useMock,
+		useMock:        false,
 		chainName:      chainName,
 	}
 }
@@ -318,28 +304,7 @@ func (c *Client) ListNFTs() ([]models.NFT, error) {
 
 	log.Printf("Found %d NFTs", count)
 	
-	// If using mock implementation and no NFTs exist, return demo data
-	if c.useMock && count == 0 {
-		log.Printf("Using demo NFT data")
-		return []models.NFT{
-			{
-				ID:      1,
-				EventID: "1",
-				Owner:   "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-				Metadata: map[string]interface{}{
-					"name":        "Attendance: Polkadot Meetup",
-					"description": "Proof of attendance for Polkadot Meetup",
-					"event_name":  "Polkadot Meetup",
-					"event_date":  "2023-06-01",
-					"location":    "Berlin",
-					"attendee":    "John Doe",
-				},
-			},
-		}, nil
-	}
-
-	// In real implementation, we would fetch each NFT
-	// For now, just return an empty array for non-zero counts
+	// TODO: Implement fetching individual NFTs
 	nfts := make([]models.NFT, 0, count)
 	return nfts, nil
 }

@@ -10,7 +10,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import EventsPage from '../pages/EventsPage';
 import NFTDesignPage from '../pages/NFTDesignPage';
 import Gallery from '../pages/Gallery';
-import MockCheckInSimulator from '../components/admin/MockCheckInSimulator';
 import { api } from '../services/api';
 import ConnectToLumaModal from '../components/ui/ConnectToLumaModal';
 import DarkModeToggle from '../components/ui/DarkModeToggle';
