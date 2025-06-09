@@ -96,19 +96,23 @@ if err != nil {
 addrBytes = pubKey // Use the pubKey regardless of validation error
 			}
 			
-			// If we successfully decoded the address
-			if len(addrBytes) == 32 { // AccountID is 32 bytes
-				copy(contractAddr[:], addrBytes)
-				log.Printf("Successfully converted address to AccountID")
-			} else {
-				log.Printf("Address conversion failed, falling back to mock implementation")
-				return &Client{
-					api:            api,
-					contractCaller: NewMockContractCaller(),
-					useMock:        true,
-					chainName:      chainName,
-				}
-			}
+			// For Aleph Zero, try to use the address even if length check fails
+if len(addrBytes) == 32 {
+    copy(contractAddr[:], addrBytes)
+    log.Printf("Successfully converted address to AccountID")
+} else {
+    // For Aleph Zero, let's try to continue anyway
+    log.Printf("Address length is %d (expected 32), but continuing for Aleph Zero", len(addrBytes))
+    if len(addrBytes) > 0 {
+        // Pad or truncate to 32 bytes
+        if len(addrBytes) >= 32 {
+            copy(contractAddr[:], addrBytes[:32])
+        } else {
+            copy(contractAddr[:len(addrBytes)], addrBytes)
+        }
+        log.Printf("Adjusted address for AccountID compatibility")
+    }
+}
 		} else {
 			log.Printf("Unrecognized address format: %s", contractAddress)
 			log.Printf("Using mock implementation for development")
