@@ -778,7 +778,7 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	}
 	log.Printf("✅ Extrinsic signed successfully")
 
-	log.Printf("📡 Submitting REAL contract transaction to Westend...")
+	log.Printf("📡 Submitting REAL contract transaction to Alephzero...")
 
 	// Submit the extrinsic
 	log.Printf("🔍 DEBUG: Submitting to blockchain...")
