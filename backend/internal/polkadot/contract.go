@@ -708,17 +708,12 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	// Encode recipient AccountId (32 bytes)
 	callData = append(callData, recipientAccountID[:]...)
 	
-	// Encode metadata string
-	metadataBytes := []byte(metadata)
-	// Use compact encoding for string length
-	if len(metadataBytes) < 64 {
-		callData = append(callData, byte(len(metadataBytes)<<2)) // Compact encoding
-	} else {
-		// For longer strings, use proper compact encoding
-		callData = append(callData, 0x01) // Compact marker
-		callData = append(callData, byte(len(metadataBytes)))
-	}
-	callData = append(callData, metadataBytes...)
+	// Encode metadata string using proper SCALE encoding
+metadataBytes := []byte(metadata)
+metadataLenBytes := make([]byte, 4)
+binary.LittleEndian.PutUint32(metadataLenBytes, uint32(len(metadataBytes)))
+callData = append(callData, metadataLenBytes...)
+callData = append(callData, metadataBytes...)
 
 	log.Printf("📋 Contract call data prepared: %d bytes", len(callData))
 	log.Printf("📋 Call data preview: %x", callData[:min(len(callData), 64)])
@@ -728,7 +723,7 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	call, err := types.NewCall(meta, "Contracts.call", 
 		types.MultiAddress{IsID: true, AsID: contractAccountID}, // ✅ Wrap in MultiAddress
 		types.NewUCompactFromUInt(0),                            // value: 0 (no payment)
-		types.NewUCompactFromUInt(5000000000000),               // gas_limit: 5T 
+		types.NewUCompactFromUInt(10000000000000),               // gas_limit: 5T 
 		types.Option[types.UCompact]{},                         // ✅ Use Option type for storage_deposit_limit
 		callData)                                               // data: encoded call
 	if err != nil {

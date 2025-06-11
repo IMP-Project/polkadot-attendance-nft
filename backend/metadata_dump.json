@@ -42,7 +42,7 @@
     },
     {
       "name": "mint_nft",
-      "selector": "0x219a113e",
+      "selector": "0xa5a4f778",
       "mutates": true,
       "args": [
         {
