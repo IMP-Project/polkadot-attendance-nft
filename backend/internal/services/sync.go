@@ -212,6 +212,35 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 	mintedCount := 0
 	noWalletCount := 0
 	
+	// NEW: Create event in smart contract if it doesn't exist
+if s.polkadotClient != nil {
+    log.Printf("Ensuring event %s exists in smart contract...", eventID)
+    
+    // Get event details from database
+    event, err := s.eventRepo.GetByID(eventID)
+    if err == nil && event != nil {
+        // Check if we already have a contract event ID
+        if event.ContractEventID == nil {
+            // Create event in smart contract
+            contractEventID, createErr := s.polkadotClient.CreateEvent(event.Name, event.Date, event.Location)
+            if createErr != nil {
+                log.Printf("Failed to create event in contract: %v", createErr)
+                // Continue with mock transaction for now
+            } else {
+                log.Printf("✅ Event created in smart contract with ID: %d (Luma ID: %s)", contractEventID, eventID)
+                
+                // Store the contract event ID in database
+                event.ContractEventID = &contractEventID
+                if updateErr := s.eventRepo.Update(event); updateErr != nil {
+                    log.Printf("Failed to update contract event ID: %v", updateErr)
+                }
+            }
+        } else {
+            log.Printf("Event %s already exists in contract with ID: %d", eventID, *event.ContractEventID)
+        }
+    }
+}
+
 	for i, guest := range guests {
 		// Log first guest structure to understand available fields
 		if i == 0 {
@@ -276,26 +305,40 @@ func (s *SyncService) SyncEventCheckIns(eventID string, apiKey string) error {
 		}
 
 		// FIXED: Try blockchain minting FIRST, before creating database record
-		var transactionHash string
-		if s.polkadotClient != nil {
-			log.Printf("Performing real NFT minting on blockchain for %s...", walletAddress)
-			mintResult, err := s.polkadotClient.MintNFT(eventID, walletAddress, metadata)
-			if err != nil {
-				log.Printf("Real minting failed for %s: %v. Using mock transaction.", walletAddress, err)
-				// Create a mock transaction hash for now - you can remove this later
-				transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
-			} else if !mintResult.Success {
-				log.Printf("NFT minting returned false for %s: %s. Using mock transaction.", walletAddress, mintResult.Error)
-				// Create a mock transaction hash for now - you can remove this later
-				transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
-			} else {
-				log.Printf("✅ NFT minted with transaction hash: %s", mintResult.TransactionHash)
-				transactionHash = mintResult.TransactionHash
-			}
-		} else {
-			log.Printf("Polkadot client not available, using mock transaction hash")
-			transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
-		}
+var transactionHash string
+if s.polkadotClient != nil {
+    log.Printf("Performing real NFT minting on blockchain for %s...", walletAddress)
+    
+    // Get the contract event ID to use for minting
+    // Get the contract event ID to use for minting
+event, err := s.eventRepo.GetByID(eventID)
+var mintEventID string
+
+if err == nil && event != nil && event.ContractEventID != nil {
+    // Use contract event ID (convert uint64 to string)
+    mintEventID = fmt.Sprintf("%d", *event.ContractEventID)
+    log.Printf("Using contract event ID %d for minting", *event.ContractEventID)
+} else {
+    // Fallback to Luma event ID (your current approach)
+    mintEventID = eventID
+    log.Printf("Using Luma event ID %s for minting (fallback)", eventID)
+}
+
+mintResult, err := s.polkadotClient.MintNFT(mintEventID, walletAddress, metadata)
+    if err != nil {
+        log.Printf("Real minting failed for %s: %v. Using mock transaction.", walletAddress, err)
+        transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
+    } else if !mintResult.Success {
+        log.Printf("NFT minting returned false for %s: %s. Using mock transaction.", walletAddress, mintResult.Error)
+        transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
+    } else {
+        log.Printf("✅ NFT minted with transaction hash: %s", mintResult.TransactionHash)
+        transactionHash = mintResult.TransactionHash
+    }
+} else {
+    log.Printf("Polkadot client not available, using mock transaction hash")
+    transactionHash = fmt.Sprintf("mock-%d", time.Now().Unix())
+}
 
 		// FIXED: Only create NFT database record AFTER blockchain minting attempt
 		nft := &models.NFT{

@@ -237,9 +237,9 @@ func (c *Client) ListEvents() ([]models.Event, error) {
 }
 
 // MintNFT mints a new NFT for an attendee
-func (c *Client) MintNFT(eventID string, recipient string, metadata map[string]interface{}) (*MintResult, error) {
-	log.Printf("Minting NFT for event %s to recipient %s", eventID, recipient)
-		
+func (c *Client) MintNFT(eventID interface{}, recipient string, metadata map[string]interface{}) (*MintResult, error) {
+    log.Printf("Minting NFT - eventID: %v (type: %T), recipient: %s", eventID, eventID, recipient)
+    		
 	// Validate recipient address
 	if recipient == "" {
 		return &MintResult{Success: false, Error: "recipient address is required"}, fmt.Errorf("recipient address is required")
@@ -343,3 +343,4 @@ func (c *Client) ListNFTs() ([]models.NFT, error) {
 	nfts := make([]models.NFT, 0, count)
 	return nfts, nil
 }
+

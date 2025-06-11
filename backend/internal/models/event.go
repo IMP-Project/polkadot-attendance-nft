@@ -18,6 +18,9 @@ type Event struct {
 	LumaUpdatedAt string    `gorm:"type:varchar(50)" json:"luma_updated_at"`
 	IsDeleted     bool      `gorm:"default:false;index" json:"is_deleted"`
 	
+	// NEW: Store contract event ID for blockchain operations
+	ContractEventID *uint64 `gorm:"column:contract_event_id;index" json:"contract_event_id,omitempty"`
+	
 	// Standard GORM timestamps
 	CreatedAt     time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time `gorm:"autoUpdateTime" json:"updated_at"`
