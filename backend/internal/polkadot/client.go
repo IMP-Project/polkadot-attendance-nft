@@ -158,24 +158,29 @@ if len(addrBytes) == 32 {
 func (c *Client) CreateEvent(name, date, location string) (uint64, error) {
 	log.Printf("Creating event: %s, %s, %s", name, date, location)
 	
+	// Ensure we have a real contract caller
+	if c.contractCaller == nil {
+		return 0, fmt.Errorf("❌ CRITICAL: No real contract caller available - check blockchain connection")
+	}
+	
 	// Input validation
 	if name == "" || date == "" || location == "" {
 		return 0, fmt.Errorf("name, date, and location are required")
 	}
 	
-	// Call the smart contract
+	// Call the smart contract (should only be real now)
 	result, err := c.contractCaller.Call("create_event", name, date, location)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create event: %v", err)
+		return 0, fmt.Errorf("failed to create event on real blockchain: %v", err)
 	}
 
-	// Parse result
+	// Parse result as uint64 (real contract response)
 	var eventID uint64
 	if err := json.Unmarshal(result, &eventID); err != nil {
-		return 0, fmt.Errorf("failed to parse event ID: %v", err)
+		return 0, fmt.Errorf("failed to parse real contract response: %v", err)
 	}
 
-	log.Printf("Event created with ID: %d", eventID)
+	log.Printf("✅ Real event created with ID: %d", eventID)
 	return eventID, nil
 }
 

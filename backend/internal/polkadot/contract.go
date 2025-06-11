@@ -39,53 +39,33 @@ type RealContractCaller struct {
 
 // NewContractCaller creates a new contract caller
 func NewContractCaller(api *gsrpc.SubstrateAPI, contractAddr types.AccountID) ContractCaller {
-	// Get the shared mock instance
-	sharedMock := GetSharedMockContractCaller()
-	
 	// If we have a valid API and contract address, return a real caller
 	if api != nil && contractAddr != (types.AccountID{}) {
 		// Load the development keypair for testing
 		signerMnemonic := os.Getenv("SIGNER_MNEMONIC")
-if signerMnemonic == "" {
-    signerMnemonic = "//Alice" // Fallback for development
-}
-signer, err := signature.KeyringPairFromSecret(signerMnemonic, 42)
+		if signerMnemonic == "" {
+			signerMnemonic = "//Alice" // Fallback for development
+		}
+		signer, err := signature.KeyringPairFromSecret(signerMnemonic, 42)
 		if err != nil {
-			log.Printf("Failed to create signer: %v", err)
-			log.Printf("Falling back to mock implementation")
-			return sharedMock
+			log.Printf("❌ CRITICAL: Failed to create signer: %v", err)
+			log.Printf("❌ Cannot proceed without real blockchain connection!")
+			return nil // Return nil instead of mock
 		}
 		
-		// Create simplified real contract caller
+		// Create real contract caller
+		log.Printf("✅ Creating REAL contract caller for blockchain operations")
 		return &RealContractCaller{
 			api:          api,
 			contractAddr: contractAddr,
-			signer:       signer,  // ← Fixed: no pointer
+			signer:       signer,
 		}
 	}
 
-	// Otherwise return a mock caller
-	return sharedMock
-}
-
-// Define the message struct type first
-type ContractMessage struct {
-	Args []struct {
-		Name string `json:"name"`
-		Type struct {
-			DisplayName []string `json:"displayName"`
-			Type        int      `json:"type"`
-		} `json:"type"`
-	} `json:"args"`
-	ReturnType struct {
-		DisplayName []string `json:"displayName"`
-		Type        int      `json:"type"`
-	} `json:"returnType"`
-	Selector string   `json:"selector"`
-	Mutates  bool     `json:"mutates"`
-	Payable  bool     `json:"payable"`
-	Docs     []string `json:"docs"`
-	Name     string   `json:"name"`
+	// Don't return mock - fail clearly if we can't create real caller
+	log.Printf("❌ CRITICAL: Invalid API or contract address - cannot create real contract caller!")
+	log.Printf("❌ API is nil: %v, Contract address is empty: %v", api == nil, contractAddr == (types.AccountID{}))
+	return nil
 }
 
 func loadContractMetadataWithCaching(contractFile string) (*ContractMetadata, error) {
