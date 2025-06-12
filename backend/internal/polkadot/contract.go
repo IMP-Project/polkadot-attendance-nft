@@ -324,26 +324,18 @@ func (c *RealContractCaller) submitCreateEventTransaction(name, date, location s
     var callData []byte
     callData = append(callData, selector...)
     
-    // Encode name string
-    nameBytes := []byte(name)
-    nameLenBytes := make([]byte, 4)
-    binary.LittleEndian.PutUint32(nameLenBytes, uint32(len(nameBytes)))
-    callData = append(callData, nameLenBytes...)
-    callData = append(callData, nameBytes...)
-    
-    // Encode date string
-    dateBytes := []byte(date)
-    dateLenBytes := make([]byte, 4)
-    binary.LittleEndian.PutUint32(dateLenBytes, uint32(len(dateBytes)))
-    callData = append(callData, dateLenBytes...)
-    callData = append(callData, dateBytes...)
-    
-    // Encode location string
-    locationBytes := []byte(location)
-    locationLenBytes := make([]byte, 4)
-    binary.LittleEndian.PutUint32(locationLenBytes, uint32(len(locationBytes)))
-    callData = append(callData, locationLenBytes...)
-    callData = append(callData, locationBytes...)
+    // Use simple compact encoding like the UI does
+nameBytes := []byte(name)
+callData = append(callData, byte(len(nameBytes)<<2)) // Simple compact length
+callData = append(callData, nameBytes...)
+
+dateBytes := []byte(date)
+callData = append(callData, byte(len(dateBytes)<<2))
+callData = append(callData, dateBytes...)
+
+locationBytes := []byte(location)
+callData = append(callData, byte(len(locationBytes)<<2))
+callData = append(callData, locationBytes...)
     
     log.Printf("📋 Create event call data prepared: %d bytes", len(callData))
     
