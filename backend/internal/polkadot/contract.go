@@ -324,17 +324,36 @@ func (c *RealContractCaller) submitCreateEventTransaction(name, date, location s
     var callData []byte
     callData = append(callData, selector...)
     
-    // Use simple compact encoding like the UI does
+    // Use proper SCALE encoding for strings (matching ink! expectations)
 nameBytes := []byte(name)
-callData = append(callData, byte(len(nameBytes)<<2)) // Simple compact length
+if len(nameBytes) < 64 {
+    callData = append(callData, byte(len(nameBytes)<<2)) // Compact encoding for length
+} else {
+    // For longer strings
+    callData = append(callData, 0xfd)
+    callData = append(callData, byte(len(nameBytes)))
+    callData = append(callData, byte(len(nameBytes)>>8))
+}
 callData = append(callData, nameBytes...)
 
 dateBytes := []byte(date)
-callData = append(callData, byte(len(dateBytes)<<2))
+if len(dateBytes) < 64 {
+    callData = append(callData, byte(len(dateBytes)<<2))
+} else {
+    callData = append(callData, 0xfd)
+    callData = append(callData, byte(len(dateBytes)))
+    callData = append(callData, byte(len(dateBytes)>>8))
+}
 callData = append(callData, dateBytes...)
 
 locationBytes := []byte(location)
-callData = append(callData, byte(len(locationBytes)<<2))
+if len(locationBytes) < 64 {
+    callData = append(callData, byte(len(locationBytes)<<2))
+} else {
+    callData = append(callData, 0xfd)
+    callData = append(callData, byte(len(locationBytes)))
+    callData = append(callData, byte(len(locationBytes)>>8))
+}
 callData = append(callData, locationBytes...)
     
     log.Printf("📋 Create event call data prepared: %d bytes", len(callData))
