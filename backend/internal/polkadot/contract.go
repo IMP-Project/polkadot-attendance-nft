@@ -851,11 +851,15 @@ log.Printf("📋 Contract AccountID: %x", contractAccountID[:8])
 	// Encode recipient AccountId (32 bytes)
 	callData = append(callData, recipientAccountID[:]...)
 	
-	// Encode metadata string using proper SCALE encoding
+	// Use compact encoding for metadata string (like create_event)
 metadataBytes := []byte(metadata)
-metadataLenBytes := make([]byte, 4)
-binary.LittleEndian.PutUint32(metadataLenBytes, uint32(len(metadataBytes)))
-callData = append(callData, metadataLenBytes...)
+if len(metadataBytes) < 64 {
+    callData = append(callData, byte(len(metadataBytes)<<2)) // Compact encoding
+} else {
+    callData = append(callData, 0xfd)
+    callData = append(callData, byte(len(metadataBytes)))
+    callData = append(callData, byte(len(metadataBytes)>>8))
+}
 callData = append(callData, metadataBytes...)
 
 	log.Printf("📋 Contract call data prepared: %d bytes", len(callData))
