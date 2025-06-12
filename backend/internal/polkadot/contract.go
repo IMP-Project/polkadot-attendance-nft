@@ -184,10 +184,16 @@ func (c *RealContractCaller) performRealMintNFT(args ...interface{}) ([]byte, er
 	case int:
 		eventID = uint64(v)
 	case string:
-		// Convert string event ID to hash-based u64
-		hash := sha256.Sum256([]byte(v))
-		eventID = binary.BigEndian.Uint64(hash[:8])
-		log.Printf("🔄 Converted string event ID '%s' to u64: %d", v, eventID)
+    // Try to parse as number first
+    if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+        eventID = parsed
+        log.Printf("🔄 Parsed string event ID '%s' to u64: %d", v, eventID)
+    } else {
+        // Fallback to hash for non-numeric strings
+        hash := sha256.Sum256([]byte(v))
+        eventID = binary.BigEndian.Uint64(hash[:8])
+        log.Printf("🔄 Converted string event ID '%s' to u64: %d", v, eventID)
+    }
 	default:
 		return nil, fmt.Errorf("invalid event ID type: %T", args[0])
 	}
