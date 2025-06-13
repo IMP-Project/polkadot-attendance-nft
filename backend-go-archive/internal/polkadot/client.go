@@ -1,0 +1,262 @@
+package polkadot
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/models"
+	"github.com/samuelarogbonlo/polkadot-attendance-nft/backend/internal/utils"
+)
+
+// MintResult holds the result of an NFT minting operation
+type MintResult struct {
+	Success         bool   `json:"success"`
+	TransactionHash string `json:"transaction_hash"`
+	Error           string `json:"error,omitempty"`
+}
+
+// Client handles interactions with the Polkadot blockchain
+type Client struct {
+	api            *gsrpc.SubstrateAPI
+	contractAddr   types.AccountID
+	contractCaller ContractCaller
+	chainName      string
+}
+
+// NewClient creates a new Polkadot client
+func NewClient(rpcURL, contractAddress string) *Client {
+	log.Printf("Connecting to %s...", rpcURL)
+	// Connect to Polkadot node
+	api, err := gsrpc.NewSubstrateAPI(rpcURL)
+	if err != nil {
+		log.Printf("Failed to connect to Polkadot node: %v", err)
+		return nil
+	}
+
+	// Get chain name for logging
+	var chainName string
+	// Try to get the chain name from the system properties
+	sysName, err := api.RPC.System.Name()
+	if err == nil {
+		chainName = string(sysName)
+	}
+	
+	// If that failed, try to get the chain type
+	if chainName == "" {
+		chainType, err := api.RPC.System.Chain()
+		if err == nil {
+			chainName = string(chainType)
+		}
+	}
+	
+	if chainName == "" {
+		chainName = "Unknown"
+	}
+	log.Printf("Connected to chain: %s", chainName)
+
+	// Parse contract address if provided
+	var contractAddr types.AccountID
+	if contractAddress != "" {
+		log.Printf("Processing contract address: %s", contractAddress)
+		
+		// Use the new utility function to handle address conversion
+		accountID, err := utils.ConvertAddressToAccountID(contractAddress)
+		if err != nil {
+			log.Printf("❌ Failed to convert address to AccountID: %v", err)
+			return nil
+		}
+		
+		contractAddr = accountID
+		log.Printf("✅ Successfully converted address to AccountID: %x...", contractAddr[:8])
+	} else {
+		log.Printf("No contract address provided")
+		return nil
+	}
+
+	// Create contract caller
+	caller := NewContractCaller(api, contractAddr)
+	if caller == nil {
+		log.Printf("Failed to create contract caller")
+		return nil
+	}
+
+	log.Printf("Using real contract at address: %s", contractAddress)
+
+	return &Client{
+		api:            api,
+		contractAddr:   contractAddr,
+		contractCaller: caller,
+		chainName:      chainName,
+	}
+}
+
+// CreateEvent creates a new event in the smart contract
+func (c *Client) CreateEvent(name, date, location string) (uint64, error) {
+	log.Printf("Creating event: %s, %s, %s", name, date, location)
+	
+	// Input validation
+	if name == "" || date == "" || location == "" {
+		return 0, fmt.Errorf("name, date, and location are required")
+	}
+	
+	// Call the smart contract
+	result, err := c.contractCaller.Call("create_event", name, date, location)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create event: %v", err)
+	}
+
+	// Parse result
+	var eventID uint64
+	if err := json.Unmarshal(result, &eventID); err != nil {
+		return 0, fmt.Errorf("failed to parse event ID: %v", err)
+	}
+
+	log.Printf("Event created with ID: %d", eventID)
+	return eventID, nil
+}
+
+// GetEvent gets an event by ID
+func (c *Client) GetEvent(id uint64) (*models.Event, error) {
+	log.Printf("Getting event with ID: %d", id)
+	
+	// Call the smart contract
+	result, err := c.contractCaller.Call("get_event", id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event: %v", err)
+	}
+
+	// Check if event exists
+	if len(result) == 0 {
+		log.Printf("Event %d not found", id)
+		return nil, nil
+	}
+
+	// Parse result
+	var event models.Event
+	if err := json.Unmarshal(result, &event); err != nil {
+		return nil, fmt.Errorf("failed to parse event: %v", err)
+	}
+
+	log.Printf("Retrieved event: %+v", event)
+	return &event, nil
+}
+
+// ListEvents lists all events
+func (c *Client) ListEvents() ([]models.Event, error) {
+	log.Printf("Listing all events")
+	
+	// Get total event count
+	countResult, err := c.contractCaller.Call("get_event_count")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event count: %v", err)
+	}
+
+	var count uint64
+	if err := json.Unmarshal(countResult, &count); err != nil {
+		return nil, fmt.Errorf("failed to parse event count: %v", err)
+	}
+
+	log.Printf("Found %d events", count)
+	events := make([]models.Event, 0, count)
+	for i := uint64(1); i <= count; i++ {
+		event, err := c.GetEvent(i)
+		if err != nil {
+			log.Printf("Failed to get event %d: %v", i, err)
+			continue
+		}
+		if event != nil {
+			events = append(events, *event)
+		}
+	}
+
+	return events, nil
+}
+
+// MintNFT mints a new NFT for an attendee
+func (c *Client) MintNFT(eventID string, recipient string, metadata map[string]interface{}) (*MintResult, error) {
+	log.Printf("Minting NFT for event %s to recipient %s", eventID, recipient)
+		
+	// Validate recipient address
+	if recipient == "" {
+		return &MintResult{Success: false, Error: "recipient address is required"}, fmt.Errorf("recipient address is required")
+	}
+	
+	// Validate event ID
+	if eventID == "" {
+		return &MintResult{Success: false, Error: "invalid event ID"}, fmt.Errorf("invalid event ID")
+	}
+	
+	// Convert metadata to JSON string
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return &MintResult{Success: false, Error: "failed to marshal metadata"}, fmt.Errorf("failed to marshal metadata: %v", err)
+	}
+
+	// Call the smart contract
+	result, err := c.contractCaller.Call("mint_nft", eventID, recipient, string(metadataJSON))
+	if err != nil {
+		return &MintResult{Success: false, Error: err.Error()}, fmt.Errorf("failed to mint NFT: %v", err)
+	}
+
+	// Parse result - the contract now returns a JSON object with success and transaction_hash
+	var contractResponse map[string]interface{}
+	if err := json.Unmarshal(result, &contractResponse); err != nil {
+		return &MintResult{Success: false, Error: "failed to parse contract response"}, fmt.Errorf("failed to parse result: %v", err)
+	}
+
+	// Extract success status
+	success, ok := contractResponse["success"].(bool)
+	if !ok {
+		return &MintResult{Success: false, Error: "invalid contract response format"}, fmt.Errorf("invalid contract response format")
+	}
+
+	// Extract transaction hash if available
+	var txHash string
+	if txHashInterface, exists := contractResponse["transaction_hash"]; exists {
+		if txHashStr, ok := txHashInterface.(string); ok {
+			txHash = txHashStr
+		}
+	}
+
+	mintResult := &MintResult{
+		Success:         success,
+		TransactionHash: txHash,
+	}
+
+	if success {
+		log.Printf("✅ NFT minted successfully with transaction hash: %s", txHash)
+	} else {
+		log.Printf("❌ NFT minting failed")
+		if errorMsg, exists := contractResponse["error"]; exists {
+			if errorStr, ok := errorMsg.(string); ok {
+				mintResult.Error = errorStr
+			}
+		}
+	}
+	
+	return mintResult, nil
+}
+
+// ListNFTs lists all NFTs
+func (c *Client) ListNFTs() ([]models.NFT, error) {
+	log.Printf("Listing all NFTs")
+	
+	// Get total NFT count
+	countResult, err := c.contractCaller.Call("get_nft_count")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get NFT count: %v", err)
+	}
+
+	var count uint64
+	if err := json.Unmarshal(countResult, &count); err != nil {
+		return nil, fmt.Errorf("failed to parse NFT count: %v", err)
+	}
+
+	log.Printf("Found %d NFTs", count)
+	
+	// TODO: Implement fetching individual NFTs
+	nfts := make([]models.NFT, 0, count)
+	return nfts, nil
+}

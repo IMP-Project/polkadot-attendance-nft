@@ -87,40 +87,54 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
       
       // If no pre-selected event from navigation, select the first one
       if (!localStorage.getItem('selectedEventId') && eventsData.length > 0) {
-  setSelectedEvent(eventsData[0].api_id);
-}
+        setSelectedEvent(eventsData[0].lumaEventId || eventsData[0].id);
+      }
     } catch (error) {
       console.error('Error fetching events:', error);
     }
   };
 
   const fetchAttendees = async (eventId) => {
-  setLoading(true);
-  try {
-    // Call the new check-ins endpoint (CORRECT)
-    const checkInsData = await api.getEventCheckIns(eventId);
-    
-    // Transform the data to match the expected format
-    const attendeeData = checkInsData.check_ins.map(checkIn => ({
-      id: `checkin-${checkIn.wallet}`, // Create a unique ID
-      name: checkIn.attendee,
-      email: 'Check-in via Luma', // Could be enhanced later
-      checkInTime: new Date(checkIn.checked_in_at).toLocaleString(),
-      walletAddress: checkIn.wallet,
-      ticketType: 'General Admission',
-      nftId: null,
-      nftStatus: checkIn.nft_status ? 'minted' : 'pending',
-      transactionHash: null
-    }));
-    
-    setAttendees(attendeeData);
-  } catch (error) {
-    console.error('Error fetching attendees:', error);
-    setAttendees([]);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      // First, find the event in our events list to get the database ID
+      const event = events.find(e => (e.lumaEventId || e.id) === eventId);
+      if (!event) {
+        console.error('Event not found:', eventId);
+        setAttendees([]);
+        return;
+      }
+
+      // Use the CheckInsPage approach - fetch check-ins with filter
+      // We need the database ID, not the Luma event ID
+      const dbEventId = event.originalData?.id || event.id;
+      console.log('Fetching check-ins for event:', eventId, 'DB ID:', dbEventId);
+      
+      // Fetch check-ins for this specific event
+      const data = await api.getCheckIns({ eventId: dbEventId });
+      console.log('Check-ins response:', data);
+      
+      // Transform the data to match the expected format
+      const attendeeData = (data.checkins || []).map(checkIn => ({
+        id: checkIn.id,
+        name: checkIn.attendeeName,
+        email: checkIn.attendeeEmail || 'Check-in via Luma',
+        checkInTime: new Date(checkIn.checkedInAt).toLocaleString(),
+        walletAddress: checkIn.walletAddress,
+        ticketType: 'General Admission',
+        nftId: checkIn.nft?.id || null,
+        nftStatus: checkIn.nftMintStatus === 'COMPLETED' ? 'minted' : 'pending',
+        transactionHash: checkIn.nft?.transactionHash || null
+      }));
+      
+      setAttendees(attendeeData);
+    } catch (error) {
+      console.error('Error fetching attendees:', error);
+      setAttendees([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRefresh = async () => {
     if (selectedEvent) {
@@ -272,10 +286,10 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
               >
                 <MenuItem value="" disabled>Select an event</MenuItem>
                 {events.map(event => (
-  <MenuItem key={event.api_id} value={event.api_id}>
-    {event.name}
-  </MenuItem>
-))}
+                  <MenuItem key={event.lumaEventId || event.id} value={event.lumaEventId || event.id}>
+                    {event.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Box>

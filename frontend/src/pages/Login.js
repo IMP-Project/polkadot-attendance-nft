@@ -46,33 +46,14 @@ const Login = () => {
     setError('');
     
     try {
-      // Call your real backend API
-      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          wallet_address: walletAddress.trim()
-        })
-      });
+      // Call the backend API using the api service
+      const data = await api.login(walletAddress.trim());
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Success! Store the real JWT token and user data
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('wallet_address', walletAddress);
-      localStorage.setItem('user_id', data.user.id.toString());
-      localStorage.setItem('auth_mode', 'api'); // Mark as API-authenticated
-      
+      // Success! The api.login method already stores the token
       // Log success for debugging
       console.log("API login successful:", {
         userId: data.user.id,
-        walletAddress: data.user.wallet_address,
+        walletAddress: data.user.walletAddress,
         tokenReceived: !!data.token
       });
       

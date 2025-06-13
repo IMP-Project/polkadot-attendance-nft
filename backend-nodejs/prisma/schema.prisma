@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  walletAddress     String   @unique @map("wallet_address")
+  
+  // Luma integration (encrypted)
+  lumaApiKey        String?  @map("luma_api_key") // Encrypted
+  lumaOrganization  String?  @map("luma_organization")
+  lumaConnectedAt   DateTime? @map("luma_connected_at")
+  
+  // Sync status
+  lastEventSyncAt   DateTime? @map("last_event_sync_at")
+  lastCheckInSyncAt DateTime? @map("last_checkin_sync_at")
+  syncError         String?  @map("sync_error")
+  checkInSyncError  String?  @map("checkin_sync_error")
+  
+  // Auto-minting settings
+  autoMintingEnabled Boolean @default(true) @map("auto_minting_enabled")
+  
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  events            Event[]
+  nfts              NFT[]
+  
+  @@map("users")
+}
+
+model Event {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  
+  // Luma event data
+  lumaEventId       String   @unique @map("luma_event_id")
+  name              String
+  description       String?
+  startDate         DateTime @map("start_date")
+  endDate           DateTime? @map("end_date")
+  location          String?
+  imageUrl          String?  @map("image_url")
+  attendeeCount     Int      @default(0) @map("attendee_count")
+  
+  // NFT minting settings
+  autoMintEnabled   Boolean  @default(true) @map("auto_mint_enabled")
+  nftTemplate       String?  @map("nft_template") // JSON metadata template
+  
+  // Sync status
+  lastSyncedAt      DateTime @default(now()) @map("last_synced_at")
+  lastCheckInSyncAt DateTime? @map("last_checkin_sync_at")
+  syncError         String?  @map("sync_error")
+  
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkins          CheckIn[]
+  nfts              NFT[]
+  
+  @@map("events")
+}
+
+model CheckIn {
+  id                String   @id @default(cuid())
+  eventId           String   @map("event_id")
+  
+  // Attendee data from Luma
+  lumaCheckInId     String   @unique @map("luma_checkin_id")
+  attendeeName      String   @map("attendee_name")
+  attendeeEmail     String   @map("attendee_email")
+  walletAddress     String?  @map("wallet_address") // SS58 format
+  
+  // Check-in details
+  checkedInAt       DateTime @map("checked_in_at")
+  location          String?
+  
+  // NFT minting status
+  nftMintStatus     NFTMintStatus @default(PENDING) @map("nft_mint_status")
+  nftId             String?  @unique @map("nft_id")
+  mintError         String?  @map("mint_error")
+  mintAttempts      Int      @default(0) @map("mint_attempts")
+  lastMintAttempt   DateTime? @map("last_mint_attempt")
+  
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  nft               NFT?     @relation(fields: [nftId], references: [id])
+  
+  @@map("checkins")
+}
+
+model NFT {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  eventId           String   @map("event_id")
+  checkInId         String?  @map("checkin_id")
+  
+  // On-chain data
+  contractNftId     BigInt   @map("contract_nft_id") // u64 from contract
+  recipientAddress  String   @map("recipient_address") // SS58 format
+  transactionHash   String?  @map("transaction_hash")
+  blockNumber       BigInt?  @map("block_number")
+  
+  // Metadata
+  metadata          String   // JSON metadata
+  imageUrl          String?  @map("image_url")
+  
+  // Status
+  mintStatus        NFTMintStatus @default(PENDING) @map("mint_status")
+  mintError         String?  @map("mint_error")
+  mintAttempts      Int      @default(0) @map("mint_attempts")
+  
+  // Timestamps
+  mintedAt          DateTime? @map("minted_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  checkin           CheckIn?
+  
+  @@map("nfts")
+}
+
+enum NFTMintStatus {
+  PENDING     // Waiting to be minted
+  PROCESSING  // Currently being minted
+  COMPLETED   // Successfully minted
+  FAILED      // Minting failed
+  SKIPPED     // Skipped (invalid address, etc.)
+}

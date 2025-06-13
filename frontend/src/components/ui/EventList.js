@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import { 
   Event, Room, Webhook, Close, MoreVert, QrCode, Edit, Delete, LocationOn, People,
-  Add, Title, CalendarMonth
+  Title, CalendarMonth
 } from '@mui/icons-material';
 import WebhookSetup from '../admin/WebhookSetup';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -161,7 +161,7 @@ function EventList({ events: propEvents }) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
         <Typography variant="body1" color="text.secondary">
-          No events found. Create your first event above.
+          No events found. Connect to Luma to import your events.
         </Typography>
       </Box>
     );
@@ -171,14 +171,6 @@ function EventList({ events: propEvents }) {
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">Your Events</Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
-          onClick={() => navigate('/admin/create-event')}
-          sx={{ borderRadius: 28 }}
-        >
-          Create Event
-        </Button>
       </Box>
 
       <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2 }}>

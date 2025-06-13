@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use environment variable if available, otherwise use the correct deployed backend URL
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://polkadot-attendance-nft-api-bpa5.onrender.com';
+// Use environment variable if available, otherwise use localhost for development
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 // Maximum number of retries for API calls
 const MAX_RETRIES = 3;

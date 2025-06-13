@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -11,10 +11,12 @@ import {
   Grid,
   Alert,
   Avatar,
-  IconButton
+  Chip,
+  CircularProgress
 } from '@mui/material';
-import { PhotoCamera, Delete } from '@mui/icons-material';
+import { PhotoCamera, Delete, Link, LinkOff } from '@mui/icons-material';
 import PageHeader from '../components/ui/PageHeader';
+import { api } from '../services/api';
 
 const SettingsPage = ({ mode, toggleDarkMode }) => {
   const walletAddress = localStorage.getItem('wallet_address') || '';
@@ -29,6 +31,72 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
   });
   
   const [saved, setSaved] = useState(false);
+  
+  // Luma integration state
+  const [lumaStatus, setLumaStatus] = useState({ connected: false, connectedAt: null });
+  const [lumaApiKey, setLumaApiKey] = useState('');
+  const [lumaLoading, setLumaLoading] = useState(false);
+  const [lumaMessage, setLumaMessage] = useState({ type: '', text: '' });
+  
+  // Load Luma status on component mount
+  useEffect(() => {
+    if (api.isAuthenticated()) {
+      loadLumaStatus();
+    }
+  }, []);
+
+  const loadLumaStatus = async () => {
+    try {
+      const status = await api.getLumaStatus();
+      setLumaStatus(status);
+    } catch (error) {
+      console.error('Failed to load Luma status:', error);
+    }
+  };
+
+  const handleLumaConnect = async () => {
+    if (!lumaApiKey.trim()) {
+      setLumaMessage({ type: 'error', text: 'Please enter your Luma API key' });
+      return;
+    }
+
+    setLumaLoading(true);
+    setLumaMessage({ type: '', text: '' });
+
+    try {
+      const result = await api.connectToLuma(lumaApiKey);
+      setLumaStatus({ connected: true, connectedAt: new Date().toISOString() });
+      setLumaApiKey('');
+      setLumaMessage({ type: 'success', text: 'Successfully connected to Luma!' });
+    } catch (error) {
+      console.error('Luma connection failed:', error);
+      setLumaMessage({ 
+        type: 'error', 
+        text: error.response?.data?.error || 'Failed to connect to Luma' 
+      });
+    } finally {
+      setLumaLoading(false);
+    }
+  };
+
+  const handleLumaDisconnect = async () => {
+    setLumaLoading(true);
+    setLumaMessage({ type: '', text: '' });
+
+    try {
+      await api.disconnectFromLuma();
+      setLumaStatus({ connected: false, connectedAt: null });
+      setLumaMessage({ type: 'success', text: 'Successfully disconnected from Luma' });
+    } catch (error) {
+      console.error('Luma disconnect failed:', error);
+      setLumaMessage({ 
+        type: 'error', 
+        text: error.response?.data?.error || 'Failed to disconnect from Luma' 
+      });
+    } finally {
+      setLumaLoading(false);
+    }
+  };
 
   const handleChange = (field) => (event) => {
     setSettings({
@@ -231,6 +299,81 @@ const SettingsPage = ({ mode, toggleDarkMode }) => {
               />
             </Paper>
           </Grid>
+
+          {/* Luma Integration */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ mb: 3, fontFamily: 'Manrope, sans-serif' }}>
+                Luma Integration
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Typography variant="body2" sx={{ mr: 2 }}>
+                  Status:
+                </Typography>
+                <Chip
+                  icon={lumaStatus.connected ? <Link /> : <LinkOff />}
+                  label={lumaStatus.connected ? 'Connected' : 'Disconnected'}
+                  color={lumaStatus.connected ? 'success' : 'default'}
+                  size="small"
+                />
+                {lumaStatus.connected && lumaStatus.connectedAt && (
+                  <Typography variant="caption" sx={{ ml: 2, color: 'text.secondary' }}>
+                    Connected on {new Date(lumaStatus.connectedAt).toLocaleDateString()}
+                  </Typography>
+                )}
+              </Box>
+
+              {lumaMessage.text && (
+                <Alert severity={lumaMessage.type} sx={{ mb: 3 }}>
+                  {lumaMessage.text}
+                </Alert>
+              )}
+
+              {!lumaStatus.connected ? (
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <TextField
+                    placeholder="Enter your Luma API key"
+                    value={lumaApiKey}
+                    onChange={(e) => setLumaApiKey(e.target.value)}
+                    type="password"
+                    size="small"
+                    sx={{ flexGrow: 1 }}
+                    disabled={lumaLoading}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleLumaConnect}
+                    disabled={lumaLoading || !lumaApiKey.trim()}
+                    startIcon={lumaLoading ? <CircularProgress size={16} /> : <Link />}
+                    sx={{
+                      backgroundColor: '#E6007A',
+                      '&:hover': { backgroundColor: '#C50066' },
+                      textTransform: 'none',
+                    }}
+                  >
+                    Connect
+                  </Button>
+                </Box>
+              ) : (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={handleLumaDisconnect}
+                  disabled={lumaLoading}
+                  startIcon={lumaLoading ? <CircularProgress size={16} /> : <LinkOff />}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Disconnect
+                </Button>
+              )}
+
+              <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
+                Connect your Luma account to sync events and attendee data automatically.
+              </Typography>
+            </Paper>
+          </Grid>
+
         </Grid>
 
         {/* Save Button */}

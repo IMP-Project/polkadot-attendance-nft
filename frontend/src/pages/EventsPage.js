@@ -23,7 +23,6 @@ import {
   Delete as DeleteIcon,
   Settings as ConfigureIcon,
   Refresh as RefreshIcon,
-  Add as AddIcon,
   CheckCircle as CheckCircleIcon,
   People as PeopleIcon
 } from '@mui/icons-material';
@@ -34,23 +33,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
   const { events, removeEvent, allEventsImported } = useEvents();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [selectedEventId, setSelectedEventId] = React.useState(null);
-  const [checkInCounts, setCheckInCounts] = React.useState({});
-
-  // Fetch check-in counts when events change
-  React.useEffect(() => {
-    const fetchCheckInCounts = async () => {
-      if (events.length > 0) {
-        try {
-          const response = await api.getAllEventCheckInCounts();
-          setCheckInCounts(response.check_in_counts || {});
-        } catch (error) {
-          console.error('Failed to fetch check-in counts:', error);
-        }
-      }
-    };
-    
-    fetchCheckInCounts();
-  }, [events]);
+  // Note: check-in counts are already included in events data from the API
 
   const handleMenuClick = (event, eventId) => {
     setAnchorEl(event.currentTarget);
@@ -240,28 +223,6 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
             </Button>
           )}
 
-          {/* Create Event button (only show when events exist) */}
-          {events.length > 0 && (
-            <Button
-              startIcon={<AddIcon />}
-              sx={{
-                backgroundColor: '#18171C',
-                color: 'white',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                textTransform: 'none',
-                fontFamily: 'Manrope, sans-serif',
-                fontWeight: 500,
-                fontSize: '14px',
-                whiteSpace: 'nowrap',
-                '&:hover': {
-                  backgroundColor: '#374151',
-                },
-              }}
-            >
-              Create Event
-            </Button>
-          )}
         </Box>
       </Box>
 
@@ -371,8 +332,36 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
             </Box>
           </Box>
         ) : (
-          // Events Table
-          <TableContainer 
+          <>
+            {/* Sync Status Indicator */}
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mb: 2, 
+                px: 1,
+                py: 1,
+                backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.05)',
+                borderRadius: '8px',
+                border: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)'}`
+              }}
+            >
+              <CheckCircleIcon sx={{ color: '#4CAF50', fontSize: 16 }} />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontFamily: 'Manrope, sans-serif',
+                  fontSize: '13px',
+                  color: (theme) => theme.palette.text.secondary 
+                }}
+              >
+                Showing {events.length} synced events from your Luma organization
+              </Typography>
+            </Box>
+
+            {/* Events Table */}
+            <TableContainer 
             component={Paper} 
             sx={{ 
               borderRadius: '12px',
@@ -565,7 +554,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
                           fontWeight: 500,
                           textDecoration: 'underline'
                         }}>
-                          {checkInCounts[event.id] || 0}
+                          {event.checkinsCount || 0}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -589,6 +578,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
               </TableBody>
             </Table>
           </TableContainer>
+          </>
         )}
       </Box>
 

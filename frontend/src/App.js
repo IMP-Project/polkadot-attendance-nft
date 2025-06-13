@@ -8,6 +8,7 @@ import Admin from './pages/Admin';
 import Gallery from './pages/Gallery';
 import PublicGallery from './pages/PublicGallery';
 import EventsPage from './pages/EventsPage';
+import CheckInsPage from './pages/CheckInsPage';
 import PolkadotBackground from './components/layout/PolkadotBackground';
 import { FontSizeProvider, useFontSize } from './contexts/FontSizeContext';
 import { EventsProvider } from './contexts/EventsContext';
@@ -272,6 +273,9 @@ function MainContent() {
 
   // Check if we're on events page
   const isEventsPage = location.pathname.startsWith('/events');
+  
+  // Check if we're on check-ins page
+  const isCheckInsPage = location.pathname.startsWith('/checkins');
 
   // Don't show any wrapper for public pages
   if (isPublicPage) {
@@ -317,6 +321,18 @@ function MainContent() {
         <CssBaseline />
         <Routes>
           <Route path="/events" element={<ProtectedRoute element={<EventsPageWrapper />} />} />
+        </Routes>
+      </ThemeProvider>
+    );
+  }
+
+  // Show check-ins page without any wrapper (full screen like admin)
+  if (isCheckInsPage) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Routes>
+          <Route path="/checkins" element={<ProtectedRoute element={<CheckInsPage />} />} />
         </Routes>
       </ThemeProvider>
     );

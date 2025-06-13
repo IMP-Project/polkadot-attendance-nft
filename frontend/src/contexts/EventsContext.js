@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const EventsContext = createContext();
 
-// API Base URL - Updated to use your Render deployment
-const API_BASE_URL = 'https://polkadot-attendance-nft-api-bpa5.onrender.com';
+// API Base URL - Use local backend for development
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 export const useEvents = () => {
   const context = useContext(EventsContext);
@@ -36,7 +36,8 @@ export const EventsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/api/user/events`, {
+      // Load events from database (synced from Luma)
+      const response = await fetch(`${API_BASE_URL}/api/events`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${currentAuthToken}`,
@@ -49,29 +50,28 @@ export const EventsProvider = ({ children }) => {
         console.log('Loaded events from database:', data);
         
         // Transform database events to match UI format
-        const formattedEvents = (Array.isArray(data) ? data : []).map(event => ({
-          id: event.api_id || event.id || 'unknown',
+        const eventsArray = data.events || data || [];
+        const formattedEvents = (Array.isArray(eventsArray) ? eventsArray : []).map(event => ({
+          id: event.lumaEventId || event.id || 'unknown',
           name: event.name || 'Untitled Event',
-          date: formatDate(event.date || event.start_at),
+          date: formatDate(event.startDate || event.date || event.start_at),
           location: event.location || event.timezone || 'Online',
-          status: getEventStatus(event.date || event.start_at, event.end_at),
+          status: getEventStatus(event.startDate || event.date || event.start_at, event.endDate || event.end_at),
+          checkinsCount: event.checkinsCount || 0, // Include check-ins count
           originalData: event, // Keep original database data
         }));
         
         setEvents(formattedEvents);
-        console.log(`✅ Loaded ${formattedEvents.length} events after login`);
-
-        // Check sync status after loading events
-        checkSyncStatus(currentAuthToken, formattedEvents.length);
+        setAllEventsImported(true);
+        console.log(`✅ Loaded ${formattedEvents.length} events from database`);
       } else {
-        console.warn('Failed to load events from database:', response.status);
-        // Don't set error for 401/403 as user might not be logged in
+        console.warn('Failed to load events:', response.status);
         if (response.status !== 401 && response.status !== 403) {
           setError('Failed to load events');
         }
       }
     } catch (err) {
-      console.warn('Error loading events from database:', err);
+      console.warn('Error loading events:', err);
       setError('Error loading events');
     } finally {
       setLoading(false);

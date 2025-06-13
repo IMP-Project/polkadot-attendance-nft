@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Database connection (using your Render PostgreSQL)
+      DATABASE_URL: postgres://attendance_nft_db_user:jakMxfqctlrET5cnO0wxLroHdmM57yx8@dpg-d0lq7u8dl3ps73bn64ng-a.frankfurt-postgres.render.com:5432/attendance_nft_db?sslmode=require
+      
+      # Blockchain configuration
+      POLKADOT_RPC_URL: wss://ws.test.azero.dev
+      CONTRACT_ADDRESS: 5HAQRFusUjYdNLchvrWe632orYgr615g2ePGj7DkShX3go1j
+      SIGNER_MNEMONIC: "denial clip diesel pool peasant garment price sick person cabin fabric million"
+      
+      # Admin credentials (for testing)
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: changeme123
+      
+      # JWT Secret
+      JWT_SECRET: test-secret-key-123
+      
+      # Cloudinary (optional, for NFT images)
+      CLOUDINARY_URL: cloudinary://841968147153539:UaPYFKWTu-dm9j9713mpvlGokU4@dqfjni7gr
+      
+      # Luma API configuration
+      LUMA_API_KEY: secret-fOp0jjjitrQFXoYg15j8gEAHf
+      LUMA_WEBHOOK_KEY: not_used_for_polling
+      
+    command: ./server
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

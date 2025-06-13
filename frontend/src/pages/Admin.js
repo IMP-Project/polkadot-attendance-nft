@@ -13,12 +13,12 @@ import Gallery from '../pages/Gallery';
 import { api } from '../services/api';
 import ConnectToLumaModal from '../components/ui/ConnectToLumaModal';
 import DarkModeToggle from '../components/ui/DarkModeToggle';
-import EventCheckInsPage from './EventCheckInsPage';
+import CheckInsPage from './CheckInsPage';
 import SettingsPage from './SettingsPage';
 
 const drawerWidth = 272;
 
-const Dashboard = ({ onCreateEvent, mode, toggleDarkMode, onSearch }) => {
+const Dashboard = ({ mode, toggleDarkMode, onSearch, onConnectToLuma }) => {
   // Generate a unique user ID based on wallet address
   const walletAddress = localStorage.getItem('wallet_address') || '';
   const userID = walletAddress ? `User-${walletAddress.slice(-4).toUpperCase()}` : 'User-ANON';
@@ -79,7 +79,7 @@ const Dashboard = ({ onCreateEvent, mode, toggleDarkMode, onSearch }) => {
             filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
           }} />
           <Button
-            onClick={onCreateEvent}
+            onClick={onConnectToLuma}
             sx={{
               backgroundColor: '#FF2670',
               color: 'white',
@@ -432,12 +432,12 @@ function Admin({ mode, toggleDarkMode }) {
 
   const renderPageContent = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard onCreateEvent={() => setConnectToLumaModalOpen(true)} mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} />;
+      case 'dashboard': return <Dashboard mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} onConnectToLuma={() => setConnectToLumaModalOpen(true)} />;
       case 'events': return <EventsPage onConnectToLuma={() => setConnectToLumaModalOpen(true)} mode={mode} toggleDarkMode={toggleDarkMode} setCurrentPage={setCurrentPage} />;
       case 'nft-gallery': return <Gallery mode={mode} toggleDarkMode={toggleDarkMode} />;
-      case 'check-ins': return <EventCheckInsPage mode={mode} toggleDarkMode={toggleDarkMode} />;
+      case 'check-ins': return <CheckInsPage mode={mode} toggleDarkMode={toggleDarkMode} />;
       case 'settings': return <SettingsPage mode={mode} toggleDarkMode={toggleDarkMode} />;
-      default: return <Dashboard onCreateEvent={() => setConnectToLumaModalOpen(true)} mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} />;
+      default: return <Dashboard mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} onConnectToLuma={() => setConnectToLumaModalOpen(true)} />;
     }
   };
 

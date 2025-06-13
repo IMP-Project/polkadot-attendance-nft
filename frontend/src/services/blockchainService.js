@@ -157,43 +157,6 @@ class BlockchainService {
     }
   }
 
-  /**
-   * Create an event on the blockchain
-   * @param {Object} eventData - Event data to create
-   * @returns {Promise<Object>} Created event
-   */
-  async createEvent(eventData) {
-    await this.init();
-    
-    try {
-      const callerAddress = localStorage.getItem('wallet_address');
-      const signer = await getSigner(callerAddress);
-      
-      // Create gas limit
-      const gasLimit = this.api.registry.createType('WeightV2', {
-        refTime: new BN(1000000000),
-        proofSize: new BN(1000000),
-      });
-      
-      // Send transaction
-      const txResult = await this.contract.tx
-        .createEvent({ gasLimit }, eventData.name, eventData.date, eventData.location)
-        .signAndSend(callerAddress, { signer });
-      
-      // In a real implementation, we'd wait for the event to be created and get the ID
-      // For now, we're simulating this with a timestamp
-      const eventId = `event-${Date.now()}`;
-      
-      return {
-        id: eventId,
-        ...eventData,
-        created_at: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Error creating event on blockchain:', error);
-      throw error;
-    }
-  }
 }
 
 export const blockchainService = new BlockchainService();

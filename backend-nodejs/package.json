@@ -1,0 +1,53 @@
+{
+  "name": "polkadot-attendance-nft-backend",
+  "version": "1.0.0",
+  "description": "Node.js backend for Polkadot Attendance NFT system with Luma integration",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev",
+    "db:deploy": "npx prisma migrate deploy",
+    "db:seed": "npx prisma db seed",
+    "db:reset": "npx prisma migrate reset",
+    "db:studio": "npx prisma studio",
+    "test": "echo \"Manual testing via UI\" && exit 0"
+  },
+  "dependencies": {
+    "@polkadot/api": "^10.13.1",
+    "@polkadot/api-contract": "^10.13.1",
+    "@polkadot/keyring": "^12.6.2",
+    "@polkadot/util": "^12.6.2",
+    "@polkadot/util-crypto": "^12.6.2",
+    "@prisma/client": "^5.7.1",
+    "axios": "^1.9.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.41.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "prisma": "^5.7.1",
+    "socket.io": "^4.7.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "polkadot",
+    "nft",
+    "attendance",
+    "luma",
+    "blockchain",
+    "web3"
+  ],
+  "author": "Polkadot Attendance NFT Team",
+  "license": "MIT"
+}
