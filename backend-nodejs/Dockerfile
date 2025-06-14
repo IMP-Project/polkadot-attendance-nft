@@ -1,15 +1,15 @@
 FROM node:18-alpine
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl
+# Install OpenSSL and other dependencies for Prisma and Polkadot
+RUN apk add --no-cache openssl python3 make g++ libc6-compat
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including dev dependencies for development)
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -20,5 +20,5 @@ RUN npx prisma generate
 # Expose port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "start"]
+# Start with inline command
+CMD ["sh", "-c", "until npx prisma db push --skip-generate; do echo 'Waiting for database...'; sleep 2; done && npm run dev"]

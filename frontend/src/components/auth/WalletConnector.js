@@ -78,7 +78,7 @@ const WalletConnector = ({ onLogin }) => {
     setManualAddress(event.target.value);
   };
 
-  const manualLogin = () => {
+  const manualLogin = async () => {
     if (!manualAddress || manualAddress.trim() === '') {
       setError('Please enter a valid Polkadot address');
       return;
@@ -91,27 +91,28 @@ const WalletConnector = ({ onLogin }) => {
     }
 
     setLoading(true);
+    setError('');
     
     try {
-      // For manual mode, we'll generate a simple token ourselves
-      // Store the address in localStorage
-      localStorage.setItem('wallet_address', manualAddress);
+      // Call the API login method to get a real JWT token
+      console.log("Attempting login with address:", manualAddress);
+      const loginResponse = await api.login(manualAddress);
       
-      // Create a placeholder token for the frontend flow
-      const placeholderToken = `manual_${Date.now()}_${manualAddress.substring(0, 8)}`;
-      localStorage.setItem('auth_token', placeholderToken);
-      localStorage.setItem('auth_mode', 'manual');
-      
-      // Log information for debugging
-      console.log("Manual login successful with address:", manualAddress);
+      console.log("Login successful:", loginResponse);
       
       // Run callback function
       if (onLogin) {
         onLogin(manualAddress);
       }
     } catch (err) {
-      console.error("Error in manual login:", err);
-      setError("Failed to process manual login");
+      console.error("Login failed:", err);
+      if (err.response) {
+        setError(`Login failed: ${err.response.data.message || err.response.statusText}`);
+      } else if (err.request) {
+        setError("Network error - please check if the backend is running");
+      } else {
+        setError("Failed to process login");
+      }
     } finally {
       setLoading(false);
     }

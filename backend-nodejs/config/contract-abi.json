@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x51f9e7cf77325f534c3c361b75a2a79d8f60c1cc477bc8ab6bfc28cdf604b6d0",
+    "hash": "0xb014285dfdf8bc2e954b0de62d6f28990c753cd652acd1769cf97b108b2b5126",
     "language": "ink! 5.1.1",
     "compiler": "rustc 1.87.0",
     "build_info": {
@@ -36,7 +36,7 @@
             "ink_primitives",
             "ConstructorResult"
           ],
-          "type": 16
+          "type": 21
         },
         "selector": "0x9bae9d5e"
       }
@@ -53,25 +53,25 @@
         "displayName": [
           "Balance"
         ],
-        "type": 25
+        "type": 29
       },
       "blockNumber": {
         "displayName": [
           "BlockNumber"
         ],
-        "type": 27
+        "type": 31
       },
       "chainExtension": {
         "displayName": [
           "ChainExtension"
         ],
-        "type": 28
+        "type": 32
       },
       "hash": {
         "displayName": [
           "Hash"
         ],
-        "type": 26
+        "type": 30
       },
       "maxEventTopics": 4,
       "staticBufferSize": 16384,
@@ -132,7 +132,7 @@
         "ink",
         "LangError"
       ],
-      "type": 17
+      "type": 22
     },
     "messages": [
       {
@@ -167,7 +167,7 @@
         ],
         "default": false,
         "docs": [
-          " Mint a new NFT for event attendance (owner-only)"
+          " Mint NFT to specified recipient - backend service can mint for attendees"
         ],
         "label": "mint_nft",
         "mutates": true,
@@ -177,7 +177,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 18
+          "type": 23
         },
         "selector": "0x219a113e"
       },
@@ -205,7 +205,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 20
+          "type": 24
         },
         "selector": "0x26443695"
       },
@@ -233,9 +233,46 @@
             "ink",
             "MessageResult"
           ],
-          "type": 22
+          "type": 26
         },
         "selector": "0x683bdd8f"
+      },
+      {
+        "args": [
+          {
+            "label": "luma_event_id",
+            "type": {
+              "displayName": [
+                "String"
+              ],
+              "type": 1
+            }
+          },
+          {
+            "label": "account",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Check if account already has NFT for a specific event"
+        ],
+        "label": "has_attended_event",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 23
+        },
+        "selector": "0x84773ea6"
       },
       {
         "args": [],
@@ -251,7 +288,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 27
         },
         "selector": "0x33de4730"
       },
@@ -259,7 +296,7 @@
         "args": [],
         "default": false,
         "docs": [
-          " Get contract owner"
+          " Get contract owner (kept for potential future use)"
         ],
         "label": "get_owner",
         "mutates": false,
@@ -269,37 +306,9 @@
             "ink",
             "MessageResult"
           ],
-          "type": 24
+          "type": 28
         },
         "selector": "0x07fcd0b1"
-      },
-      {
-        "args": [
-          {
-            "label": "new_owner",
-            "type": {
-              "displayName": [
-                "AccountId"
-              ],
-              "type": 2
-            }
-          }
-        ],
-        "default": false,
-        "docs": [
-          " Transfer ownership (current owner only)"
-        ],
-        "label": "transfer_ownership",
-        "mutates": true,
-        "payable": false,
-        "returnType": {
-          "displayName": [
-            "ink",
-            "MessageResult"
-          ],
-          "type": 18
-        },
-        "selector": "0x107e33ea"
       }
     ]
   },
@@ -386,6 +395,21 @@
             },
             {
               "layout": {
+                "root": {
+                  "layout": {
+                    "leaf": {
+                      "key": "0xf5487e61",
+                      "ty": 15
+                    }
+                  },
+                  "root_key": "0xf5487e61",
+                  "ty": 16
+                }
+              },
+              "name": "event_attendees"
+            },
+            {
+              "layout": {
                 "leaf": {
                   "key": "0x00000000",
                   "ty": 0
@@ -407,7 +431,7 @@
         }
       },
       "root_key": "0x00000000",
-      "ty": 15
+      "ty": 20
     }
   },
   "types": [
@@ -682,6 +706,95 @@
       "id": 15,
       "type": {
         "def": {
+          "primitive": "bool"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 17
+          },
+          {
+            "name": "V",
+            "type": 15
+          },
+          {
+            "name": "KeyType",
+            "type": 18
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": {
+        "def": {
+          "tuple": [
+            1,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 8
+          },
+          {
+            "name": "R",
+            "type": 19
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 10
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "type": {
+        "def": {
           "composite": {
             "fields": [
               {
@@ -693,6 +806,11 @@
                 "name": "owned_nfts",
                 "type": 12,
                 "typeName": "<Mapping<AccountId, Vec<u64>> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<4011155843u32,\n()>,>>::Type"
+              },
+              {
+                "name": "event_attendees",
+                "type": 16,
+                "typeName": "<Mapping<(String, AccountId), bool> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1635666165u32,\n()>,>>::Type"
               },
               {
                 "name": "nft_count",
@@ -715,7 +833,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 21,
       "type": {
         "def": {
           "variant": {
@@ -732,7 +850,7 @@
               {
                 "fields": [
                   {
-                    "type": 17
+                    "type": 22
                   }
                 ],
                 "index": 1,
@@ -748,7 +866,7 @@
           },
           {
             "name": "E",
-            "type": 17
+            "type": 22
           }
         ],
         "path": [
@@ -757,7 +875,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 22,
       "type": {
         "def": {
           "variant": {
@@ -776,7 +894,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 23,
       "type": {
         "def": {
           "variant": {
@@ -784,7 +902,7 @@
               {
                 "fields": [
                   {
-                    "type": 19
+                    "type": 15
                   }
                 ],
                 "index": 0,
@@ -793,7 +911,7 @@
               {
                 "fields": [
                   {
-                    "type": 17
+                    "type": 22
                   }
                 ],
                 "index": 1,
@@ -805,11 +923,11 @@
         "params": [
           {
             "name": "T",
-            "type": 19
+            "type": 15
           },
           {
             "name": "E",
-            "type": 17
+            "type": 22
           }
         ],
         "path": [
@@ -818,15 +936,7 @@
       }
     },
     {
-      "id": 19,
-      "type": {
-        "def": {
-          "primitive": "bool"
-        }
-      }
-    },
-    {
-      "id": 20,
+      "id": 24,
       "type": {
         "def": {
           "variant": {
@@ -834,7 +944,7 @@
               {
                 "fields": [
                   {
-                    "type": 21
+                    "type": 25
                   }
                 ],
                 "index": 0,
@@ -843,7 +953,7 @@
               {
                 "fields": [
                   {
-                    "type": 17
+                    "type": 22
                   }
                 ],
                 "index": 1,
@@ -855,11 +965,11 @@
         "params": [
           {
             "name": "T",
-            "type": 21
+            "type": 25
           },
           {
             "name": "E",
-            "type": 17
+            "type": 22
           }
         ],
         "path": [
@@ -868,7 +978,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 25,
       "type": {
         "def": {
           "variant": {
@@ -901,7 +1011,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 26,
       "type": {
         "def": {
           "variant": {
@@ -918,7 +1028,7 @@
               {
                 "fields": [
                   {
-                    "type": 17
+                    "type": 22
                   }
                 ],
                 "index": 1,
@@ -934,7 +1044,7 @@
           },
           {
             "name": "E",
-            "type": 17
+            "type": 22
           }
         ],
         "path": [
@@ -943,7 +1053,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 27,
       "type": {
         "def": {
           "variant": {
@@ -960,7 +1070,7 @@
               {
                 "fields": [
                   {
-                    "type": 17
+                    "type": 22
                   }
                 ],
                 "index": 1,
@@ -976,7 +1086,7 @@
           },
           {
             "name": "E",
-            "type": 17
+            "type": 22
           }
         ],
         "path": [
@@ -985,7 +1095,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 28,
       "type": {
         "def": {
           "variant": {
@@ -1002,7 +1112,7 @@
               {
                 "fields": [
                   {
-                    "type": 17
+                    "type": 22
                   }
                 ],
                 "index": 1,
@@ -1018,7 +1128,7 @@
           },
           {
             "name": "E",
-            "type": 17
+            "type": 22
           }
         ],
         "path": [
@@ -1027,7 +1137,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 29,
       "type": {
         "def": {
           "primitive": "u128"
@@ -1035,7 +1145,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 30,
       "type": {
         "def": {
           "composite": {
@@ -1055,7 +1165,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 31,
       "type": {
         "def": {
           "primitive": "u32"
@@ -1063,7 +1173,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 32,
       "type": {
         "def": {
           "variant": {}

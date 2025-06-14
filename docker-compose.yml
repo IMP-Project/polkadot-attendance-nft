@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -19,39 +17,52 @@ services:
       retries: 5
 
   backend:
-    build: ./backend-nodejs
+    build: 
+      context: ./backend-nodejs
+      dockerfile: Dockerfile
     container_name: polkadot-nft-backend
     ports:
       - "3001:3001"
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/polkadot_attendance
-      JWT_SECRET: dev-jwt-secret-key
+      JWT_SECRET: dev-jwt-secret-key-very-long-and-secure
       NODE_ENV: development
       PORT: 3001
       FRONTEND_URL: http://localhost:3000
       POLKADOT_RPC_URL: wss://ws.test.azero.dev
+      RATE_LIMIT_ENABLED: false
+      # Email service configuration (disabled by default)
+      EMAIL_ENABLED: false
+      EMAIL_SERVICE: development
+      EMAIL_FROM: noreply@polkadot-nft.dev
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./backend-nodejs/src:/app/src
       - ./backend-nodejs/prisma:/app/prisma
-    command: npm run dev
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: polkadot-nft-frontend
     ports:
       - "3000:3000"
     environment:
       REACT_APP_API_URL: http://localhost:3001
       REACT_APP_WS_URL: ws://localhost:3001
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      GENERATE_SOURCEMAP: "false"
+      FAST_REFRESH: "true"
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
-    command: npm start
+      - /app/node_modules
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   postgres_data:

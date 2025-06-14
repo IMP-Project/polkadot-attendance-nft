@@ -76,14 +76,13 @@ export const api = {
   // Wallet login method
   login: async (walletAddress) => {
     try {
-      const response = await apiClient.post('/login', { 
-        wallet_address: walletAddress
+      const response = await apiClient.post('/auth/wallet-login', { 
+        walletAddress: walletAddress
       });
       
       // Store the real token and user data
       localStorage.setItem('auth_token', response.data.token);
-      localStorage.setItem('wallet_address', walletAddress);
-      localStorage.setItem('user_id', response.data.user.id.toString());
+      localStorage.setItem('wallet_address', response.data.walletAddress);
       localStorage.setItem('auth_mode', 'api');
       
       return response.data;
@@ -126,8 +125,8 @@ export const api = {
   // Events
   getEvents: async () => {
     return apiCallWithRetry(async () => {
-      const response = await apiClient.get('/user/events');
-      return response.data;
+      const response = await apiClient.get('/events');
+      return response.data.events || []; // Extract events array from response
     });
   },
   
@@ -274,5 +273,79 @@ async applyDesignToEvent(eventId, designId) {
     return response.data;
   });
 },
+
+async uploadEventDesign(eventId, formData) {
+  return apiCallWithRetry(async () => {
+    const response = await apiClient.post(`/events/${eventId}/design`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  });
+},
+
+  // Check-ins API methods
+  getCheckIns: async (params = {}) => {
+    return apiCallWithRetry(async () => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await apiClient.get(`/checkins${queryString ? `?${queryString}` : ''}`);
+      return response.data;
+    });
+  },
+
+  getCheckInsStats: async () => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.get('/checkins/stats/overview');
+      return response.data;
+    });
+  },
+
+  // Luma Integration API methods
+  getLumaStatus: async () => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.get('/users/luma/status');
+      return response.data;
+    });
+  },
+
+  connectToLuma: async (lumaApiKey) => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.post('/users/luma/connect', { lumaApiKey });
+      return response.data;
+    });
+  },
+
+  disconnectFromLuma: async () => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.post('/users/luma/disconnect');
+      return response.data;
+    });
+  },
+
+  // Email notification API methods
+  getEmailStatus: async () => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.get('/email/status');
+      return response.data;
+    });
+  },
+
+  sendTestEmail: async (recipientEmail, recipientName) => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.post('/email/test', {
+        recipientEmail,
+        recipientName
+      });
+      return response.data;
+    });
+  },
+
+  sendOrganizerSummary: async (summaryData) => {
+    return apiCallWithRetry(async () => {
+      const response = await apiClient.post('/email/organizer-summary', summaryData);
+      return response.data;
+    });
+  },
 
 };

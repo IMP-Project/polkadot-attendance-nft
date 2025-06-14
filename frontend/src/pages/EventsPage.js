@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,46 +12,29 @@ import {
   Paper,
   Chip,
   IconButton,
+  Tooltip,
   Menu,
   MenuItem,
-  Tooltip
+  CircularProgress,
+  Skeleton
 } from '@mui/material';
 import { 
-  MoreVert as MoreVertIcon,
-  Visibility as ViewIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Settings as ConfigureIcon,
-  Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  MoreVert as MoreVertIcon,
+  Image as ImageIcon
 } from '@mui/icons-material';
 import { useEvents } from '../contexts/EventsContext';
 import { api } from '../services/api';
+import UploadDesignModal from '../components/ui/UploadDesignModal';
 
-const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) => {
-  const { events, removeEvent, allEventsImported } = useEvents();
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const [selectedEventId, setSelectedEventId] = React.useState(null);
+const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
+  const { events, allEventsImported, loading } = useEvents();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [uploadDesignOpen, setUploadDesignOpen] = useState(false);
   // Note: check-in counts are already included in events data from the API
 
-  const handleMenuClick = (event, eventId) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedEventId(eventId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedEventId(null);
-  };
-
-  const handleAction = (action) => {
-    console.log(`${action} event:`, selectedEventId);
-    if (action === 'delete') {
-      removeEvent(selectedEventId);
-    }
-    handleMenuClose();
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -91,6 +74,42 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
     localStorage.setItem('selectedEventId', event.id);
     // Navigate to check-ins page
     setCurrentPage('check-ins');
+  };
+
+  const handleMenuClick = (event, eventItem) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedEvent(eventItem);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleUploadDesign = () => {
+    setUploadDesignOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDesignUpload = async (designData) => {
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', designData.file);
+      formData.append('title', designData.title);
+      formData.append('description', designData.description);
+      formData.append('traits', designData.traits);
+      formData.append('metadata', JSON.stringify(designData.metadata));
+      formData.append('eventId', selectedEvent.id);
+
+      // Upload the design to the backend
+      await api.uploadEventDesign(selectedEvent.id, formData);
+      
+      // Refresh events to show updated design status
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to upload design:', error);
+      alert('Failed to upload design. Please try again.');
+    }
   };
 
   return (
@@ -175,60 +194,28 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
             </IconButton>
           </Tooltip>
 
-          {/* Import from Luma button - conditionally show based on allEventsImported */}
-          {allEventsImported ? (
-            // Show "All Events Synced" chip when all events are imported
-            <Chip
-              icon={<CheckCircleIcon />}
-              label="All Events Synced"
-              sx={{
-                backgroundColor: '#DCFCE7',
-                color: '#15803D',
-                fontFamily: 'Manrope, sans-serif',
-                fontWeight: 500,
-                fontSize: '14px',
-                '& .MuiChip-icon': {
-                  color: '#15803D',
-                },
-              }}
-            />
-          ) : (
-            // Show import button when not all events are imported
-            <Button
-              onClick={onConnectToLuma}
-              startIcon={
-                <Box
-                  component="img"
-                  src="/images/plus-icon.png"
-                  alt="Import"
-                  sx={{ width: 16, height: 16 }}
-                />
-              }
-              sx={{
-                backgroundColor: '#FF2670',
-                color: 'white',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                textTransform: 'none',
-                fontFamily: 'Manrope, sans-serif',
-                fontWeight: 500,
-                fontSize: '14px',
-                whiteSpace: 'nowrap',
-                '&:hover': {
-                  backgroundColor: '#E91E63',
-                },
-              }}
-            >
-              {events.length > 0 ? 'Import More' : 'Connect to Luma'}
-            </Button>
-          )}
 
         </Box>
       </Box>
 
       {/* Main Content */}
       <Box sx={{ flex: 1, px: 4, pb: 4 }}>
-        {events.length === 0 ? (
+        {loading ? (
+          // Loading State
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            minHeight: '60vh',
+            gap: 3 
+          }}>
+            <CircularProgress size={40} />
+            <Typography variant="h6" color="text.secondary">
+              Loading events...
+            </Typography>
+          </Box>
+        ) : events.length === 0 ? (
           // Empty State
           <Box
             sx={{
@@ -265,70 +252,56 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
 
               {/* Main Heading */}
               <Typography
+                variant="h1"
                 sx={{
-                  fontFamily: 'Unbounded, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '39px',
-                  lineHeight: '114.9%',
-                  letterSpacing: '0%',
                   textAlign: 'center',
-                  color: (theme) => theme.palette.text.primary,
                   mb: 3,
+                  fontSize: { xs: '28px', md: '39px' }
                 }}
               >
-                Import your events
+                Ready to mint NFTs?
               </Typography>
 
               {/* Description */}
               <Typography
+                variant="h5"
+                color="text.secondary"
                 sx={{
-                  fontFamily: 'Manrope, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '18px',
-                  lineHeight: '24px',
-                  letterSpacing: '0.9%',
                   textAlign: 'center',
-                  color: (theme) => theme.palette.text.secondary,
                   mb: 4,
                   maxWidth: '500px',
                   mx: 'auto',
+                  fontWeight: 400,
                 }}
               >
-                Connect your Luma events and start minting on-chain attendance NFTs — reward your attendees the web 3 way
+                Connect your Luma events and start minting on-chain attendance NFTs — reward your attendees the web3 way
               </Typography>
 
-              {/* Connect to Luma Button */}
-              <Button
-                onClick={onConnectToLuma}
-                sx={{
-                  backgroundColor: '#FF2670',
-                  color: 'white',
-                  borderRadius: '8px',
-                  padding: '12px 24px',
-                  textTransform: 'none',
-                  fontFamily: 'Manrope, sans-serif',
-                  fontWeight: 500,
-                  fontSize: '14px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  boxShadow: '0 4px 12px rgba(255, 38, 112, 0.3)',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: '#E91E63',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(255, 38, 112, 0.4)',
-                  },
-                }}
+              {/* Call to Action */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    borderRadius: '12px',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '16px',
+                    fontWeight: 500,
+                  }}
+                  onClick={() => {/* Navigate to settings to connect Luma */}}
+                >
+                  Connect to Luma
+                </Button>
+              </Box>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ textAlign: 'center' }}
               >
-                <Box
-                  component="img"
-                  src="/images/plus-icon.png"
-                  alt="Create"
-                  sx={{ width: 16, height: 16 }}
-                />
-                Connect to Luma
-              </Button>
+                Events will automatically sync and appear here once connected
+              </Typography>
             </Box>
           </Box>
         ) : (
@@ -453,8 +426,7 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
                       fontSize: '14px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                      py: 2,
-                      textAlign: 'center'
+                      py: 2
                     }}
                   >
                     Actions
@@ -558,17 +530,11 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ py: 2, textAlign: 'center' }}>
+                    <TableCell sx={{ py: 2 }}>
                       <IconButton
-                        onClick={(e) => handleMenuClick(e, event.id)}
                         size="small"
-                        sx={{
-                          color: '#6B7280',
-                          '&:hover': {
-                            backgroundColor: '#F3F4F6',
-                            color: '#374151'
-                          }
-                        }}
+                        onClick={(e) => handleMenuClick(e, event)}
+                        sx={{ color: (theme) => theme.palette.text.secondary }}
                       >
                         <MoreVertIcon />
                       </IconButton>
@@ -587,74 +553,22 @@ const EventsPage = ({ onConnectToLuma, mode, toggleDarkMode, setCurrentPage }) =
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            border: '1px solid #E5E7EB',
-            minWidth: '160px'
-          }
-        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem 
-          onClick={() => handleAction('view')}
-          sx={{ 
-            fontFamily: 'Manrope, sans-serif',
-            fontSize: '14px',
-            py: 1.5,
-            '&:hover': {
-              backgroundColor: '#F3F4F6'
-            }
-          }}
-        >
-          <ViewIcon sx={{ mr: 2, fontSize: '18px', color: '#6B7280' }} />
-          View
-        </MenuItem>
-        <MenuItem 
-          onClick={() => handleAction('edit')}
-          sx={{ 
-            fontFamily: 'Manrope, sans-serif',
-            fontSize: '14px',
-            py: 1.5,
-            '&:hover': {
-              backgroundColor: '#F3F4F6'
-            }
-          }}
-        >
-          <EditIcon sx={{ mr: 2, fontSize: '18px', color: '#6B7280' }} />
-          Edit
-        </MenuItem>
-        <MenuItem 
-          onClick={() => handleAction('configure')}
-          sx={{ 
-            fontFamily: 'Manrope, sans-serif',
-            fontSize: '14px',
-            py: 1.5,
-            '&:hover': {
-              backgroundColor: '#F3F4F6'
-            }
-          }}
-        >
-          <ConfigureIcon sx={{ mr: 2, fontSize: '18px', color: '#6B7280' }} />
-          Configure
-        </MenuItem>
-        <MenuItem 
-          onClick={() => handleAction('delete')}
-          sx={{ 
-            fontFamily: 'Manrope, sans-serif',
-            fontSize: '14px',
-            py: 1.5,
-            color: '#DC2626',
-            '&:hover': {
-              backgroundColor: '#FEF2F2',
-              color: '#DC2626'
-            }
-          }}
-        >
-          <DeleteIcon sx={{ mr: 2, fontSize: '18px' }} />
-          Delete
+        <MenuItem onClick={handleUploadDesign}>
+          <ImageIcon sx={{ mr: 1, fontSize: 20 }} />
+          Upload NFT Design
         </MenuItem>
       </Menu>
+
+      {/* Upload Design Modal */}
+      <UploadDesignModal
+        open={uploadDesignOpen}
+        onClose={() => setUploadDesignOpen(false)}
+        onUpload={handleDesignUpload}
+      />
+
     </Box>
   );
 };

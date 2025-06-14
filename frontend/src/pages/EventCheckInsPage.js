@@ -672,10 +672,18 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                         icon={<CheckCircleIcon />}
                         label={attendee.nftStatus === 'minted' ? 'NFT Minted' : 'Pending'}
                         size="small"
+                        onClick={() => {
+                          // Handle NFT status click - could show transaction details
+                          if (attendee.nftStatus === 'minted' && attendee.transactionHash) {
+                            const explorerUrl = `https://test.azero.dev/#/explorer/query/${attendee.transactionHash}`;
+                            window.open(explorerUrl, '_blank');
+                          }
+                        }}
                         sx={{
                           backgroundColor: attendee.nftStatus === 'minted' ? '#DCFCE7' : '#FFFBEB',
                           color: attendee.nftStatus === 'minted' ? '#15803D' : '#FF9800',
                           fontFamily: 'Manrope, sans-serif',
+                          cursor: attendee.nftStatus === 'minted' && attendee.transactionHash ? 'pointer' : 'default',
                           '& .MuiChip-icon': {
                             color: attendee.nftStatus === 'minted' ? '#15803D' : '#FF9800',
                           },

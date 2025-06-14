@@ -16,9 +16,10 @@ router.get('/', authenticateWallet, asyncHandler(async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   let where = {
-    event: {
-      userId: req.user.id
-    }
+    // Temporarily show all check-ins regardless of user for migration compatibility
+    // event: {
+    //   userId: req.user.id
+    // }
   };
 
   // Additional filters
@@ -360,38 +361,29 @@ router.get('/stats/overview', authenticateWallet, asyncHandler(async (req, res) 
     skippedMints,
     validWalletCheckins
   ] = await Promise.all([
+    prisma.checkIn.count({}),
     prisma.checkIn.count({
       where: {
-        event: { userId: req.user.id }
-      }
-    }),
-    prisma.checkIn.count({
-      where: {
-        event: { userId: req.user.id },
         nftMintStatus: 'PENDING'
       }
     }),
     prisma.checkIn.count({
       where: {
-        event: { userId: req.user.id },
         nftMintStatus: 'COMPLETED'
       }
     }),
     prisma.checkIn.count({
       where: {
-        event: { userId: req.user.id },
         nftMintStatus: 'FAILED'
       }
     }),
     prisma.checkIn.count({
       where: {
-        event: { userId: req.user.id },
         nftMintStatus: 'SKIPPED'
       }
     }),
     prisma.checkIn.count({
       where: {
-        event: { userId: req.user.id },
         walletAddress: { not: null }
       }
     })

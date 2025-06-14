@@ -8,8 +8,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import EventsPage from '../pages/EventsPage';
-import NFTDesignPage from '../pages/NFTDesignPage';
-import Gallery from '../pages/Gallery';
 import { api } from '../services/api';
 import ConnectToLumaModal from '../components/ui/ConnectToLumaModal';
 import DarkModeToggle from '../components/ui/DarkModeToggle';
@@ -18,7 +16,7 @@ import SettingsPage from './SettingsPage';
 
 const drawerWidth = 272;
 
-const Dashboard = ({ mode, toggleDarkMode, onSearch, onConnectToLuma }) => {
+const Dashboard = ({ mode, toggleDarkMode, onSearch }) => {
   // Generate a unique user ID based on wallet address
   const walletAddress = localStorage.getItem('wallet_address') || '';
   const userID = walletAddress ? `User-${walletAddress.slice(-4).toUpperCase()}` : 'User-ANON';
@@ -78,32 +76,6 @@ const Dashboard = ({ mode, toggleDarkMode, onSearch, onConnectToLuma }) => {
             cursor: 'pointer',
             filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'none'
           }} />
-          <Button
-            onClick={onConnectToLuma}
-            sx={{
-              backgroundColor: '#FF2670',
-              color: 'white',
-              borderRadius: '8px',
-              padding: {
-                xs: '6px 10px',
-                sm: '10px 20px 10px 16px',
-              },
-              fontSize: { xs: '12px', sm: '14px' },
-              minWidth: 'auto',
-              textTransform: 'none',
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              '&:hover': { backgroundColor: '#E91E63' },
-            }}
-          >
-            <Box component="img" src="/images/plus-icon.png" alt="Create" sx={{ width: 14, height: 14 }} />
-            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-              Connect to Luma
-            </Box>
-          </Button>
         </Box>
       </Box>
 
@@ -113,38 +85,33 @@ const Dashboard = ({ mode, toggleDarkMode, onSearch, onConnectToLuma }) => {
             <Box component="img" src="/images/calender-icon.png" alt="Calendar" sx={{ width: 120, height: 120 }} />
           </Box>
           <Typography
+            variant="h4"
             sx={{
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 600,
-              fontSize: { xs: '20px', md: '24px' },
-              color: (theme) => theme.palette.text.primary,
+              textAlign: 'center',
               mb: 2,
             }}
           >
             Welcome, {userID}!
           </Typography>
           <Typography
+            variant="h1"
             sx={{
-              fontFamily: 'Unbounded, sans-serif',
-              fontWeight: 400,
-              fontSize: { xs: '24px', md: '39px' },
               textAlign: 'center',
-              color: (theme) => theme.palette.text.primary,
               mb: 3,
+              fontSize: { xs: '24px', md: '39px' }
             }}
           >
             Ready to make your mark on the chain?
           </Typography>
           <Typography
+            variant="h5"
+            color="text.secondary"
             sx={{
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 400,
-              fontSize: { xs: '16px', md: '18px' },
               textAlign: 'center',
-              color: (theme) => theme.palette.text.secondary,
               mb: 4,
               maxWidth: '500px',
               mx: 'auto',
+              fontWeight: 400,
             }}
           >
             Create your first event and start minting on-chain attendance NFTs — scan, check-in, and reward your attendees the Web3 way.
@@ -156,7 +123,12 @@ const Dashboard = ({ mode, toggleDarkMode, onSearch, onConnectToLuma }) => {
 };
 
 function Admin({ mode, toggleDarkMode }) {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Get page from localStorage or URL hash, default to 'dashboard'
+    const savedPage = localStorage.getItem('current_page');
+    const hashPage = window.location.hash.replace('#', '');
+    return hashPage || savedPage || 'dashboard';
+  });
   const [events, setEvents] = useState([]);
   const [nfts, setNFTs] = useState([]);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -168,6 +140,25 @@ function Admin({ mode, toggleDarkMode }) {
   const walletAddress = localStorage.getItem('wallet_address') || '';
   const userID = walletAddress ? `User-${walletAddress.slice(-4).toUpperCase()}` : 'User-ANON';
   const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profile_picture') || '');
+
+  // Persist current page and handle browser navigation
+  useEffect(() => {
+    localStorage.setItem('current_page', currentPage);
+    window.location.hash = currentPage;
+  }, [currentPage]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hashPage = window.location.hash.replace('#', '');
+      if (hashPage && hashPage !== currentPage) {
+        setCurrentPage(hashPage);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [currentPage]);
 
   const fetchData = useCallback(async () => {
   try {
@@ -190,7 +181,6 @@ function Admin({ mode, toggleDarkMode }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '/images/dashboard-icon.png' },
     { id: 'events', label: 'Events', icon: '/images/events-icon.png' },
-    { id: 'nft-gallery', label: 'NFT Gallery', icon: '/images/gallery-icon.png' },
     { id: 'check-ins', label: 'Check-ins', icon: '/images/check-ins-icon.png' },
   ];
 
@@ -420,7 +410,7 @@ function Admin({ mode, toggleDarkMode }) {
           label: nft.metadata?.event_name || 'Unnamed NFT',
           subtitle: nft.metadata?.attendee || 'Unknown attendee',
           action: () => {
-            setCurrentPage('nft-gallery');
+            // NFT Gallery removed - no action
             handleSearchClose();
           }
         });
@@ -432,12 +422,11 @@ function Admin({ mode, toggleDarkMode }) {
 
   const renderPageContent = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} onConnectToLuma={() => setConnectToLumaModalOpen(true)} />;
-      case 'events': return <EventsPage onConnectToLuma={() => setConnectToLumaModalOpen(true)} mode={mode} toggleDarkMode={toggleDarkMode} setCurrentPage={setCurrentPage} />;
-      case 'nft-gallery': return <Gallery mode={mode} toggleDarkMode={toggleDarkMode} />;
+      case 'dashboard': return <Dashboard mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} />;
+      case 'events': return <EventsPage mode={mode} toggleDarkMode={toggleDarkMode} setCurrentPage={setCurrentPage} />;
       case 'check-ins': return <CheckInsPage mode={mode} toggleDarkMode={toggleDarkMode} />;
       case 'settings': return <SettingsPage mode={mode} toggleDarkMode={toggleDarkMode} />;
-      default: return <Dashboard mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} onConnectToLuma={() => setConnectToLumaModalOpen(true)} />;
+      default: return <Dashboard mode={mode} toggleDarkMode={toggleDarkMode} onSearch={handleSearch} />;
     }
   };
 

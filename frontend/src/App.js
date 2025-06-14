@@ -5,7 +5,6 @@ import {
 } from '@mui/material';
 
 import Admin from './pages/Admin';
-import Gallery from './pages/Gallery';
 import PublicGallery from './pages/PublicGallery';
 import EventsPage from './pages/EventsPage';
 import CheckInsPage from './pages/CheckInsPage';
@@ -163,47 +162,103 @@ function MainContent() {
       },
     },
     typography: {
-      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+      fontFamily: '"Manrope", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
       fontSize: 14 * scale, // Base font size scaled
+      // Enhanced typography scale
       h1: {
+        fontFamily: '"Unbounded", "Manrope", sans-serif',
         fontWeight: 700,
-        fontSize: `${2.5 * scale}rem`,
+        fontSize: `${2.5 * scale}rem`, // 40px
+        lineHeight: 1.2,
       },
       h2: {
+        fontFamily: '"Manrope", sans-serif',
         fontWeight: 600,
-        fontSize: `${2 * scale}rem`,
+        fontSize: `${2 * scale}rem`, // 32px
+        lineHeight: 1.25,
       },
       h3: {
-        fontSize: `${1.75 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 600,
+        fontSize: `${1.5 * scale}rem`, // 24px
+        lineHeight: 1.33,
       },
       h4: {
-        fontSize: `${1.5 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 600,
+        fontSize: `${1.25 * scale}rem`, // 20px
+        lineHeight: 1.4,
       },
       h5: {
-        fontSize: `${1.25 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 500,
+        fontSize: `${1.125 * scale}rem`, // 18px
+        lineHeight: 1.44,
       },
       h6: {
-        fontSize: `${1.1 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 500,
+        fontSize: `${1 * scale}rem`, // 16px
+        lineHeight: 1.5,
       },
       subtitle1: {
-        fontSize: `${1 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 500,
+        fontSize: `${1 * scale}rem`, // 16px
+        lineHeight: 1.5,
       },
       subtitle2: {
-        fontSize: `${0.875 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 500,
+        fontSize: `${0.875 * scale}rem`, // 14px
+        lineHeight: 1.43,
       },
       body1: {
-        fontSize: `${1 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 400,
+        fontSize: `${1 * scale}rem`, // 16px
+        lineHeight: 1.5,
       },
       body2: {
-        fontSize: `${0.875 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 400,
+        fontSize: `${0.875 * scale}rem`, // 14px
+        lineHeight: 1.43,
       },
       button: {
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 500,
         textTransform: 'none',
-        fontSize: `${0.875 * scale}rem`,
+        fontSize: `${0.875 * scale}rem`, // 14px
+        lineHeight: 1.43,
       },
       caption: {
-        fontSize: `${0.75 * scale}rem`,
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 400,
+        fontSize: `${0.75 * scale}rem`, // 12px
+        lineHeight: 1.33,
       },
+      // Custom variants for consistent usage
+      overline: {
+        fontFamily: '"Manrope", sans-serif',
+        fontWeight: 500,
+        fontSize: `${0.75 * scale}rem`, // 12px
+        lineHeight: 1.33,
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+      },
+    },
+    // Custom spacing system (in addition to default 8px scale)
+    spacing: 8, // Base unit: 8px
+    // Custom properties for consistent spacing
+    customSpacing: {
+      xs: 4,   // 4px
+      sm: 8,   // 8px  
+      md: 16,  // 16px
+      lg: 24,  // 24px
+      xl: 32,  // 32px
+      xxl: 48, // 48px
+      xxxl: 64 // 64px
     },
     components: {
       MuiCard: {
@@ -218,10 +273,25 @@ function MainContent() {
       MuiButton: {
         styleOverrides: {
           root: {
-            padding: `${0.5 * scale}rem ${1 * scale}rem`,
+            fontFamily: '"Manrope", sans-serif',
+            fontWeight: 500,
+            borderRadius: '8px',
+            padding: `${12 * scale}px ${24 * scale}px`,
+            textTransform: 'none',
+            fontSize: `${14 * scale}px`,
+            lineHeight: 1.43,
           },
           contained: {
             boxShadow: mode === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(255, 38, 112, 0.3)',
+            '&:hover': {
+              boxShadow: mode === 'dark' ? '0 4px 16px rgba(0, 0, 0, 0.4)' : '0 6px 20px rgba(255, 38, 112, 0.4)',
+            },
+          },
+          outlined: {
+            borderWidth: '1.5px',
+            '&:hover': {
+              borderWidth: '1.5px',
+            },
           },
         },
       },
@@ -242,6 +312,48 @@ function MainContent() {
                 backgroundColor: mode === 'dark' ? 'rgba(230, 0, 122, 0.24)' : '#FFEBF1',
               },
             },
+          },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            fontFamily: '"Manrope", sans-serif',
+            padding: `${16 * scale}px`,
+            borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#E5E5E5'}`,
+          },
+          head: {
+            fontWeight: 600,
+            fontSize: `${14 * scale}px`,
+            color: mode === 'dark' ? '#ffffff' : '#18171C',
+            backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+          },
+          body: {
+            fontSize: `${14 * scale}px`,
+            color: mode === 'dark' ? '#b3b3b3' : '#77738C',
+          },
+        },
+      },
+      MuiTableRow: {
+        styleOverrides: {
+          root: {
+            '&:hover': {
+              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+            },
+            '&:last-child td': {
+              borderBottom: 0,
+            },
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            fontFamily: '"Manrope", sans-serif',
+            fontWeight: 500,
+            fontSize: `${12 * scale}px`,
+            height: `${24 * scale}px`,
+            borderRadius: `${12 * scale}px`,
           },
         },
       },
@@ -338,7 +450,7 @@ function MainContent() {
     );
   }
 
-  // For other pages (Home, Gallery), show simple layout without old sidebar
+  // For other pages (Home), show simple layout without old sidebar
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -347,7 +459,6 @@ function MainContent() {
         <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/gallery" element={<ProtectedRoute element={<Gallery />} />} />
             <Route path="/check-in/:eventId" element={<ProtectedRoute element={<CheckInPage />} />} />
           </Routes>
         </Container>

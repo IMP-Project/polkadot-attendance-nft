@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { LumaClient } = require('./lumaClient');
+const { nftMintingService } = require('./nftMintingService');
 
 const prisma = new PrismaClient();
 
@@ -7,7 +8,7 @@ class SimpleCheckinSync {
   constructor() {
     this.isRunning = false;
     this.syncInterval = null;
-    this.intervalMs = 30000; // 30 seconds to avoid rate limits
+    this.intervalMs = 5000; // 5 seconds for faster check-in detection
   }
 
   start() {
@@ -105,8 +106,27 @@ class SimpleCheckinSync {
         }
         
         if (isCheckedIn) {
-          const created = await this.upsertCheckIn(event, guest);
-          if (created) newCheckIns++;
+          const checkIn = await this.upsertCheckIn(event, guest);
+          if (checkIn) {
+            newCheckIns++;
+            // Automatically queue NFT minting if wallet address is available
+            if (checkIn.walletAddress) {
+              try {
+                await nftMintingService.queueMint({
+                  eventId: event.id,
+                  checkInId: checkIn.id,
+                  lumaEventId: event.lumaEventId,
+                  recipient: checkIn.walletAddress,
+                  attendeeName: checkIn.attendeeName,
+                  attendeeEmail: checkIn.attendeeEmail,
+                  priority: 'normal'
+                });
+                console.log(`🎨 NFT queued for ${checkIn.attendeeName} (${checkIn.walletAddress})`);
+              } catch (mintError) {
+                console.error(`❌ Failed to queue NFT for ${checkIn.attendeeName}:`, mintError);
+              }
+            }
+          }
         }
       }
 
@@ -134,22 +154,41 @@ class SimpleCheckinSync {
         return false; // Already exists
       }
 
+      // Extract wallet address from registration answers
+      let walletAddress = null;
+      if (guest.registration_answers && Array.isArray(guest.registration_answers)) {
+        const walletAnswer = guest.registration_answers.find(answer => 
+          answer.label && (
+            answer.label.toLowerCase().includes('polkadot') ||
+            answer.label.toLowerCase().includes('wallet') ||
+            answer.label.toLowerCase().includes('address')
+          )
+        );
+        
+        if (walletAnswer && walletAnswer.answer) {
+          walletAddress = walletAnswer.answer.trim();
+          console.log(`🔍 Found wallet address for ${guest.name}: ${walletAddress}`);
+        }
+      }
+
       const checkInData = {
         eventId: event.id,
         lumaCheckInId,
         attendeeName: guest.name || guest.user?.name || 'Unknown',
         attendeeEmail: guest.email || guest.user?.email || '',
-        walletAddress: null, // We'll need to extract this from guest data if available
+        walletAddress: walletAddress,
         checkedInAt: new Date(guest.checked_in_at || new Date()),
-        location: event.location
+        location: event.location,
+        nftMintStatus: walletAddress ? 'PENDING' : 'SKIPPED'
       };
 
-      await prisma.checkIn.create({
+      const checkIn = await prisma.checkIn.create({
         data: checkInData
       });
 
-      console.log(`✅ New check-in: ${guest.name} for ${event.name}`);
-      return true;
+      const walletInfo = walletAddress ? `(wallet: ${walletAddress})` : '(no wallet)';
+      console.log(`✅ New check-in: ${guest.name} for ${event.name} ${walletInfo}`);
+      return checkIn;
     } catch (error) {
       console.error(`Failed to create check-in for ${guest.name}:`, error);
       return false;

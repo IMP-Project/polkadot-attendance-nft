@@ -24,16 +24,3 @@ std = [
 ]
 ink-as-dependency = []
 e2e-tests = []
-
-# These features are needed for e2e testing
-[package.metadata.dylint]
-libraries = [
-    { git = "https://github.com/paritytech/ink", pattern = "ink/linting" }
-]
-
-[package.metadata.cargo-contract]
-contract-build = []
-ink-as-dependency = []
-
-[profile.release]
-overflow-checks = false

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid, 
   FormControl, Select, MenuItem, TextField, InputAdornment,
-  CircularProgress, Alert, Tabs, Tab, Chip
+  CircularProgress, Alert, Tabs, Tab, Chip, Dialog, DialogContent,
+  DialogTitle, IconButton, Divider
 } from '@mui/material';
 import {
-  ContentCopy, Image, Token
+  ContentCopy, Image, Token, Close, OpenInNew, Share
 } from '@mui/icons-material';
 import { api } from '../services/api';
 import UploadDesignModal from '../components/ui/UploadDesignModal';
@@ -21,6 +22,8 @@ function Gallery() {
   const [mintedNFTs, setMintedNFTs] = useState([]);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0); // 0 = Design Templates, 1 = Minted NFTs
+  const [selectedNFT, setSelectedNFT] = useState(null);
+  const [nftDetailOpen, setNftDetailOpen] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -182,6 +185,30 @@ const handleViewOnChain = (nft) => {
 const getExplorerUrl = (txHash) => {
   // Westend Explorer (for testing)
   return `https://test.azero.dev/#/explorer/extrinsic/${txHash}`;
+};
+
+const handleViewNFTDetails = (nft) => {
+  setSelectedNFT(nft);
+  setNftDetailOpen(true);
+};
+
+const handleShareNFT = (nft) => {
+  const shareUrl = `${window.location.origin}/nft/${nft.id}`;
+  if (navigator.share) {
+    navigator.share({
+      title: `NFT: ${nft.metadata?.event_name || 'Event NFT'}`,
+      text: `Check out this attendance NFT from ${nft.metadata?.event_name || 'an event'}`,
+      url: shareUrl,
+    });
+  } else {
+    navigator.clipboard.writeText(shareUrl);
+    // Could add a toast notification here
+  }
+};
+
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text);
+  // Could add a toast notification here
 };
 
   // Render Design Templates
@@ -457,9 +484,60 @@ const getExplorerUrl = (txHash) => {
                       wordBreak: 'break-all'
                     }}
                   >
-                    {nft.owner ? `${nft.owner.slice(0, 6)}...${nft.owner.slice(-4)}` : 'Unknown'}
+                    {nft.recipientAddress ? `${nft.recipientAddress.slice(0, 6)}...${nft.recipientAddress.slice(-4)}` : 'Unknown'}
                   </Typography>
                 </Box>
+
+                {/* Mint Status */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: (theme) => theme.palette.text.secondary,
+                      fontSize: '11px',
+                      display: 'block',
+                      mb: 0.5
+                    }}
+                  >
+                    Status
+                  </Typography>
+                  <Chip
+                    label={nft.mintStatus || 'Completed'}
+                    size="small"
+                    sx={{
+                      backgroundColor: nft.mintStatus === 'COMPLETED' ? '#DCFCE7' : '#FED7AA',
+                      color: nft.mintStatus === 'COMPLETED' ? '#15803D' : '#C2410C',
+                      fontSize: '10px',
+                      height: '20px'
+                    }}
+                  />
+                </Box>
+
+                {/* Minted Date */}
+                {nft.mintedAt && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: (theme) => theme.palette.text.secondary,
+                        fontSize: '11px',
+                        display: 'block',
+                        mb: 0.5
+                      }}
+                    >
+                      Minted
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: (theme) => theme.palette.text.primary,
+                        fontSize: '11px'
+                      }}
+                    >
+                      {new Date(nft.mintedAt).toLocaleDateString()}
+                    </Typography>
+                  </Box>
+                )}
 
                 {/* Attendee Info */}
                 {nft.metadata?.attendee && (
@@ -489,25 +567,64 @@ const getExplorerUrl = (txHash) => {
                 )}
 
                 {/* Action Buttons */}
-<Box>
+<Box sx={{ display: 'flex', gap: 1 }}>
   <Button
-  variant="contained"
-  fullWidth
-  onClick={() => handleViewOnChain(nft)}
-  sx={{
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    borderRadius: '8px',
-    textTransform: 'none',
-    fontWeight: 500,
-    fontSize: '12px',
-    '&:hover': {
-      backgroundColor: '#45a049',
-    },
-  }}
->
-  View on Chain
-</Button>
+    variant="outlined"
+    size="small"
+    onClick={() => handleViewNFTDetails(nft)}
+    sx={{
+      flex: 1,
+      borderColor: '#E0E0E0',
+      color: (theme) => theme.palette.text.primary,
+      borderRadius: '6px',
+      textTransform: 'none',
+      fontWeight: 500,
+      fontSize: '11px',
+      '&:hover': {
+        borderColor: '#FF2670',
+        backgroundColor: 'rgba(255, 38, 112, 0.04)',
+      },
+    }}
+  >
+    Details
+  </Button>
+  <Button
+    variant="outlined"
+    size="small"
+    onClick={() => handleViewOnChain(nft)}
+    sx={{
+      flex: 1,
+      borderColor: '#E0E0E0',
+      color: (theme) => theme.palette.text.primary,
+      borderRadius: '6px',
+      textTransform: 'none',
+      fontWeight: 500,
+      fontSize: '11px',
+      '&:hover': {
+        borderColor: '#4CAF50',
+        backgroundColor: 'rgba(76, 175, 80, 0.04)',
+      },
+    }}
+  >
+    <OpenInNew sx={{ fontSize: 14, mr: 0.5 }} />
+    Chain
+  </Button>
+  <IconButton
+    size="small"
+    onClick={() => handleShareNFT(nft)}
+    sx={{
+      border: '1px solid #E0E0E0',
+      borderRadius: '6px',
+      width: 32,
+      height: 32,
+      '&:hover': {
+        borderColor: '#FF2670',
+        backgroundColor: 'rgba(255, 38, 112, 0.04)',
+      },
+    }}
+  >
+    <Share sx={{ fontSize: 14 }} />
+  </IconButton>
 </Box>
               </CardContent>
             </Card>
@@ -820,6 +937,230 @@ const getExplorerUrl = (txHash) => {
         onClose={() => setUploadModalOpen(false)}
         onUpload={handleUploadComplete}
       />
+
+      {/* NFT Detail Modal */}
+      <Dialog
+        open={nftDetailOpen}
+        onClose={() => setNftDetailOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            backgroundColor: (theme) => theme.palette.background.paper
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            NFT Details
+          </Typography>
+          <IconButton onClick={() => setNftDetailOpen(false)}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 3 }}>
+          {selectedNFT && (
+            <Grid container spacing={3}>
+              {/* Left - Image */}
+              <Grid item xs={12} md={5}>
+                <Box sx={{ position: 'sticky', top: 0 }}>
+                  <Card sx={{ borderRadius: '12px', overflow: 'hidden', mb: 2 }}>
+                    <Box sx={{ height: 300, position: 'relative' }}>
+                      {selectedNFT.metadata?.image_data ? (
+                        <img
+                          src={selectedNFT.metadata.image_data}
+                          alt={selectedNFT.metadata?.event_name || 'NFT'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <Box sx={{ 
+                          height: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          backgroundColor: (theme) => theme.palette.action.hover
+                        }}>
+                          <Token sx={{ fontSize: 64, color: '#FF2670' }} />
+                        </Box>
+                      )}
+                    </Box>
+                  </Card>
+                  
+                  {/* Action Buttons */}
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={() => handleViewOnChain(selectedNFT)}
+                      sx={{
+                        backgroundColor: '#4CAF50',
+                        color: 'white',
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        '&:hover': { backgroundColor: '#45a049' },
+                      }}
+                    >
+                      <OpenInNew sx={{ mr: 1, fontSize: 16 }} />
+                      View on Blockchain
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleShareNFT(selectedNFT)}
+                      sx={{
+                        borderColor: '#E0E0E0',
+                        color: (theme) => theme.palette.text.primary,
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        minWidth: 'auto',
+                        px: 2
+                      }}
+                    >
+                      <Share sx={{ fontSize: 16 }} />
+                    </Button>
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Right - Details */}
+              <Grid item xs={12} md={7}>
+                <Box>
+                  {/* Title */}
+                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+                    {selectedNFT.metadata?.event_name || 'Event NFT'}
+                  </Typography>
+                  
+                  {/* NFT ID */}
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                    NFT #{selectedNFT.id}
+                  </Typography>
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  {/* Metadata Grid */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                        Owner
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                          {selectedNFT.recipientAddress ? `${selectedNFT.recipientAddress.slice(0, 8)}...${selectedNFT.recipientAddress.slice(-6)}` : 'Unknown'}
+                        </Typography>
+                        <IconButton size="small" onClick={() => copyToClipboard(selectedNFT.recipientAddress)}>
+                          <ContentCopy sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                        Status
+                      </Typography>
+                      <Chip
+                        label={selectedNFT.mintStatus || 'Completed'}
+                        size="small"
+                        sx={{
+                          backgroundColor: selectedNFT.mintStatus === 'COMPLETED' ? '#DCFCE7' : '#FED7AA',
+                          color: selectedNFT.mintStatus === 'COMPLETED' ? '#15803D' : '#C2410C',
+                        }}
+                      />
+                    </Grid>
+
+                    {selectedNFT.mintedAt && (
+                      <Grid item xs={6}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                          Minted Date
+                        </Typography>
+                        <Typography variant="body2">
+                          {new Date(selectedNFT.mintedAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </Typography>
+                      </Grid>
+                    )}
+
+                    {selectedNFT.transactionHash && (
+                      <Grid item xs={6}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                          Transaction
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                            {`${selectedNFT.transactionHash.slice(0, 8)}...${selectedNFT.transactionHash.slice(-6)}`}
+                          </Typography>
+                          <IconButton size="small" onClick={() => copyToClipboard(selectedNFT.transactionHash)}>
+                            <ContentCopy sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  {/* Attendee Information */}
+                  {selectedNFT.metadata?.attendee && (
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        Attendee Information
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {selectedNFT.metadata.attendee}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Description */}
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                      Description
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
+                      {selectedNFT.metadata?.description || 
+                       'This NFT serves as verifiable proof of attendance at this event. Minted on the Polkadot blockchain, it commemorates participation and may unlock special perks or access.'}
+                    </Typography>
+                  </Box>
+
+                  {/* Additional Metadata */}
+                  {selectedNFT.metadata && Object.keys(selectedNFT.metadata).length > 0 && (
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        Metadata
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {Object.entries(selectedNFT.metadata).map(([key, value]) => {
+                          if (key === 'image_data' || key === 'description' || key === 'attendee' || key === 'event_name') return null;
+                          return (
+                            <Chip
+                              key={key}
+                              label={`${key}: ${value}`}
+                              size="small"
+                              sx={{
+                                backgroundColor: (theme) => theme.palette.action.selected,
+                                color: (theme) => theme.palette.text.primary,
+                              }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

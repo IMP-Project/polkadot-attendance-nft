@@ -2,8 +2,8 @@ import { web3Accounts, web3Enable, web3FromAddress } from '@polkadot/extension-d
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 
-// Contract address from backend config
-const CONTRACT_ADDRESS = '5E34VfGGLfR7unMf9UH6xCtsoKy7sgLiGzUXC47Mv2U5uB28';
+// Contract address from deployed contract on Aleph Zero
+const CONTRACT_ADDRESS = '5E8w158E63XVHVRVg95LUFi3KD5i4LDHQUehsr6UQHzqZLDN';
 // Polkadot RPC endpoint
 const RPC_ENDPOINT = process.env.REACT_APP_POLKADOT_RPC || 'wss://ws.test.azero.dev';
 const APP_NAME = 'Polkadot Attendance NFT';

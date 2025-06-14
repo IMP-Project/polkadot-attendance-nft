@@ -12,23 +12,25 @@ mod attendance_nft {
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
     pub struct AttendanceNft {
-        id: u64,             // Unique NFT ID
-        luma_event_id: String, // Luma event ID (string format)
-        owner: AccountId,    // NFT owner
-        metadata: String,    // JSON metadata with event details
-        minted_at: u64,      // Block timestamp
+        id: u64,
+        luma_event_id: String,
+        owner: AccountId,
+        metadata: String,
+        minted_at: u64,
     }
 
-    /// Main contract storage - simplified NFT-only structure
+    /// Main contract storage - simple NFT structure
     #[ink(storage)]
     pub struct AttendanceNFT {
         // NFT ID -> NFT
         nfts: Mapping<u64, AttendanceNft>,
         // Account -> List of owned NFT IDs
         owned_nfts: Mapping<AccountId, Vec<u64>>,
+        // Track who minted for which event (prevent duplicates)
+        event_attendees: Mapping<(String, AccountId), bool>,
         // Total NFTs minted
         nft_count: u64,
-        // Contract owner (only owner can mint)
+        // Contract owner (for future upgrades/admin tasks only)
         owner: AccountId,
     }
 
@@ -55,19 +57,19 @@ mod attendance_nft {
             Self {
                 nfts: Mapping::new(),
                 owned_nfts: Mapping::new(),
+                event_attendees: Mapping::new(),
                 nft_count: 0,
                 owner: Self::env().caller(),
             }
         }
 
-        /// Mint a new NFT for event attendance (owner-only)
+        /// Mint NFT to specified recipient - backend service can mint for attendees
         #[ink(message)]
         pub fn mint_nft(&mut self, luma_event_id: String, recipient: AccountId, metadata: String) -> bool {
-            let caller = self.env().caller();
-
-            // Only contract owner can mint
-            if caller != self.owner {
-                return false;
+            // Check if recipient already has NFT for this event
+            let event_key = (luma_event_id.clone(), recipient);
+            if self.event_attendees.get(&event_key).unwrap_or(false) {
+                return false; // Already minted for this event
             }
 
             let nft_id = self.nft_count.checked_add(1).expect("NFT count overflow");
@@ -76,17 +78,20 @@ mod attendance_nft {
             let nft = AttendanceNft {
                 id: nft_id,
                 luma_event_id: luma_event_id.clone(),
-                owner: recipient,
+                owner: recipient, // Mint to the specified recipient
                 metadata,
                 minted_at: current_block,
             };
 
             self.nfts.insert(nft_id, &nft);
 
-            // Update owned NFTs
+            // Update owned NFTs for the recipient
             let mut owned = self.owned_nfts.get(recipient).unwrap_or_default();
             owned.push(nft_id);
             self.owned_nfts.insert(recipient, &owned);
+
+            // Mark as minted for this event and recipient
+            self.event_attendees.insert(&event_key, &true);
 
             self.nft_count = nft_id;
 
@@ -112,27 +117,22 @@ mod attendance_nft {
             self.owned_nfts.get(owner).unwrap_or_default()
         }
 
+        /// Check if account already has NFT for a specific event
+        #[ink(message)]
+        pub fn has_attended_event(&self, luma_event_id: String, account: AccountId) -> bool {
+            self.event_attendees.get(&(luma_event_id, account)).unwrap_or(false)
+        }
+
         /// Get total number of NFTs
         #[ink(message)]
         pub fn get_nft_count(&self) -> u64 {
             self.nft_count
         }
 
-        /// Get contract owner
+        /// Get contract owner (kept for potential future use)
         #[ink(message)]
         pub fn get_owner(&self) -> AccountId {
             self.owner
-        }
-
-        /// Transfer ownership (current owner only)
-        #[ink(message)]
-        pub fn transfer_ownership(&mut self, new_owner: AccountId) -> bool {
-            let caller = self.env().caller();
-            if caller != self.owner {
-                return false;
-            }
-            self.owner = new_owner;
-            true
         }
     }
 
@@ -142,100 +142,92 @@ mod attendance_nft {
         use ink::env::test;
 
         #[ink::test]
-        fn constructor_works() {
-            let contract = AttendanceNFT::new();
-            assert_eq!(contract.get_nft_count(), 0);
-            assert_eq!(contract.get_owner(), test::default_accounts::<ink::env::DefaultEnvironment>().alice);
-        }
-
-        #[ink::test]
-        fn mint_nft_works() {
+        fn anyone_can_mint() {
             // Get test accounts
             let accounts = test::default_accounts::<ink::env::DefaultEnvironment>();
 
-            // Create a new contract (Alice is owner)
+            // Create a new contract
             let mut contract = AttendanceNFT::new();
 
-            // Mint an NFT as owner
+            // Alice (caller) mints NFT for Bob
+            test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let success = contract.mint_nft(
                 String::from("evt_12345"),
                 accounts.bob,
-                String::from("{\"name\":\"Polkadot Meetup\",\"description\":\"Attendance proof for Polkadot Meetup\"}")
+                String::from("{\"name\":\"Polkadot Meetup\",\"description\":\"Attendance proof\"}")
             );
 
-            // Verify minting was successful
             assert!(success);
             assert_eq!(contract.get_nft_count(), 1);
 
-            // Check if Bob owns the NFT
+            // Alice mints NFT for Charlie
+            let success2 = contract.mint_nft(
+                String::from("evt_12345"),
+                accounts.charlie,
+                String::from("{\"name\":\"Polkadot Meetup\",\"description\":\"Attendance proof\"}")
+            );
+
+            assert!(success2);
+            assert_eq!(contract.get_nft_count(), 2);
+
+            // Check ownership
             let bob_nfts = contract.get_owned_nfts(accounts.bob);
             assert_eq!(bob_nfts.len(), 1);
-            assert_eq!(bob_nfts[0], 1);
-
-            // Check the NFT details
-            let nft = contract.get_nft(1).unwrap();
-            assert_eq!(nft.id, 1);
-            assert_eq!(nft.luma_event_id, "evt_12345");
-            assert_eq!(nft.owner, accounts.bob);
+            
+            let charlie_nfts = contract.get_owned_nfts(accounts.charlie);
+            assert_eq!(charlie_nfts.len(), 1);
         }
 
         #[ink::test]
-        fn unauthorized_mint_fails() {
-            // Get test accounts
+        fn cannot_mint_duplicate_for_same_event() {
             let accounts = test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // Create a new contract (Alice is owner)
             let mut contract = AttendanceNFT::new();
 
-            // Try to mint as Bob (unauthorized)
-            test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
+            // Alice mints for Bob
+            test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            contract.mint_nft(
+                String::from("evt_12345"),
+                accounts.bob,
+                String::from("{\"description\":\"First mint\"}")
+            );
+
+            // Alice tries to mint again for Bob for same event
+            let duplicate_mint = contract.mint_nft(
+                String::from("evt_12345"),
+                accounts.bob,
+                String::from("{\"description\":\"Duplicate attempt\"}")
+            );
+
+            assert!(!duplicate_mint); // Should fail
+            assert_eq!(contract.get_nft_count(), 1); // Still only 1 NFT
+        }
+
+        #[ink::test]
+        fn can_mint_for_different_events() {
+            let accounts = test::default_accounts::<ink::env::DefaultEnvironment>();
+            let mut contract = AttendanceNFT::new();
+
+            test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            
+            // Mint for Bob for first event
+            contract.mint_nft(
+                String::from("evt_12345"),
+                accounts.bob,
+                String::from("{\"description\":\"Event 1\"}")
+            );
+
+            // Mint for Bob for second event
             let success = contract.mint_nft(
-                String::from("evt_12345"),
-                accounts.charlie,
-                String::from("{\"description\":\"Attendance proof\"}")
+                String::from("evt_67890"),
+                accounts.bob,
+                String::from("{\"description\":\"Event 2\"}")
             );
 
-            // Verify minting failed
-            assert!(!success);
-            assert_eq!(contract.get_nft_count(), 0);
-        }
-
-        #[ink::test]
-        fn ownership_transfer_works() {
-            // Get test accounts
-            let accounts = test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // Create a new contract (Alice is owner)
-            let mut contract = AttendanceNFT::new();
-
-            // Transfer ownership to Bob
-            let success = contract.transfer_ownership(accounts.bob);
             assert!(success);
-            assert_eq!(contract.get_owner(), accounts.bob);
-
-            // Now Bob can mint
-            test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
-            let mint_success = contract.mint_nft(
-                String::from("evt_12345"),
-                accounts.charlie,
-                String::from("{\"description\":\"Attendance proof\"}")
-            );
-            assert!(mint_success);
-        }
-
-        #[ink::test]
-        fn unauthorized_ownership_transfer_fails() {
-            // Get test accounts
-            let accounts = test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // Create a new contract (Alice is owner)
-            let mut contract = AttendanceNFT::new();
-
-            // Try to transfer ownership as Bob (unauthorized)
-            test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
-            let success = contract.transfer_ownership(accounts.charlie);
-            assert!(!success);
-            assert_eq!(contract.get_owner(), accounts.alice);
+            assert_eq!(contract.get_nft_count(), 2);
+            
+            let bob_nfts = contract.get_owned_nfts(accounts.bob);
+            assert_eq!(bob_nfts.len(), 2);
         }
     }
 }

@@ -53,13 +53,14 @@ const nftRoutes = require('./routes/nfts');
 const checkinRoutes = require('./routes/checkins');
 const syncRoutes = require('./routes/sync');
 const blockchainRoutes = require('./routes/blockchain');
-const testCheckinRoutes = require('./routes/testCheckin');
+const emailRoutes = require('./routes/email');
 const { errorHandler } = require('./utils/errors');
 
 // Import services
 const { simpleEventSync } = require('./services/simpleEventSync');
 const { simpleCheckinSync } = require('./services/simpleCheckinSync');
 const { nftMintingService } = require('./services/nftMintingService');
+const { emailService } = require('./services/emailService');
 
 // API routes
 app.get('/api/v1', (req, res) => {
@@ -75,6 +76,7 @@ app.get('/api/v1', (req, res) => {
       checkins: '/api/checkins',
       sync: '/api/sync',
       blockchain: '/api/blockchain',
+      email: '/api/email',
       health: '/health'
     }
   });
@@ -88,7 +90,7 @@ app.use('/api/nfts', nftRoutes);
 app.use('/api/checkins', checkinRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/blockchain', blockchainRoutes);
-app.use('/api/test', testCheckinRoutes);
+app.use('/api/email', emailRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -111,6 +113,10 @@ const server = app.listen(PORT, async () => {
   // Start services in development/production
   if (process.env.NODE_ENV !== 'test') {
     try {
+      console.log('📧 Initializing email service...');
+      await emailService.initialize();
+      console.log('✅ Email service initialized successfully');
+      
       console.log('🔄 Starting simple event sync...');
       simpleEventSync.start();
       console.log('✅ Simple event sync started successfully');

@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { contractService } = require('./contractService');
 const { blockchainService } = require('./blockchainService');
+const { emailService } = require('./emailService');
 
 const prisma = new PrismaClient();
 
@@ -17,7 +18,7 @@ class NFTMintingService {
    * Start the NFT minting service
    */
   async start() {
-    if (this.isProcessing) {
+    if (this.mintInterval !== null) {
       console.log('NFT minting service is already running');
       return;
     }
@@ -31,7 +32,7 @@ class NFTMintingService {
     
     // Start processing pending mints
     console.log('🎨 Minting Step 2: Starting mint processing...');
-    this.isProcessing = true;
+    // Don't set isProcessing here - let processPendingMints handle it
     this.processPendingMints();
     console.log('✅ Minting Step 2: Mint processing started');
     
@@ -180,15 +181,29 @@ class NFTMintingService {
         }
       });
 
-      // Estimate gas
+      // Estimate gas with fallback to fixed values
       console.log(`⛽ Estimating gas for NFT ${nft.id}...`);
-      const gasEstimate = await blockchainService.estimateGas('mintNft', [
-        nft.event.lumaEventId,
-        nft.recipientAddress,
-        JSON.stringify(metadata)
-      ]);
-
-      console.log(`💰 Estimated fee: ${gasEstimate.estimatedFee.formatted}`);
+      let gasEstimate;
+      try {
+        gasEstimate = await blockchainService.estimateGas('mintNft', [
+          nft.event.lumaEventId,
+          nft.recipientAddress,
+          JSON.stringify(metadata)
+        ]);
+        console.log(`💰 Estimated fee: ${gasEstimate.estimatedFee.formatted}`);
+      } catch (gasError) {
+        console.log(`⚠️ Gas estimation failed, using fixed gas values: ${gasError.message}`);
+        // Use fixed gas values by creating an API weight object like the UI
+        const api = blockchainService.api;
+        gasEstimate = {
+          gasLimit: api.registry.createType('WeightV2', {
+            refTime: 3_000_000_000, // 3B gas units
+            proofSize: 200_000       // 200KB proof size
+          }),
+          estimatedFee: { formatted: '~0.003 AZERO (fixed)' }
+        };
+        console.log(`💰 Using fixed gas estimate: ${gasEstimate.estimatedFee.formatted}`);
+      }
 
       // Execute mint transaction
       console.log(`📤 Submitting mint transaction for NFT ${nft.id}...`);
@@ -237,6 +252,13 @@ class NFTMintingService {
         eventName: nft.event.name
       });
 
+      // Send email notification if recipient email is available
+      await this.sendEmailNotification('minted', {
+        nft: nft,
+        result: result,
+        eventName: nft.event.name
+      });
+
     } catch (error) {
       console.error(`❌ Failed to mint NFT ${nft.id}:`, error);
       
@@ -272,10 +294,24 @@ class NFTMintingService {
 
       if (shouldRetry) {
         console.log(`🔄 Will retry NFT ${nft.id} (attempt ${attempts}/${this.maxRetries})`);
+        // Send retry email notification
+        await this.sendEmailNotification('retry', {
+          nft: nft,
+          error: error,
+          attempts: attempts,
+          eventName: nft.event.name
+        });
       } else {
         console.error(`💥 NFT ${nft.id} permanently failed after ${attempts} attempts`);
         // Send permanent failure notification
         await this.sendMintNotification('permanent_failure', {
+          nft: nft,
+          error: error,
+          attempts: attempts,
+          eventName: nft.event.name
+        });
+        // Send failure email notification
+        await this.sendEmailNotification('failed', {
           nft: nft,
           error: error,
           attempts: attempts,
@@ -817,7 +853,11 @@ class NFTMintingService {
             }
           },
           user: {
-            select: { autoMintingEnabled: true }
+            select: { 
+              autoMintingEnabled: true,
+              email: true,
+              name: true
+            }
           }
         }
       });
@@ -849,6 +889,16 @@ class NFTMintingService {
       const batchResult = await this.batchQueueMints(mintRequests);
 
       console.log(`✅ Bulk mint queued for event ${event.name}: ${batchResult.summary.queued} NFTs`);
+
+      // Send organizer summary if there were any successful mints
+      if (batchResult.summary.queued > 0) {
+        await this.sendOrganizerSummaryEmail(event, {
+          totalAttendees: event.checkins.length,
+          mintedNFTs: batchResult.summary.queued,
+          pendingNFTs: 0, // These are just queued, so pending
+          failedNFTs: batchResult.summary.errors
+        });
+      }
 
       return {
         success: true,
@@ -902,6 +952,129 @@ class NFTMintingService {
     
     // Default to retry for unknown errors
     return true;
+  }
+
+  /**
+   * Send organizer summary email
+   * @param {Object} event - Event object with user data
+   * @param {Object} stats - Minting statistics
+   */
+  async sendOrganizerSummaryEmail(event, stats) {
+    try {
+      // Get organizer email from event user
+      const organizerEmail = event.user?.email;
+      const organizerName = event.user?.name || 'Event Organizer';
+
+      if (!organizerEmail) {
+        console.log(`📧 No organizer email available for event ${event.id}, skipping summary`);
+        return;
+      }
+
+      console.log(`📧 Sending organizer summary email to ${organizerEmail} for event ${event.name}`);
+
+      const emailResult = await emailService.sendOrganizerSummary({
+        organizerEmail,
+        organizerName,
+        eventName: event.name,
+        totalAttendees: stats.totalAttendees,
+        mintedNFTs: stats.mintedNFTs,
+        pendingNFTs: stats.pendingNFTs,
+        failedNFTs: stats.failedNFTs,
+        eventDate: event.startDate || event.createdAt
+      });
+
+      if (emailResult.success) {
+        console.log(`✅ Organizer summary email sent successfully for event ${event.name}`);
+      } else {
+        console.log(`⚠️ Organizer summary email failed for event ${event.name}: ${emailResult.reason || emailResult.error}`);
+      }
+
+    } catch (error) {
+      console.error(`❌ Error sending organizer summary email for event ${event.id}:`, error);
+    }
+  }
+
+  /**
+   * Send email notification for minting events
+   * @param {string} type - Email type ('minted', 'retry', 'failed')
+   * @param {Object} data - Notification data
+   */
+  async sendEmailNotification(type, data) {
+    try {
+      const { nft, result, error, eventName, attempts } = data;
+
+      // Get recipient email from check-in or metadata
+      let recipientEmail = null;
+      let recipientName = 'Attendee';
+
+      if (nft.checkin?.attendeeEmail) {
+        recipientEmail = nft.checkin.attendeeEmail;
+        recipientName = nft.checkin.attendeeName || 'Attendee';
+      } else if (nft.metadata) {
+        try {
+          const metadata = typeof nft.metadata === 'string' ? JSON.parse(nft.metadata) : nft.metadata;
+          recipientEmail = metadata.attendeeEmail;
+          recipientName = metadata.attendeeName || 'Attendee';
+        } catch (e) {
+          console.log('Could not parse NFT metadata for email');
+        }
+      }
+
+      if (!recipientEmail) {
+        console.log(`📧 No email available for NFT ${nft.id}, skipping email notification`);
+        return;
+      }
+
+      console.log(`📧 Sending ${type} email notification to ${recipientEmail} for NFT ${nft.id}`);
+
+      let emailResult;
+      switch (type) {
+        case 'minted':
+          emailResult = await emailService.sendNFTMintedNotification({
+            recipientEmail,
+            recipientName,
+            eventName,
+            nftId: nft.id,
+            transactionHash: result.transactionHash,
+            organizerName: nft.event?.user?.name || 'Event Organizer'
+          });
+          break;
+
+        case 'retry':
+          emailResult = await emailService.sendMintingStatusUpdate({
+            recipientEmail,
+            recipientName,
+            eventName,
+            status: 'retry',
+            attempt: attempts,
+            maxAttempts: this.maxRetries
+          });
+          break;
+
+        case 'failed':
+          emailResult = await emailService.sendMintingStatusUpdate({
+            recipientEmail,
+            recipientName,
+            eventName,
+            status: 'failed',
+            errorMessage: error.message
+          });
+          break;
+
+        default:
+          console.log(`📧 Unknown email type: ${type}`);
+          return;
+      }
+
+      if (emailResult.success) {
+        console.log(`✅ Email notification sent successfully for NFT ${nft.id}`);
+      } else {
+        console.log(`⚠️ Email notification failed for NFT ${nft.id}: ${emailResult.reason || emailResult.error}`);
+      }
+
+    } catch (error) {
+      console.error(`❌ Error sending email notification for NFT ${nft.id}:`, error);
+    }
   }
 
   /**

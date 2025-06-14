@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog, DialogContent, Box, Typography, Button, TextField,
-  IconButton, Switch, FormControlLabel, Chip, Grid, Paper
+  IconButton, Switch, FormControlLabel, Chip, Grid, Paper, CircularProgress
 } from '@mui/material';
 import { Close, CloudUpload } from '@mui/icons-material';
 
@@ -12,6 +12,7 @@ const UploadDesignModal = ({ open, onClose, onUpload }) => {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileData, setUploadedFileData] = useState(null); // Store base64 data
   const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [metadata, setMetadata] = useState({
     attendeeName: true,
     eventName: true,
@@ -118,31 +119,39 @@ const processFile = (file) => {
   };
 
   // Handle upload instead of preview
-  const handleUpload = () => {
+  const handleUpload = async () => {
     // Validate required fields
     if (!uploadedFileData || !nftTitle) {
       console.error('Please upload a file and provide a title');
       return;
     }
 
-   const designData = {
-  file: uploadedFile,           // Just the File object, no base64
-  title: nftTitle,
-  description: description || 'This NFT serves as verifiable proof of attendance at {event_name}. Minted on the Polkadot blockchain, it commemorates your participation and may unlock special perks, access, or exclusive content within the ecosystem.',
-  traits: traits || 'VIP',
-  metadata: metadata
-};
+    setUploading(true);
 
-    // Call the onUpload callback with the design data
-    if (onUpload) {
-      onUpload(designData);
+    try {
+      const designData = {
+        file: uploadedFile,           // Just the File object, no base64
+        title: nftTitle,
+        description: description || 'This NFT serves as verifiable proof of attendance at {event_name}. Minted on the Polkadot blockchain, it commemorates your participation and may unlock special perks, access, or exclusive content within the ecosystem.',
+        traits: traits || 'VIP',
+        metadata: metadata
+      };
+
+      // Call the onUpload callback with the design data
+      if (onUpload) {
+        await onUpload(designData);
+      }
+
+      // Clear the saved draft after successful upload
+      localStorage.removeItem('nftDesignDraft');
+
+      // Close the modal
+      handleClose();
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setUploading(false);
     }
-
-    // Clear the saved draft after successful upload
-    localStorage.removeItem('nftDesignDraft');
-
-    // Close the modal
-    handleClose();
   };
 
   // Handle close
@@ -520,7 +529,8 @@ if (uploadedFileData && uploadedFileData.startsWith('blob:')) {
             <Button
               onClick={handleUpload}
               variant="contained"
-              disabled={!uploadedFile || !nftTitle}
+              disabled={!uploadedFile || !nftTitle || uploading}
+              startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : null}
               sx={{
                 backgroundColor: '#FF2670',
                 color: 'white',
@@ -539,7 +549,7 @@ if (uploadedFileData && uploadedFileData.startsWith('blob:')) {
                 }
               }}
             >
-              Upload
+              {uploading ? 'Uploading...' : 'Upload'}
             </Button>
           </Grid>
 

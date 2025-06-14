@@ -51,15 +51,17 @@ export const EventsProvider = ({ children }) => {
         
         // Transform database events to match UI format
         const eventsArray = data.events || data || [];
-        const formattedEvents = (Array.isArray(eventsArray) ? eventsArray : []).map(event => ({
-          id: event.lumaEventId || event.id || 'unknown',
-          name: event.name || 'Untitled Event',
-          date: formatDate(event.startDate || event.date || event.start_at),
-          location: event.location || event.timezone || 'Online',
-          status: getEventStatus(event.startDate || event.date || event.start_at, event.endDate || event.end_at),
-          checkinsCount: event.checkinsCount || 0, // Include check-ins count
-          originalData: event, // Keep original database data
-        }));
+        const formattedEvents = (Array.isArray(eventsArray) ? eventsArray : [])
+          .filter(event => event && typeof event === 'object') // Filter out undefined/null events
+          .map(event => ({
+            id: event.lumaEventId || event.id || 'unknown',
+            name: event.name || 'Untitled Event',
+            date: formatDate(event.startDate || event.date || event.start_at),
+            location: event.location || event.timezone || 'Online',
+            status: getEventStatus(event.startDate || event.date || event.start_at, event.endDate || event.end_at),
+            checkinsCount: event.checkinsCount || 0, // Include check-ins count
+            originalData: event, // Keep original database data
+          }));
         
         setEvents(formattedEvents);
         setAllEventsImported(true);
@@ -128,9 +130,14 @@ export const EventsProvider = ({ children }) => {
     }
   }, []);
 
-  // Load events only once when component mounts
+  // Load events only once when component mounts and user is authenticated
   useEffect(() => {
-    loadEventsFromDatabase();
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      loadEventsFromDatabase();
+    } else {
+      setLoading(false); // Stop loading if no token
+    }
   }, [loadEventsFromDatabase]);
 
   // Monitor auth token changes - FIXED: Only update when token actually changes

@@ -83,10 +83,48 @@ class SimpleEventSync {
         return;
       }
 
+      // Get current events from database for this user
+      const dbEvents = await prisma.event.findMany({
+        where: { userId: user.id },
+        select: { id: true, lumaEventId: true, name: true }
+      });
+
+      // Extract Luma event IDs from API response
+      const lumaEvents = result.events.map(wrapper => wrapper.event);
+      const lumaEventIds = new Set(lumaEvents.map(event => event.api_id));
+      
+      console.log(`🔍 User ${user.walletAddress}: ${lumaEvents.length} events in Luma, ${dbEvents.length} in DB`);
+
+      // Delete events that exist in DB but not in Luma (deleted events)
+      const eventsToDelete = dbEvents.filter(dbEvent => !lumaEventIds.has(dbEvent.lumaEventId));
+      
+      for (const eventToDelete of eventsToDelete) {
+        console.log(`🗑️ Deleting event: ${eventToDelete.name} (${eventToDelete.lumaEventId})`);
+        
+        // Delete related data first (due to foreign key constraints)
+        await prisma.nFT.deleteMany({
+          where: { eventId: eventToDelete.id }
+        });
+        
+        await prisma.checkIn.deleteMany({
+          where: { eventId: eventToDelete.id }
+        });
+        
+        // Delete the event
+        await prisma.event.delete({
+          where: { id: eventToDelete.id }
+        });
+      }
+
+      // Upsert events that exist in Luma (create new or update existing)
+      let syncedCount = 0;
       for (const eventWrapper of result.events) {
         const event = eventWrapper.event;
         await this.upsertEvent(user.id, event);
+        syncedCount++;
       }
+
+      console.log(`✅ Synced ${syncedCount} events, deleted ${eventsToDelete.length} events for user ${user.walletAddress}`);
 
       // Update last sync time
       await prisma.user.update({

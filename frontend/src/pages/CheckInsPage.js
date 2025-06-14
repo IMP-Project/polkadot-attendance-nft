@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -29,17 +29,7 @@ import { api } from '../services/api';
 const CheckInsPage = () => {
   const user = api.isAuthenticated() ? { walletAddress: localStorage.getItem('wallet_address') } : null;
   const [checkIns, setCheckIns] = useState([]);
-  const [stats, setStats] = useState({
-    totalCheckins: 0,
-    validWalletCheckins: 0,
-    minting: {
-      pending: 0,
-      completed: 0,
-      failed: 0,
-      skipped: 0
-    },
-    mintingRate: 0
-  });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -54,14 +44,9 @@ const CheckInsPage = () => {
     pages: 0
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchCheckIns();
-      fetchStats();
-    }
-  }, [user, filters, pagination.page]);
-
-  const fetchCheckIns = async () => {
+  const fetchCheckIns = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       const params = {
@@ -83,16 +68,27 @@ const CheckInsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, pagination.page, filters]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
+    if (!user) return;
+    
     try {
       const data = await api.getCheckInsStats();
       setStats(data);
     } catch (err) {
       console.error('Failed to fetch check-in stats:', err);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCheckIns();
+      fetchStats();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [fetchCheckIns, fetchStats]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -111,6 +107,13 @@ const CheckInsPage = () => {
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleStatusClick = (checkIn) => {
+    if (checkIn.nftMintStatus === 'COMPLETED' && checkIn.nft?.transactionHash) {
+      const explorerUrl = `https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Froc-contracts-rpc.polkadot.io#/explorer/query/${checkIn.nft.transactionHash}`;
+      window.open(explorerUrl, '_blank');
+    }
   };
 
   if (!user) {
@@ -304,6 +307,13 @@ const CheckInsPage = () => {
                         label={checkIn.nftMintStatus}
                         color={getStatusColor(checkIn.nftMintStatus)}
                         size="small"
+                        onClick={() => handleStatusClick(checkIn)}
+                        sx={{
+                          cursor: checkIn.nftMintStatus === 'COMPLETED' && checkIn.nft?.transactionHash ? 'pointer' : 'default',
+                          '&:hover': checkIn.nftMintStatus === 'COMPLETED' && checkIn.nft?.transactionHash ? {
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                          } : {}
+                        }}
                       />
                     </TableCell>
                     <TableCell>
