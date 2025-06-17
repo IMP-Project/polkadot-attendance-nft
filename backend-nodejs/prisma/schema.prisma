@@ -41,7 +41,7 @@ model User {
 
 model Event {
   id                String   @id @default(cuid())
-  userId            String   @map("user_id")
+  userId            String?   @map("user_id")
   
   // Luma event data
   lumaEventId       String   @unique @map("luma_event_id")
@@ -108,7 +108,7 @@ model CheckIn {
 
 model NFT {
   id                String   @id @default(cuid())
-  userId            String   @map("user_id")
+  userId            String?   @map("user_id")
   eventId           String   @map("event_id")
   checkInId         String?  @map("checkin_id")
   
