@@ -66,8 +66,8 @@ model Event {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   
-  // Relations
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations - FIXED: Made user relation optional
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkins          CheckIn[]
   nfts              NFT[]
   
@@ -132,8 +132,8 @@ model NFT {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   
-  // Relations
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations - FIXED: Made user relation optional
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   checkin           CheckIn?
   
