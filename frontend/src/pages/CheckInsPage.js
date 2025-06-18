@@ -85,7 +85,7 @@ const CheckInsPage = () => {
     const timer = setTimeout(() => {
       fetchCheckIns();
       fetchStats();
-    }, 300);
+    }, 30000);
 
     return () => clearTimeout(timer);
   }, [fetchCheckIns, fetchStats]);
