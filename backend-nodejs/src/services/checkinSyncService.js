@@ -108,15 +108,18 @@ class CheckInSyncService {
       const lumaClient = await createLumaClientForUser(userId);
       
       // Get user's events to sync check-ins for
-      const userEvents = await prisma.event.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          lumaEventId: true,
-          name: true,
-          lastCheckInSyncAt: true
-        }
-      });
+     // NEW CODE (FIXED)
+const userEvents = await prisma.event.findMany({
+  where: { 
+    lumaEventId: { not: null } // Find all events that came from Luma
+  },
+  select: {
+    id: true,
+    lumaEventId: true,
+    name: true,
+    lastCheckInSyncAt: true
+  }
+});
 
       if (userEvents.length === 0) {
         console.log(`No events found for user ${userId}`);
