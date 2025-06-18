@@ -144,7 +144,7 @@ class SimpleEventSync {
         lumaEventId: lumaEvent.api_id,
         name: lumaEvent.name || 'Untitled Event',
         description: lumaEvent.description || null,
-        startDate: new Date(lumaEvent.start_at),
+        startDate: lumaEvent.start_at ? new Date(lumaEvent.start_at) : new Date(),
         endDate: lumaEvent.end_at ? new Date(lumaEvent.end_at) : null,
         location: lumaEvent.geo_address_json?.full_address || lumaEvent.timezone || null,
         imageUrl: lumaEvent.cover_url || null,
@@ -169,3 +169,4 @@ class SimpleEventSync {
 
 const simpleEventSync = new SimpleEventSync();
 module.exports = { simpleEventSync };
+

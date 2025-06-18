@@ -147,3 +147,4 @@ enum NFTMintStatus {
   FAILED      // Minting failed
   SKIPPED     // Skipped (invalid address, etc.)
 }
+
