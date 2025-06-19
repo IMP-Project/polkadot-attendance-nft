@@ -87,7 +87,7 @@ const CheckInsPage = () => {
       fetchCheckIns();
       fetchStats();
     }
-  }, [user, fetchCheckIns, fetchStats]);
+  }, [user]); // Only depend on user, not the functions
 
   // Smart refresh: Check for updates only when there might be new data
   useEffect(() => {
@@ -131,7 +131,7 @@ const CheckInsPage = () => {
       isActive = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [user, stats, fetchCheckIns, fetchStats]);
+  }, [user, stats]); // Remove function dependencies to prevent infinite loops
 
   const getStatusColor = (status) => {
     switch (status) {
