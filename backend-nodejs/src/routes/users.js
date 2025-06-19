@@ -76,7 +76,7 @@ router.get('/stats', authenticateWallet, async (req, res) => {
       }
     });
     
-    const pendingMints = await prisma.nft.count({
+    const pendingMints = await prisma.nFT.count({
       where: {
         userId: req.user.id,
         mintStatus: {

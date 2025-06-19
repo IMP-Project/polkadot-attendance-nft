@@ -487,6 +487,7 @@ class NFTMintingService {
           userId: checkin.event.userId,
           eventId: checkin.eventId,
           checkInId: checkin.id,
+          owner: checkin.walletAddress, // Add the required owner field
           recipientAddress: checkin.walletAddress,
           contractNftId: BigInt(0), // Placeholder, will be updated when minted
           mintStatus: 'PENDING',
