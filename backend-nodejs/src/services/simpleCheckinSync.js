@@ -148,9 +148,10 @@ class SimpleCheckinSync {
 
       // Debug logging - add this temporarily
 console.log(`🔍 Processing check-in:`, {
-  lumaCheckInId: lumaCheckIn.checkin_id,
-  attendeeName: lumaCheckIn.user?.name || 'Unknown',
-  hasCheckInId: !!lumaCheckIn.checkin_id
+  lumaCheckInId: lumaCheckInId,
+  attendeeName: guest.name || guest.user?.name || 'Unknown',
+  guestApiId: guest.api_id,
+  hasCheckedInAt: !!guest.checked_in_at
 });
       
       const existingCheckIn = await prisma.checkIn.findUnique({
