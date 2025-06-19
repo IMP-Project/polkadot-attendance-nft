@@ -411,7 +411,6 @@ const nft = await prisma.nFT.create({
     userId: event.userId,
     eventId: eventId,
     checkInId: checkInId,
-    owner: recipient,  // ← ADD THIS LINE
     recipientAddress: recipient,
     contractNftId: BigInt(0), // Placeholder, will be updated when minted
     mintStatus: 'PENDING',
