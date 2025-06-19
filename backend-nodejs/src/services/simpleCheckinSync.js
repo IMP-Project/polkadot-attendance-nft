@@ -117,6 +117,7 @@ class SimpleCheckinSync {
                   checkInId: checkIn.id,
                   lumaEventId: event.lumaEventId,
                   recipient: checkIn.walletAddress,
+                  owner: checkIn.walletAddress, 
                   attendeeName: checkIn.attendeeName,
                   attendeeEmail: checkIn.attendeeEmail,
                   priority: 'normal'
