@@ -81,14 +81,50 @@ const CheckInsPage = () => {
     }
   }, [user]);
 
+  // Smart refresh: Check for updates only when there might be new data
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchCheckIns();
-      fetchStats();
-    }, 30000);
+    let isActive = true;
+    let timeoutId;
 
-    return () => clearTimeout(timer);
-  }, [fetchCheckIns, fetchStats]);
+    const checkForUpdates = async () => {
+      if (!isActive || !user) return;
+
+      try {
+        // Check if there are any recent check-ins (last 2 minutes)
+        const recentThreshold = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const currentStats = await api.getCheckInsStats();
+        
+        // Compare with previous stats to see if anything changed
+        if (stats && (
+          currentStats.totalCheckins !== stats.totalCheckins ||
+          currentStats.minting.pending !== stats.minting.pending ||
+          currentStats.minting.completed !== stats.minting.completed ||
+          currentStats.minting.failed !== stats.minting.failed
+        )) {
+          console.log('📊 Check-in data changed, refreshing...');
+          fetchCheckIns();
+          fetchStats();
+        }
+      } catch (error) {
+        console.log('Error checking for updates:', error);
+      }
+
+      // Check again in 15 seconds (reduced from 30)
+      if (isActive) {
+        timeoutId = setTimeout(checkForUpdates, 15000);
+      }
+    };
+
+    // Start checking after initial load
+    if (stats) {
+      timeoutId = setTimeout(checkForUpdates, 15000);
+    }
+
+    return () => {
+      isActive = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [user, stats, fetchCheckIns, fetchStats]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -116,6 +152,12 @@ const CheckInsPage = () => {
     }
   };
 
+  const handleManualRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    fetchCheckIns();
+    fetchStats();
+  };
+
   if (!user) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -126,9 +168,19 @@ const CheckInsPage = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Event Check-ins
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" gutterBottom>
+          Event Check-ins
+        </Typography>
+        <Button 
+          variant="outlined" 
+          onClick={handleManualRefresh}
+          disabled={loading}
+          sx={{ minWidth: 120 }}
+        >
+          {loading ? <CircularProgress size={20} /> : 'Refresh'}
+        </Button>
+      </Box>
 
       {stats && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
