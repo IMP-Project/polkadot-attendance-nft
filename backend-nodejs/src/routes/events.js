@@ -23,8 +23,7 @@ router.get('/', authenticateWallet, asyncHandler(async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   const where = {
-    // Temporarily show all events regardless of user for migration compatibility
-    // userId: req.user.id,
+    // Show all events for community visibility
     ...(status && { 
       // Filter by sync status if provided
       syncError: status === 'error' ? { not: null } : null
@@ -35,6 +34,11 @@ router.get('/', authenticateWallet, asyncHandler(async (req, res) => {
     prisma.event.findMany({
       where,
       include: {
+        user: {
+          select: {
+            walletAddress: true
+          }
+        },
         _count: {
           select: {
             checkins: true,
@@ -56,7 +60,10 @@ router.get('/', authenticateWallet, asyncHandler(async (req, res) => {
       ...event,
       checkinsCount: event._count.checkins,
       mintedNFTsCount: event._count.nfts,
-      _count: undefined // Remove from response
+      isOwner: event.userId === req.user.id,
+      ownerAddress: event.user.walletAddress,
+      _count: undefined, // Remove from response
+      user: undefined // Remove user object from response
     })),
     pagination: {
       page: parseInt(page),

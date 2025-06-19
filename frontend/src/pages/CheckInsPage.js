@@ -81,6 +81,14 @@ const CheckInsPage = () => {
     }
   }, [user]);
 
+  // Initial data loading on component mount
+  useEffect(() => {
+    if (user) {
+      fetchCheckIns();
+      fetchStats();
+    }
+  }, [user, fetchCheckIns, fetchStats]);
+
   // Smart refresh: Check for updates only when there might be new data
   useEffect(() => {
     let isActive = true;
@@ -168,7 +176,7 @@ const CheckInsPage = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h3" gutterBottom sx={{ fontSize: '28px' }}>
           Event Check-ins
         </Typography>
         <Button 
@@ -189,7 +197,7 @@ const CheckInsPage = () => {
                 <Typography color="textSecondary" gutterBottom>
                   Total Check-ins
                 </Typography>
-                <Typography variant="h4">
+                <Typography variant="h3" sx={{ fontSize: '32px' }}>
                   {stats.totalCheckins}
                 </Typography>
               </CardContent>
@@ -201,7 +209,7 @@ const CheckInsPage = () => {
                 <Typography color="textSecondary" gutterBottom>
                   With Wallet Address
                 </Typography>
-                <Typography variant="h4">
+                <Typography variant="h3" sx={{ fontSize: '32px' }}>
                   {stats.validWalletCheckins}
                 </Typography>
               </CardContent>
@@ -213,7 +221,7 @@ const CheckInsPage = () => {
                 <Typography color="textSecondary" gutterBottom>
                   NFTs Minted
                 </Typography>
-                <Typography variant="h4">
+                <Typography variant="h3" sx={{ fontSize: '32px' }}>
                   {stats.minting.completed}
                 </Typography>
               </CardContent>
@@ -225,7 +233,7 @@ const CheckInsPage = () => {
                 <Typography color="textSecondary" gutterBottom>
                   Pending Mints
                 </Typography>
-                <Typography variant="h4">
+                <Typography variant="h3" sx={{ fontSize: '32px' }}>
                   {stats.minting.pending}
                 </Typography>
               </CardContent>

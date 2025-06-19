@@ -139,8 +139,8 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
             sx={{
               fontFamily: 'Manrope, sans-serif',
               fontWeight: 500,
-              fontSize: '20px',
-              lineHeight: '33.6px',
+              fontSize: '24px',
+              lineHeight: '36px',
               color: (theme) => theme.palette.text.primary,
               mb: 0.5,
             }}
@@ -151,8 +151,8 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
             sx={{
               fontFamily: 'Manrope, sans-serif',
               fontWeight: 400,
-              fontSize: '14px',
-              lineHeight: '19.6px',
+              fontSize: '16px',
+              lineHeight: '22px',
               letterSpacing: '1.4%',
               color: (theme) => theme.palette.text.secondary,
             }}
@@ -162,6 +162,16 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Refresh Button */}
+          <Button 
+            variant="outlined" 
+            onClick={() => window.location.reload()}
+            disabled={loading}
+            sx={{ minWidth: 120 }}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Refresh'}
+          </Button>
+          
           {/* Search icon */}
           <Tooltip title="Search">
             <IconButton>
@@ -325,11 +335,11 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                 variant="body2" 
                 sx={{ 
                   fontFamily: 'Manrope, sans-serif',
-                  fontSize: '13px',
+                  fontSize: '15px',
                   color: (theme) => theme.palette.text.secondary 
                 }}
               >
-                Showing {events.length} synced events from your Luma organization
+                Showing {events.length} synced events from all organizers
               </Typography>
             </Box>
 
@@ -351,7 +361,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -363,7 +373,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -375,7 +385,19 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
+                      color: (theme) => theme.palette.text.primary,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}
+                  >
+                    Owner
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      fontFamily: 'Manrope, sans-serif',
+                      fontWeight: 600,
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -387,7 +409,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -399,7 +421,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -411,7 +433,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -423,7 +445,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     sx={{ 
                       fontFamily: 'Manrope, sans-serif',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '16px',
                       color: (theme) => theme.palette.text.primary,
                       borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                       py: 2
@@ -449,7 +471,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     <TableCell 
                       sx={{ 
                         fontFamily: 'monospace',
-                        fontSize: '14px',
+                        fontSize: '16px',
                         color: (theme) => theme.palette.text.secondary,
                         py: 2
                       }}
@@ -465,12 +487,39 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                         py: 2
                       }}
                     >
-                      {event.name || 'Untitled Event'}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {event.name || 'Untitled Event'}
+                        {event.isOwner && (
+                          <Chip 
+                            label="Owner" 
+                            size="small"
+                            sx={{ 
+                              backgroundColor: '#E3F2FD',
+                              color: '#1976D2',
+                              fontSize: '10px',
+                              height: '20px'
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        fontFamily: 'monospace',
+                        fontSize: '12px',
+                        color: (theme) => theme.palette.text.secondary,
+                        py: 2
+                      }}
+                    >
+                      {event.ownerAddress ? 
+                        `${event.ownerAddress.slice(0, 6)}...${event.ownerAddress.slice(-4)}` : 
+                        'Unknown'
+                      }
                     </TableCell>
                     <TableCell 
                       sx={{ 
                         fontFamily: 'Manrope, sans-serif',
-                        fontSize: '14px',
+                        fontSize: '16px',
                         color: (theme) => theme.palette.text.secondary,
                         py: 2
                       }}
@@ -480,7 +529,7 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
                     <TableCell 
                       sx={{ 
                         fontFamily: 'Manrope, sans-serif',
-                        fontSize: '14px',
+                        fontSize: '16px',
                         color: (theme) => theme.palette.text.secondary,
                         py: 2
                       }}
@@ -556,10 +605,18 @@ const EventsPage = ({ mode, toggleDarkMode, setCurrentPage }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={handleUploadDesign}>
-          <ImageIcon sx={{ mr: 1, fontSize: 20 }} />
-          Upload NFT Design
-        </MenuItem>
+        {selectedEvent?.isOwner && (
+          <MenuItem onClick={handleUploadDesign}>
+            <ImageIcon sx={{ mr: 1, fontSize: 20 }} />
+            Upload NFT Design
+          </MenuItem>
+        )}
+        {!selectedEvent?.isOwner && (
+          <MenuItem disabled>
+            <ImageIcon sx={{ mr: 1, fontSize: 20, opacity: 0.5 }} />
+            Upload NFT Design (Owner Only)
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Upload Design Modal */}

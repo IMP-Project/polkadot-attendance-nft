@@ -36,8 +36,8 @@ services:
       RATE_LIMIT_REQUESTS_PER_MINUTE: 100
       EVENT_POLL_INTERVAL: 10000
       CHECKIN_POLL_INTERVAL: 5000
-      # Email service configuration (disabled by default)
-      EMAIL_ENABLED: false
+      # Email service configuration (enabled for testing)
+      EMAIL_ENABLED: true
       EMAIL_SERVICE: development
       EMAIL_FROM: noreply@polkadot-nft.dev
     depends_on:
