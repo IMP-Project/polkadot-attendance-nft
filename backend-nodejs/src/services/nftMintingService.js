@@ -405,22 +405,24 @@ class NFTMintingService {
       }
 
       // Create NFT record in PENDING status
-      const nft = await prisma.nFT.create({
-        data: {
-          userId: event.userId,
-          eventId: eventId,
-          checkInId: checkInId,
-          recipientAddress: recipient,
-          contractNftId: BigInt(0), // Placeholder, will be updated when minted
-          mintStatus: 'PENDING',
-          metadata: JSON.stringify({
-            lumaEventId,
-            attendeeName,
-            attendeeEmail,
-            queuedAt: new Date().toISOString()
-          })
-        }
-      });
+      // Create NFT record in PENDING status
+const nft = await prisma.nFT.create({
+  data: {
+    userId: event.userId,
+    eventId: eventId,
+    checkInId: checkInId,
+    owner: recipient,  // ← ADD THIS LINE
+    recipientAddress: recipient,
+    contractNftId: BigInt(0), // Placeholder, will be updated when minted
+    mintStatus: 'PENDING',
+    metadata: JSON.stringify({
+      lumaEventId,
+      attendeeName,
+      attendeeEmail,
+      queuedAt: new Date().toISOString()
+    })
+  }
+});
 
       // Update check-in status if provided
       if (checkInId) {
