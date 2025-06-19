@@ -158,6 +158,9 @@ console.log(`🔍 Processing check-in:`, {
         where: { lumaCheckInId }
       });
 
+      // Add this debug line:
+console.log(`🔍 Existing check-in found:`, !!existingCheckIn, existingCheckIn ? `(ID: ${existingCheckIn.id})` : '');
+
       if (existingCheckIn) {
         return false; // Already exists
       }
