@@ -186,11 +186,12 @@ router.post('/mint/test', authenticateWallet, asyncHandler(async (req, res) => {
   }
 
   // Create test NFT record
-  const nft = await prisma.nft.create({
+  const nft = await prisma.nFT.create({
     data: {
       userId: req.user.id,
       eventId: event.id,
       recipientAddress,
+      contractNftId: BigInt(0), // Placeholder, will be updated when minted
       mintStatus: 'PENDING',
       metadata: metadata || JSON.stringify({
         name: `Test NFT for ${event.name}`,
@@ -220,7 +221,7 @@ router.post('/mint/retry/:nftId', authenticateWallet, asyncHandler(async (req, r
   const { nftId } = req.params;
 
   // Verify NFT belongs to user
-  const nft = await prisma.nft.findFirst({
+  const nft = await prisma.nFT.findFirst({
     where: {
       id: nftId,
       userId: req.user.id
@@ -266,7 +267,7 @@ router.get('/mint/queue', authenticateWallet, asyncHandler(async (req, res) => {
     where.mintStatus = status;
   }
 
-  const nfts = await prisma.nft.findMany({
+  const nfts = await prisma.nFT.findMany({
     where,
     include: {
       event: {

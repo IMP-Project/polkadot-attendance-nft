@@ -223,6 +223,39 @@ console.log(`🔍 Processing check-in:`, {
     }
   });
 
+  // Auto-mint NFT if conditions are met
+  if (checkin.event.autoMintEnabled && checkin.walletAddress && isValidSS58Address(checkin.walletAddress)) {
+    try {
+      // Import the NFT minting service
+      const { nftMintingService } = require('../services/nftMintingService');
+      
+      // Get the event details for lumaEventId
+      const fullEvent = await prisma.event.findUnique({
+        where: { id: checkin.eventId },
+        select: { lumaEventId: true }
+      });
+      
+      if (fullEvent?.lumaEventId) {
+        // Automatically queue NFT minting
+        await nftMintingService.queueMint({
+          eventId: checkin.eventId,
+          checkInId: checkin.id,
+          lumaEventId: fullEvent.lumaEventId,
+          recipient: checkin.walletAddress,
+          attendeeName: checkin.attendeeName,
+          attendeeEmail: checkin.attendeeEmail
+        });
+        
+        console.log(`✅ Auto-queued NFT for check-in: ${checkin.id} (${checkin.attendeeName})`);
+      } else {
+        console.warn(`⚠️ No lumaEventId found for event ${checkin.eventId}, skipping auto-mint`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to auto-queue NFT for check-in ${checkin.id}:`, error);
+      // Don't fail the check-in creation, just log the error
+    }
+  }
+
   res.status(201).json({
     message: 'Check-in created successfully',
     checkin: {
@@ -296,6 +329,43 @@ router.put('/:id', authenticateWallet, asyncHandler(async (req, res) => {
       }
     }
   });
+
+  // Auto-mint NFT if wallet was added and conditions are met
+  if (updatedCheckin.event.autoMintEnabled && 
+      updatedCheckin.walletAddress && 
+      isValidSS58Address(updatedCheckin.walletAddress) &&
+      newMintStatus === 'PENDING' && 
+      checkin.nftMintStatus === 'SKIPPED') {
+    try {
+      // Import the NFT minting service
+      const { nftMintingService } = require('../services/nftMintingService');
+      
+      // Get the event details for lumaEventId
+      const fullEvent = await prisma.event.findUnique({
+        where: { id: updatedCheckin.eventId },
+        select: { lumaEventId: true }
+      });
+      
+      if (fullEvent?.lumaEventId) {
+        // Automatically queue NFT minting
+        await nftMintingService.queueMint({
+          eventId: updatedCheckin.eventId,
+          checkInId: updatedCheckin.id,
+          lumaEventId: fullEvent.lumaEventId,
+          recipient: updatedCheckin.walletAddress,
+          attendeeName: updatedCheckin.attendeeName,
+          attendeeEmail: updatedCheckin.attendeeEmail
+        });
+        
+        console.log(`✅ Auto-queued NFT for updated check-in: ${updatedCheckin.id} (${updatedCheckin.attendeeName})`);
+      } else {
+        console.warn(`⚠️ No lumaEventId found for event ${updatedCheckin.eventId}, skipping auto-mint`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to auto-queue NFT for updated check-in ${updatedCheckin.id}:`, error);
+      // Don't fail the check-in update, just log the error
+    }
+  }
 
   res.json({
     message: 'Check-in updated successfully',

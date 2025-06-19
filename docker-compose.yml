@@ -28,9 +28,14 @@ services:
       JWT_SECRET: dev-jwt-secret-key-very-long-and-secure
       NODE_ENV: development
       PORT: 3001
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:3000,http://frontend:3000
       POLKADOT_RPC_URL: wss://ws.test.azero.dev
+      CONTRACT_ADDRESS: 5GvobTJcPvkYq8yYK66eitzt4AeLMuB85sYq8YMTwsq8KanA
+      SIGNER_MNEMONIC: "denial clip diesel pool peasant garment price sick person cabin fabric million"
       RATE_LIMIT_ENABLED: false
+      RATE_LIMIT_REQUESTS_PER_MINUTE: 100
+      EVENT_POLL_INTERVAL: 10000
+      CHECKIN_POLL_INTERVAL: 5000
       # Email service configuration (disabled by default)
       EMAIL_ENABLED: false
       EMAIL_SERVICE: development
@@ -52,7 +57,7 @@ services:
       - "3000:3000"
     environment:
       REACT_APP_API_URL: http://localhost:3001
-      REACT_APP_WS_URL: ws://localhost:3001
+      REACT_APP_WS_URL: ws://backend:3001
       NODE_OPTIONS: "--max-old-space-size=4096"
       GENERATE_SOURCEMAP: "false"
       FAST_REFRESH: "true"

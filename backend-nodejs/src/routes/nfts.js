@@ -35,7 +35,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   }
 
   const [nfts, totalCount] = await Promise.all([
-    prisma.nft.findMany({
+    prisma.nFT.findMany({
       where,
       include: {
         event: {
@@ -64,7 +64,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
       skip,
       take: parseInt(limit)
     }),
-    prisma.nft.count({ where })
+    prisma.nFT.count({ where })
   ]);
 
   res.json({
@@ -88,7 +88,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
  * Get specific NFT details
  */
 router.get('/:id', optionalAuth, asyncHandler(async (req, res) => {
-  const nft = await prisma.nft.findUnique({
+  const nft = await prisma.nFT.findUnique({
     where: { id: req.params.id },
     include: {
       event: {
@@ -146,7 +146,7 @@ router.get('/wallet/:address', asyncHandler(async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   const [nfts, totalCount] = await Promise.all([
-    prisma.nft.findMany({
+    prisma.nFT.findMany({
       where: {
         recipientAddress: req.params.address,
         mintStatus: 'COMPLETED'
@@ -166,7 +166,7 @@ router.get('/wallet/:address', asyncHandler(async (req, res) => {
       skip,
       take: parseInt(limit)
     }),
-    prisma.nft.count({
+    prisma.nFT.count({
       where: {
         recipientAddress: req.params.address,
         mintStatus: 'COMPLETED'
@@ -196,7 +196,7 @@ router.get('/wallet/:address', asyncHandler(async (req, res) => {
  * Retry failed NFT minting
  */
 router.post('/:id/retry-mint', authenticateWallet, asyncHandler(async (req, res) => {
-  const nft = await prisma.nft.findFirst({
+  const nft = await prisma.nFT.findFirst({
     where: {
       id: req.params.id,
       userId: req.user.id
@@ -215,7 +215,7 @@ router.post('/:id/retry-mint', authenticateWallet, asyncHandler(async (req, res)
   }
 
   // Reset NFT to pending status for retry
-  const updatedNft = await prisma.nft.update({
+  const updatedNft = await prisma.nFT.update({
     where: { id: req.params.id },
     data: {
       mintStatus: 'PENDING',
@@ -239,12 +239,12 @@ router.post('/:id/retry-mint', authenticateWallet, asyncHandler(async (req, res)
  */
 router.get('/stats/global', asyncHandler(async (req, res) => {
   const [totalNFTs, totalEvents, totalUsers, recentNFTs] = await Promise.all([
-    prisma.nft.count({
+    prisma.nFT.count({
       where: { mintStatus: 'COMPLETED' }
     }),
     prisma.event.count(),
     prisma.user.count(),
-    prisma.nft.count({
+    prisma.nFT.count({
       where: {
         mintStatus: 'COMPLETED',
         mintedAt: {
@@ -270,7 +270,7 @@ router.get('/stats/global', asyncHandler(async (req, res) => {
 router.get('/verify/:contractNftId', asyncHandler(async (req, res) => {
   const contractNftId = BigInt(req.params.contractNftId);
   
-  const nft = await prisma.nft.findFirst({
+  const nft = await prisma.nFT.findFirst({
     where: {
       contractNftId,
       mintStatus: 'COMPLETED'
