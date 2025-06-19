@@ -162,8 +162,20 @@ console.log(`🔍 Processing check-in:`, {
 console.log(`🔍 Existing check-in found:`, !!existingCheckIn, existingCheckIn ? `(ID: ${existingCheckIn.id})` : '');
 
       if (existingCheckIn) {
-        return false; // Already exists
-      }
+  // Check if this existing check-in needs an NFT queued
+  if (existingCheckIn.walletAddress && existingCheckIn.nftMintStatus === 'PENDING') {
+    // Check if NFT record already exists
+    const existingNft = await prisma.nFT.findFirst({
+      where: { checkInId: existingCheckIn.id }
+    });
+    
+    if (!existingNft) {
+      console.log(`🔄 Existing check-in needs NFT: ${existingCheckIn.attendeeName}`);
+      return existingCheckIn; // Return the existing check-in so NFT gets queued
+    }
+  }
+  return false; // Already exists and doesn't need NFT
+}
 
       // Extract wallet address from registration answers
       let walletAddress = null;
