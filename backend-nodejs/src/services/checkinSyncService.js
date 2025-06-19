@@ -235,6 +235,13 @@ const userEvents = await prisma.event.findMany({
       try {
         const checkInData = transformLumaCheckIn(lumaCheckIn, event.id);
         
+       // Debug logging - add this temporarily
+console.log(`🔍 Processing check-in:`, {
+  lumaCheckInId: lumaCheckIn.checkin_id,
+  attendeeName: lumaCheckIn.user?.name || 'Unknown',
+  hasCheckInId: !!lumaCheckIn.checkin_id
+});
+       
         // Check if check-in already exists
         const existingCheckIn = await prisma.checkIn.findUnique({
           where: { lumaCheckInId: lumaCheckIn.checkin_id }

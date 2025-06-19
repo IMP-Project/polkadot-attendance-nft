@@ -177,6 +177,13 @@ router.post('/', authenticateWallet, asyncHandler(async (req, res) => {
     throw new NotFoundError('Event');
   }
 
+  // Debug logging - add this temporarily
+console.log(`🔍 Processing check-in:`, {
+  lumaCheckInId: lumaCheckIn.checkin_id,
+  attendeeName: lumaCheckIn.user?.name || 'Unknown',
+  hasCheckInId: !!lumaCheckIn.checkin_id
+});
+
   // Check for duplicate check-in
   const existingCheckin = await prisma.checkIn.findUnique({
     where: { lumaCheckInId }

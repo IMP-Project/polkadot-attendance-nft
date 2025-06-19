@@ -146,6 +146,13 @@ class SimpleCheckinSync {
       // Create a unique ID for this check-in
       const lumaCheckInId = `${event.lumaEventId}-${guest.api_id}`;
 
+      // Debug logging - add this temporarily
+console.log(`🔍 Processing check-in:`, {
+  lumaCheckInId: lumaCheckIn.checkin_id,
+  attendeeName: lumaCheckIn.user?.name || 'Unknown',
+  hasCheckInId: !!lumaCheckIn.checkin_id
+});
+      
       const existingCheckIn = await prisma.checkIn.findUnique({
         where: { lumaCheckInId }
       });
