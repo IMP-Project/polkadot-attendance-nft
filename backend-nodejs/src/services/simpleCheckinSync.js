@@ -111,6 +111,12 @@ class SimpleCheckinSync {
             newCheckIns++;
             // Automatically queue NFT minting if wallet address is available
             if (checkIn.walletAddress) {
+              console.log(`🔍 Debug NFT queueing for ${checkIn.attendeeName}:`, {
+              checkInId: checkIn.id,
+              walletAddress: checkIn.walletAddress,
+              eventId: event.id,
+              hasWallet: !!checkIn.walletAddress
+});
               try {
                 await nftMintingService.queueMint({
                   eventId: event.id,
