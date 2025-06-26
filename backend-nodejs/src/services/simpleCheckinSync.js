@@ -194,7 +194,8 @@ console.log(`🔍 Existing check-in found:`, !!existingCheckIn, existingCheckIn 
         }
 
         // If we found a wallet address and the existing check-in doesn't have one
-        if (walletAddress && !existingCheckIn.walletAddress) {
+        // If we found a wallet address (always update if different or missing)
+        if (walletAddress && (!existingCheckIn.walletAddress || existingCheckIn.walletAddress !== walletAddress)) {
           // Update the existing check-in with wallet address
           const updatedCheckIn = await prisma.checkIn.update({
             where: { id: existingCheckIn.id },
