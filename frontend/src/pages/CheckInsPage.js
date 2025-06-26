@@ -111,7 +111,7 @@ const CheckInsPage = () => {
 
   const handleStatusClick = (checkIn) => {
     if (checkIn.nftMintStatus === 'COMPLETED' && checkIn.nft?.transactionHash) {
-      const explorerUrl = `https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Froc-contracts-rpc.polkadot.io#/explorer/query/${checkIn.nft.transactionHash}`;
+      const explorerUrl = `https://test.azero.dev/#/explorer/extrinsic/${checkIn.nft.transactionHash}`;
       window.open(explorerUrl, '_blank');
     }
   };

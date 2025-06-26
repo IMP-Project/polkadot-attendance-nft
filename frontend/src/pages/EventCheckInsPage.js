@@ -675,7 +675,7 @@ const EventCheckInsPage = ({ mode, toggleDarkMode }) => {
                         onClick={() => {
                           // Handle NFT status click - could show transaction details
                           if (attendee.nftStatus === 'minted' && attendee.transactionHash) {
-                            const explorerUrl = `https://test.azero.dev/#/explorer/query/${attendee.transactionHash}`;
+                            const explorerUrl = `https://test.azero.dev/#/explorer/extrinsic/${attendee.transactionHash}`;
                             window.open(explorerUrl, '_blank');
                           }
                         }}
