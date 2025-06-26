@@ -80,7 +80,7 @@ class EmailService {
     }
 
     try {
-      const explorerUrl = `https://test.azero.dev/#/explorer/query/${transactionHash}`;
+      const explorerUrl = `https://test.azero.dev/#/explorer/extrinsic/${transactionHash}`;
       
       const mailOptions = {
         from: `"${organizerName}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
