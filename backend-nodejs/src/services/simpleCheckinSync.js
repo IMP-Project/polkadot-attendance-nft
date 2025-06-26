@@ -169,20 +169,52 @@ console.log(`🔍 Processing check-in:`, {
 console.log(`🔍 Existing check-in found:`, !!existingCheckIn, existingCheckIn ? `(ID: ${existingCheckIn.id})` : '');
 
       if (existingCheckIn) {
-  // Check if this existing check-in needs an NFT queued
-  if (existingCheckIn.walletAddress && existingCheckIn.nftMintStatus === 'PENDING') {
-    // Check if NFT record already exists
-    const existingNft = await prisma.nFT.findFirst({
-      where: { checkInId: existingCheckIn.id }
-    });
-    
-    if (!existingNft) {
-      console.log(`🔄 Existing check-in needs NFT: ${existingCheckIn.attendeeName}`);
-      return existingCheckIn; // Return the existing check-in so NFT gets queued
-    }
-  }
-  return false; // Already exists and doesn't need NFT
-}
+        // Extract wallet address from current guest data (in case it was updated)
+        let walletAddress = null;
+        if (guest.registration_answers && Array.isArray(guest.registration_answers)) {
+          const walletAnswer = guest.registration_answers.find(answer => 
+            answer.label && (
+              answer.label.toLowerCase().includes('polkadot') ||
+              answer.label.toLowerCase().includes('wallet') ||
+              answer.label.toLowerCase().includes('address')
+            )
+          );
+          
+          if (walletAnswer && walletAnswer.answer) {
+            walletAddress = walletAnswer.answer.trim();
+            console.log(`🔍 Found wallet address for ${guest.name}: ${walletAddress}`);
+          }
+        }
+
+        // If we found a wallet address and the existing check-in doesn't have one
+        if (walletAddress && !existingCheckIn.walletAddress) {
+          // Update the existing check-in with wallet address
+          const updatedCheckIn = await prisma.checkIn.update({
+            where: { id: existingCheckIn.id },
+            data: {
+              walletAddress: walletAddress,
+              nftMintStatus: 'PENDING'
+            }
+          });
+          
+          console.log(`🔄 Updated existing check-in with wallet: ${existingCheckIn.attendeeName} (${walletAddress})`);
+          return updatedCheckIn; // This will trigger NFT queueing
+        }
+        
+        // Check if existing check-in needs NFT but doesn't have one yet
+        if (existingCheckIn.walletAddress && existingCheckIn.nftMintStatus === 'PENDING') {
+          const existingNft = await prisma.nFT.findFirst({
+            where: { checkInId: existingCheckIn.id }
+          });
+          
+          if (!existingNft) {
+            console.log(`🔄 Existing check-in needs NFT: ${existingCheckIn.attendeeName}`);
+            return existingCheckIn;
+          }
+        }
+        
+        return false; // Already processed
+      }
 
       // Extract wallet address from registration answers
       let walletAddress = null;
