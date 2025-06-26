@@ -168,6 +168,13 @@ console.log(`🔍 Processing check-in:`, {
       // Add this debug line:
 console.log(`🔍 Existing check-in found:`, !!existingCheckIn, existingCheckIn ? `(ID: ${existingCheckIn.id})` : '');
 
+      // ADD THIS DEBUG CODE HERE:
+    console.log(`🔍 Debug: Guest registration data for ${guest.name}:`, {
+    hasRegistrationAnswers: !!guest.registration_answers,
+    registrationAnswersLength: guest.registration_answers ? guest.registration_answers.length : 0,
+    registrationAnswers: guest.registration_answers
+  });
+
       if (existingCheckIn) {
         // Extract wallet address from current guest data (in case it was updated)
         let walletAddress = null;
