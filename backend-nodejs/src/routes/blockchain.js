@@ -331,26 +331,24 @@ router.post('/mint/stop', asyncHandler(async (req, res) => {
  * Get explorer link for transaction/address/nft
  */
 router.get('/explorer/:type/:value', asyncHandler(async (req, res) => {
-  const { type, value } = req.params;
-  
-  const baseUrl = 'https://test.azero.dev';
-  let url = '';
-
-  switch (type) {
-    case 'tx':
-    case 'transaction':
-      url = `${baseUrl}/tx/${value}`;
-      break;
-    case 'address':
-    case 'account':
-      url = `${baseUrl}/account/${value}`;
-      break;
-    case 'contract':
-      url = `${baseUrl}/contract/${value}`;
-      break;
-    case 'block':
-      url = `${baseUrl}/block/${value}`;
-      break;
+const { type, value } = req.params;
+const baseUrl = 'https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fws.test.azero.dev';
+let url = '';
+switch (type) {
+case 'tx':
+case 'transaction':
+url = `${baseUrl}#/explorer/query/${value}`;
+break;
+case 'address':
+case 'account':
+url = `${baseUrl}#/accounts`;
+break;
+case 'contract':
+url = `${baseUrl}#/contracts`;
+break;
+case 'block':
+url = `${baseUrl}#/explorer/query/${value}`;
+break;
     default:
       throw new ValidationError('Invalid explorer type. Use: tx, address, contract, or block');
   }

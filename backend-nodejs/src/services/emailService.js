@@ -80,7 +80,8 @@ class EmailService {
     }
 
     try {
-      const explorerUrl = `https://test.azero.dev/#/explorer/extrinsic/${transactionHash}`;
+      const explorerUrl = `https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fws.test.azero.dev#/explorer/query/${transactionHash}`;
+
       
       const mailOptions = {
         from: `"${organizerName}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
