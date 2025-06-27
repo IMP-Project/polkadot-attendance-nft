@@ -184,8 +184,9 @@ const handleViewOnChain = (nft) => {
 
 const getExplorerUrl = (txHash) => {
   // Westend Explorer (for testing)
-  return `https://test.azero.dev/#/explorer/extrinsic/${txHash}`;
+  return `https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fws.test.azero.dev#/explorer/query/${txHash};`;
 };
+
 
 const handleViewNFTDetails = (nft) => {
   setSelectedNFT(nft);
