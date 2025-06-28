@@ -24,6 +24,7 @@
         "jsonwebtoken": "^9.0.2",
         "jspdf": "^3.0.1",
         "jspdf-autotable": "^5.0.2",
+        "polkadot-api": "^1.14.1",
         "qrcode.react": "^4.2.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",

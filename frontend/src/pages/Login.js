@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, IconButton } from '@mui/material';
+import { Box, Button, Typography, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { useEvents } from '../contexts/EventsContext'; // Add this import
+import { useEvents } from '../contexts/EventsContext';
+import PAPIWalletConnector from '../components/auth/PAPIWalletConnector';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   
   // Add this to access events context
   const { refreshEventsAfterLogin } = useEvents();
-
-  const handleLogin = (address) => {
-    // After successful login, redirect to admin dashboard
-    navigate('/admin');
-  };
 
   // If user is already logged in, redirect to admin
   useEffect(() => {
@@ -25,58 +19,32 @@ const Login = () => {
     }
   }, [navigate]);
 
-  const handleWalletAddressChange = (event) => {
-    setWalletAddress(event.target.value);
-    setError(''); // Clear error when user types
-  };
-
-  const handleContinue = async () => {
-    if (!walletAddress || walletAddress.trim() === '') {
-      setError('Please enter a valid Polkadot address');
-      return;
-    }
-
-    // Simple validation - Polkadot addresses start with 1, 5, or other specific prefixes and are 47-48 chars
-    if (walletAddress.length < 45 || walletAddress.length > 50) {
-      setError('Invalid Polkadot address format');
-      return;
-    }
-
+  const handleWalletConnect = async (walletAddress) => {
     setLoading(true);
-    setError('');
     
     try {
       // Call the backend API using the api service
       const data = await api.login(walletAddress.trim());
 
       // Success! The api.login method already stores the token
-      // Log success for debugging
-      console.log("API login successful:", {
+      console.log("🎉 Wallet login successful:", {
         userId: data.user.id,
         walletAddress: data.user.walletAddress,
         tokenReceived: !!data.token
       });
       
-      // NEW: Refresh events after successful login
+      // Refresh events after successful login
       console.log("🔄 Triggering events refresh after login...");
       setTimeout(() => {
         refreshEventsAfterLogin();
       }, 500); // Small delay to ensure token is saved
       
-      // Run callback function
-      handleLogin(walletAddress);
+      // Redirect to admin dashboard
+      navigate('/admin');
       
     } catch (err) {
-      console.error("Login error:", err);
-      
-      // Handle specific error cases
-      if (err.message.includes('Failed to fetch')) {
-        setError("Unable to connect to the server. Please check your internet connection and try again.");
-      } else if (err.message.includes('Invalid wallet')) {
-        setError("Invalid wallet address format. Please check your address and try again.");
-      } else {
-        setError(err.message || "Login failed. Please try again.");
-      }
+      console.error("❌ Wallet login error:", err);
+      // Error handling will be done by the wallet connector component
     } finally {
       setLoading(false);
     }
@@ -279,91 +247,11 @@ const Login = () => {
             Connect your Polkadot wallet to manage events and mint attendance NFTs
           </Typography>
 
-          {/* Enter your Polkadot address label */}
-          <Typography
-            sx={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 500,
-              fontSize: '14px',
-              color: '#6B7280',
-              alignSelf: 'flex-start',
-              mb: '1px',
-            }}
-          >
-            Enter your Polkadot address
-          </Typography>
-
-          {/* Input Field */}
-          <TextField
-            fullWidth
-            value={walletAddress}
-            onChange={handleWalletAddressChange}
-            placeholder="e.g., 1xxxx... or 5xxxx..."
-            variant="outlined"
-            error={!!error}
-            helperText={error}
-            disabled={loading}
-            sx={{
-              mb: 3,
-              '& .MuiOutlinedInput-root': {
-                height: '44px',
-                borderRadius: '8px',
-                fontFamily: 'Manrope, sans-serif',
-                '& fieldset': {
-                  borderColor: '#E5E7EB',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#D1D5DB',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#FF2670',
-                  borderWidth: '2px',
-                },
-                '&.Mui-error fieldset': {
-                  borderColor: '#EF4444',
-                },
-              },
-              '& .MuiInputBase-input': {
-                padding: '12px 16px',
-                fontFamily: 'Manrope, sans-serif',
-                fontSize: '16px',
-              },
-              '& .MuiFormHelperText-root': {
-                fontFamily: 'Manrope, sans-serif',
-                fontSize: '14px',
-              },
-            }}
+          {/* PAPI Wallet Connector */}
+          <PAPIWalletConnector 
+            onConnect={handleWalletConnect}
+            loading={loading}
           />
-
-          {/* Continue Button */}
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={handleContinue}
-            disabled={loading}
-            sx={{
-              backgroundColor: '#FF2670',
-              width: '100%',
-              height: '44px',
-              borderRadius: '10px',
-              padding: '12px',
-              gap: '4px',
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 600,
-              fontSize: '16px',
-              textTransform: 'none',
-              mb: 3,
-              '&:hover': {
-                backgroundColor: '#E91E63',
-              },
-              '&:disabled': {
-                backgroundColor: '#F3F4F6',
-                color: '#9CA3AF',
-              },
-            }}
-          >
-            {loading ? 'Connecting...' : 'Continue'}
-          </Button>
 
           {/* Learn how it works link */}
           <Button
