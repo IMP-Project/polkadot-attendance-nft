@@ -156,7 +156,7 @@ class EmailService {
         console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(result));
       }
 
-      console.log(`✅ NFT minted notification with PDF certificate sent to ${recipientEmail}`);
+      console.log(`✅ NFT minted notification sent to ${recipientEmail}`);
       return { success: true, messageId: result.messageId };
 
     } catch (error) {
@@ -394,24 +394,24 @@ class EmailService {
           border: 4px solid #fff; 
           box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-                 .nft-placeholder {
-           width: 200px; 
-           height: 200px; 
-           border-radius: 15px; 
-           margin: 15px auto; 
-           display: flex;
-           background: linear-gradient(135deg, #667eea, #764ba2);
-           align-items: center;
-           justify-content: center;
-           color: white;
-           font-size: 16px;
-           font-weight: 600;
-           border: 4px solid #fff; 
-           box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-           text-align: center;
-           flex-direction: column;
-           gap: 8px;
-         }
+        .nft-placeholder {
+          width: 200px; 
+          height: 200px; 
+          border-radius: 15px; 
+          margin: 15px auto; 
+          display: flex;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 16px;
+          font-weight: 600;
+          border: 4px solid #fff; 
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          text-align: center;
+          flex-direction: column;
+          gap: 8px;
+        }
         
         /* Event Details */
         .event-details { 
@@ -482,10 +482,6 @@ class EmailService {
           border: 1px solid #e2e8f0;
         }
         
-        
-        
-        
-        
         /* Footer */
         .footer { 
           background: #f8f9fa; 
@@ -502,10 +498,10 @@ class EmailService {
         /* Responsive */
         @media (max-width: 600px) {
           .container { margin: 10px; }
-                     .certificate-header { padding: 30px 20px; }
-           .content { padding: 30px 20px; }
-           .certificate-title { font-size: 24px; }
-           .attendee-name { font-size: 28px; }
+          .certificate-header { padding: 30px 20px; }
+          .content { padding: 30px 20px; }
+          .certificate-title { font-size: 24px; }
+          .attendee-name { font-size: 28px; }
           .nft-image, .nft-placeholder { 
             width: 150px; 
             height: 150px; 
@@ -537,18 +533,94 @@ class EmailService {
                      <!-- NFT Showcase -->
            <div class="nft-showcase">
              <h4 style="margin-bottom: 15px; color: #4a5568;">🎨 Your Exclusive NFT</h4>
-             ${this.nftImageBase64 ? 
-               `<img src="${this.nftImageBase64}" alt="Your NFT Character" class="nft-image" />` : 
-               `<div class="nft-placeholder">
-                  <div style="font-size: 48px; margin-bottom: 8px;">🎖️</div>
-                  <div style="font-size: 14px; opacity: 0.9;">NFT #${nftId}</div>
-                  <div style="font-size: 12px; opacity: 0.7;">Attendance Certificate</div>
-                </div>`
+             
+             ${nftImage ? 
+               // Custom uploaded NFT design
+               `<div style="width: 350px; height: 350px; margin: 20px auto; border-radius: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; font-family: Arial, sans-serif;">
+                 
+                 <!-- Background subtle glow -->
+                 <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;"></div>
+                 
+                 <!-- NFT Number Badge -->
+                 <div style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.3); padding: 8px 20px; border-radius: 20px; color: white; font-size: 14px; font-weight: 600; z-index: 2;">#${nftId}</div>
+                 
+                 <!-- Custom NFT Image -->
+                 <div style="width: 280px; height: 280px; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.2); z-index: 2;">
+                   <img src="${nftImage}" alt="Your Custom NFT" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                 </div>
+                 
+                 <!-- Sparkles for custom design -->
+                 <div style="position: absolute; top: 50px; left: 25px; font-size: 16px; opacity: 0.6; color: white;">✨</div>
+                 <div style="position: absolute; top: 60px; right: 60px; font-size: 16px; opacity: 0.6; color: white;">⭐</div>
+                 <div style="position: absolute; bottom: 60px; left: 30px; font-size: 16px; opacity: 0.6; color: white;">💫</div>
+               </div>`
+               :
+               // Default Polka Buddy character
+               `<div style="width: 350px; height: 350px; margin: 20px auto; border-radius: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 20px; position: relative; overflow: hidden; font-family: Arial, sans-serif;">
+                 
+                 <!-- Background subtle glow -->
+                 <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;"></div>
+                 
+                 <!-- NFT Number Badge -->
+                 <div style="background: rgba(255,255,255,0.3); padding: 8px 20px; border-radius: 20px; color: white; font-size: 14px; font-weight: 600; margin-top: 10px; z-index: 2;">#${nftId}</div>
+                 
+                 <!-- Character Container -->
+                 <div style="width: 220px; height: 220px; position: relative; display: flex; align-items: center; justify-content: center; margin: 10px 0; z-index: 2;">
+                   
+                   <!-- Face -->
+                   <div style="width: 160px; height: 160px; background: #FFE5B4; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 8px 16px rgba(0,0,0,0.1);">
+                     
+                     <!-- Hair -->
+                     <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 140px; height: 70px; background: #8B4513; border-radius: 70px 70px 20px 20px; z-index: -1;"></div>
+                     
+                     <!-- Hair Strands -->
+                     <div style="position: absolute; width: 25px; height: 35px; background: #8B4513; border-radius: 0 0 12px 12px; top: 58px; left: 8px; transform: rotate(-15deg);"></div>
+                     <div style="position: absolute; width: 25px; height: 35px; background: #8B4513; border-radius: 0 0 12px 12px; top: 58px; right: 8px; transform: rotate(15deg);"></div>
+                     
+                     <!-- Eyebrows -->
+                     <div style="position: absolute; width: 38px; height: 6px; background: #6B4423; border-radius: 3px; top: 42px; left: 38px; transform: rotate(-5deg);"></div>
+                     <div style="position: absolute; width: 38px; height: 6px; background: #6B4423; border-radius: 3px; top: 42px; right: 38px; transform: rotate(5deg);"></div>
+                     
+                     <!-- Eyes -->
+                     <div style="position: absolute; width: 35px; height: 35px; background: white; border-radius: 50%; top: 55px; left: 40px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                       <div style="position: absolute; width: 18px; height: 18px; background: #4A4A4A; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                         <div style="position: absolute; width: 5px; height: 5px; background: white; border-radius: 50%; top: 3px; right: 3px;"></div>
+                       </div>
+                     </div>
+                     <div style="position: absolute; width: 35px; height: 35px; background: white; border-radius: 50%; top: 55px; right: 40px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                       <div style="position: absolute; width: 18px; height: 18px; background: #4A4A4A; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                         <div style="position: absolute; width: 5px; height: 5px; background: white; border-radius: 50%; top: 3px; right: 3px;"></div>
+                       </div>
+                     </div>
+                     
+                     <!-- Nose -->
+                     <div style="position: absolute; width: 18px; height: 22px; background: #E6A876; border-radius: 50%; top: 80px; left: 50%; transform: translateX(-50%);"></div>
+                     
+                     <!-- Mouth -->
+                     <div style="position: absolute; width: 50px; height: 25px; border: 3px solid #E74C3C; border-top: none; border-radius: 0 0 25px 25px; top: 100px; left: 50%; transform: translateX(-50%); background: #DB4A39;"></div>
+                     
+                     <!-- Cheeks -->
+                     <div style="position: absolute; width: 25px; height: 25px; background: rgba(255,182,193,0.6); border-radius: 50%; top: 75px; left: 18px;"></div>
+                     <div style="position: absolute; width: 25px; height: 25px; background: rgba(255,182,193,0.6); border-radius: 50%; top: 75px; right: 18px;"></div>
+                   </div>
+                 </div>
+                 
+                 <!-- Title -->
+                 <div style="text-align: center; color: white; margin-bottom: 10px; z-index: 2;">
+                   <h2 style="font-size: 20px; font-weight: 700; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); letter-spacing: 1px;">POLKA BUDDY</h2>
+                 </div>
+                 
+                 <!-- Sparkles -->
+                 <div style="position: absolute; top: 50px; left: 25px; font-size: 16px; opacity: 0.6;">✨</div>
+                 <div style="position: absolute; top: 60px; right: 30px; font-size: 16px; opacity: 0.6;">⭐</div>
+                 <div style="position: absolute; bottom: 60px; left: 30px; font-size: 16px; opacity: 0.6;">💫</div>
+               </div>`
              }
-             <p style="margin-top: 15px; color: #718096; font-size: 14px;">
-               NFT ID: <strong>#${nftId}</strong>
-             </p>
-           </div>
+            
+            <p style="margin-top: 15px; color: #718096; font-size: 14px;">
+              NFT ID: <strong>#${nftId}</strong>
+            </p>
+          </div>
           
           <!-- Blockchain Verification -->
           <div class="blockchain-proof">
@@ -574,10 +646,6 @@ class EmailService {
               </div>
             </div>
           </div>
-          
-          
-          
-          
           
           <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f0fff4; border-radius: 10px; border-left: 4px solid #38a169;">
             <p style="margin: 0; color: #2f855a; font-weight: 600;">
