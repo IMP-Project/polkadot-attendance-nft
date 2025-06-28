@@ -31,6 +31,7 @@ const CheckInsPage = () => {
   const [checkIns, setCheckIns] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
@@ -44,11 +45,62 @@ const CheckInsPage = () => {
     pages: 0
   });
 
-  const fetchCheckIns = useCallback(async () => {
+  // Cache keys for localStorage
+  const CACHE_KEYS = {
+    checkIns: 'checkIns_cache',
+    stats: 'stats_cache',
+    pagination: 'pagination_cache',
+    lastFetch: 'checkIns_lastFetch'
+  };
+
+  // Load cached data immediately
+  const loadCachedData = useCallback(() => {
+    try {
+      const cachedCheckIns = localStorage.getItem(CACHE_KEYS.checkIns);
+      const cachedStats = localStorage.getItem(CACHE_KEYS.stats);
+      const cachedPagination = localStorage.getItem(CACHE_KEYS.pagination);
+      
+      if (cachedCheckIns) {
+        setCheckIns(JSON.parse(cachedCheckIns));
+      }
+      if (cachedStats) {
+        setStats(JSON.parse(cachedStats));
+      }
+      if (cachedPagination) {
+        setPagination(prev => ({ ...prev, ...JSON.parse(cachedPagination) }));
+      }
+    } catch (err) {
+      console.warn('Failed to load cached data:', err);
+    }
+  }, []);
+
+  // Save data to cache
+  const saveToCache = useCallback((newCheckIns, newStats, newPagination) => {
+    try {
+      if (newCheckIns) {
+        localStorage.setItem(CACHE_KEYS.checkIns, JSON.stringify(newCheckIns));
+      }
+      if (newStats) {
+        localStorage.setItem(CACHE_KEYS.stats, JSON.stringify(newStats));
+      }
+      if (newPagination) {
+        localStorage.setItem(CACHE_KEYS.pagination, JSON.stringify(newPagination));
+      }
+      localStorage.setItem(CACHE_KEYS.lastFetch, Date.now().toString());
+    } catch (err) {
+      console.warn('Failed to save to cache:', err);
+    }
+  }, []);
+
+  const fetchCheckIns = useCallback(async (silent = false) => {
     if (!user) return;
     
     try {
-      setLoading(true);
+      // Only show loading on initial load, not on background refreshes
+      if (!silent && isInitialLoad) {
+        setLoading(true);
+      }
+      
       const params = {
         page: pagination.page,
         limit: pagination.limit,
@@ -56,39 +108,81 @@ const CheckInsPage = () => {
       };
       
       const data = await api.getCheckIns(params);
-      setCheckIns(data.checkins || []);
+      const newCheckIns = data.checkins || [];
+      const newPagination = data.pagination;
+      
+      setCheckIns(newCheckIns);
       setPagination(prev => ({
         ...prev,
-        ...data.pagination
+        ...newPagination
       }));
+      
+      // Save to cache
+      saveToCache(newCheckIns, null, newPagination);
       setError(null);
+      
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
     } catch (err) {
       console.error('Failed to fetch check-ins:', err);
-      setError('Failed to load check-ins');
+      // Only show error if we don't have cached data
+      if (checkIns.length === 0) {
+        setError('Failed to load check-ins');
+      } else {
+        console.warn('Background refresh failed, keeping cached data');
+      }
     } finally {
-      setLoading(false);
+      if (!silent && isInitialLoad) {
+        setLoading(false);
+      }
     }
-  }, [user, pagination.page, filters]);
+  }, [user, pagination.page, filters, isInitialLoad, checkIns.length, saveToCache]);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (silent = false) => {
     if (!user) return;
     
     try {
       const data = await api.getCheckInsStats();
       setStats(data);
+      
+      // Save to cache
+      saveToCache(null, data, null);
     } catch (err) {
       console.error('Failed to fetch check-in stats:', err);
+      // Silently fail for stats if we have cached data
+      if (!stats && !silent) {
+        console.warn('Stats fetch failed');
+      }
     }
-  }, [user]);
+  }, [user, stats, saveToCache]);
 
+  // Load cached data immediately and start fetching
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchCheckIns();
-      fetchStats();
+    if (!user) return;
+
+    // Load cached data first (instant display)
+    loadCachedData();
+
+    // Initial fetch
+    fetchCheckIns();
+    fetchStats();
+
+    // Set up 30-second background refresh
+    const interval = setInterval(() => {
+      fetchCheckIns(true); // silent refresh
+      fetchStats(true);    // silent refresh
     }, 30000);
 
-    return () => clearTimeout(timer);
-  }, [fetchCheckIns, fetchStats]);
+    return () => clearInterval(interval);
+  }, [user, loadCachedData, fetchCheckIns, fetchStats]);
+
+  // Effect for filter/pagination changes (immediate fetch)
+  useEffect(() => {
+    if (!user || isInitialLoad) return;
+    
+    fetchCheckIns();
+  }, [filters, pagination.page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -126,9 +220,19 @@ const CheckInsPage = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Event Check-ins
-      </Typography>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+        <Typography variant="h4">
+          Event Check-ins
+        </Typography>
+        {loading && !isInitialLoad && (
+          <Box display="flex" alignItems="center" gap={1}>
+            <CircularProgress size={16} />
+            <Typography variant="body2" color="textSecondary">
+              Refreshing...
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
       {stats && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -239,7 +343,7 @@ const CheckInsPage = () => {
         </Alert>
       )}
 
-      {loading ? (
+      {loading && isInitialLoad && checkIns.length === 0 ? (
         <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress />
         </Box>

@@ -8,7 +8,7 @@ class SimpleCheckinSync {
   constructor() {
     this.isRunning = false;
     this.syncInterval = null;
-    this.intervalMs = 5000; // 5 seconds for faster check-in detection
+    this.intervalMs = 60000; // 60 seconds to reduce database load
   }
 
   start() {

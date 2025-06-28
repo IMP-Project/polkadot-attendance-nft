@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 class EmailService {
@@ -6,6 +8,44 @@ class EmailService {
     this.transporter = null;
     this.isEnabled = process.env.EMAIL_ENABLED === 'true';
     this.initialized = false;
+    this.nftImageBase64 = null;
+    this.loadNFTImage();
+  }
+
+  /**
+   * Load NFT character image as base64 for email embedding
+   */
+  loadNFTImage() {
+    try {
+      // Try multiple possible paths for the NFT character image
+      const possiblePaths = [
+        path.join(__dirname, '../assets/nft-character.png'), // Local assets directory
+        path.join(__dirname, '../../frontend/public/images/nft-character.png'),
+        path.join(__dirname, '../../../frontend/public/images/nft-character.png'),
+        '/app/frontend/public/images/nft-character.png', // Docker container path
+        path.join(process.cwd(), 'frontend/public/images/nft-character.png')
+      ];
+
+      let imageLoaded = false;
+      for (const imagePath of possiblePaths) {
+        if (fs.existsSync(imagePath)) {
+          const imageBuffer = fs.readFileSync(imagePath);
+          this.nftImageBase64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+          console.log(`✅ NFT character image loaded successfully from: ${imagePath}`);
+          imageLoaded = true;
+          break;
+        }
+      }
+
+      if (!imageLoaded) {
+        console.log('⚠️ NFT character image not found in any expected locations, using placeholder');
+        // Create a beautiful CSS-based placeholder instead
+        this.nftImageBase64 = null;
+      }
+    } catch (error) {
+      console.log('⚠️ Failed to load NFT character image:', error.message);
+      this.nftImageBase64 = null;
+    }
   }
 
   /**
@@ -20,7 +60,7 @@ class EmailService {
     try {
       // Create transporter based on configuration
       if (process.env.EMAIL_SERVICE === 'gmail') {
-        this.transporter = nodemailer.createTransporter({
+        this.transporter = nodemailer.createTransport({
           service: 'gmail',
           auth: {
             user: process.env.EMAIL_USER,
@@ -28,7 +68,7 @@ class EmailService {
           }
         });
       } else if (process.env.EMAIL_SERVICE === 'smtp') {
-        this.transporter = nodemailer.createTransporter({
+        this.transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
           port: parseInt(process.env.SMTP_PORT) || 587,
           secure: process.env.SMTP_SECURE === 'true',
@@ -40,7 +80,7 @@ class EmailService {
       } else {
         // Development mode - use ethereal for testing
         const testAccount = await nodemailer.createTestAccount();
-        this.transporter = nodemailer.createTransporter({
+        this.transporter = nodemailer.createTransport({
           host: 'smtp.ethereal.email',
           port: 587,
           secure: false,
@@ -70,8 +110,12 @@ class EmailService {
     recipientEmail,
     recipientName,
     eventName,
+    eventDate,
     nftId,
+    nftImage,
     transactionHash,
+    walletAddress,
+    blockNumber,
     organizerName = 'Event Organizer'
   }) {
     if (!this.isEnabled || !this.initialized) {
@@ -82,20 +126,28 @@ class EmailService {
     try {
       const explorerUrl = `https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fws.test.azero.dev#/explorer/query/${transactionHash}`;
 
-      
+      // No PDF generation needed - everything is in the beautiful email template!
+      console.log('📧 Creating rich HTML certificate email');
+
       const mailOptions = {
         from: `"${organizerName}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
         to: recipientEmail,
-        subject: `🎉 Your NFT from ${eventName} has been minted!`,
+        subject: `🎉 Your NFT Certificate from ${eventName} is Ready!`,
         html: this.generateNFTMintedTemplate({
           recipientName,
           eventName,
+          eventDate: eventDate || new Date(),
           nftId,
+          nftImage,
           transactionHash,
           explorerUrl,
+          walletAddress,
+          blockNumber,
           organizerName
         })
       };
+
+      // No attachments needed - everything is beautifully displayed in the email!
 
       const result = await this.transporter.sendMail(mailOptions);
       
@@ -104,7 +156,7 @@ class EmailService {
         console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(result));
       }
 
-      console.log(`✅ NFT minted notification sent to ${recipientEmail}`);
+      console.log(`✅ NFT minted notification with PDF certificate sent to ${recipientEmail}`);
       return { success: true, messageId: result.messageId };
 
     } catch (error) {
@@ -218,69 +270,336 @@ class EmailService {
   }
 
   /**
-   * Generate NFT minted email template
+   * Generate NFT minted email template - Complete Certificate Design
    */
   generateNFTMintedTemplate({
     recipientName,
     eventName,
+    eventDate,
     nftId,
+    nftImage,
     transactionHash,
     explorerUrl,
+    walletAddress,
+    blockNumber,
     organizerName
   }) {
+    const formattedDate = new Date(eventDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
     return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your NFT has been minted!</title>
+      <title>🎉 Your NFT Certificate - ${eventName}</title>
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #E6007A, #FF2670); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-        .footer { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e1e5e9; border-top: none; }
-        .button { display: inline-block; background: #E6007A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 10px 0; }
-        .nft-info { background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #E6007A; }
-        .hash { font-family: monospace; background: #f1f3f4; padding: 8px; border-radius: 4px; word-break: break-all; font-size: 12px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+          line-height: 1.6; 
+          color: #333; 
+          background: #f5f7fa;
+        }
+        .container { 
+          max-width: 700px; 
+          margin: 20px auto; 
+          background: white; 
+          border-radius: 20px; 
+          overflow: hidden; 
+          box-shadow: 0 20px 60px rgba(0,0,0,0.1); 
+        }
+        
+        /* Certificate Header */
+        .certificate-header { 
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+          color: white; 
+          padding: 40px 30px; 
+          text-align: center; 
+          position: relative;
+        }
+        .certificate-header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 6px;
+          background: linear-gradient(90deg, #FF2670, #667eea, #764ba2);
+        }
+        .logo { 
+          width: 80px; 
+          height: 80px; 
+          background: linear-gradient(135deg, #FF2670, #667eea); 
+          border-radius: 50%; 
+          margin: 0 auto 20px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          font-weight: 700; 
+          font-size: 28px; 
+        }
+        .certificate-title { 
+          font-size: 32px; 
+          font-weight: 700; 
+          margin-bottom: 10px; 
+          letter-spacing: -0.5px; 
+        }
+        .certificate-subtitle { 
+          font-size: 16px; 
+          opacity: 0.9; 
+          font-weight: 300; 
+        }
+        
+        /* Main Content */
+        .content { 
+          padding: 40px 30px; 
+        }
+        .achievement-text { 
+          text-align: center; 
+          font-size: 18px; 
+          color: #4a5568; 
+          margin-bottom: 25px; 
+        }
+        .attendee-name { 
+          text-align: center; 
+          font-size: 36px; 
+          font-weight: 700; 
+          color: #FF2670; 
+          margin: 25px 0; 
+          text-transform: uppercase; 
+          letter-spacing: 1px; 
+          text-shadow: 0 2px 4px rgba(255,38,112,0.1);
+        }
+        
+        /* NFT Image Section */
+        .nft-showcase { 
+          text-align: center; 
+          margin: 30px 0; 
+          padding: 25px; 
+          background: linear-gradient(145deg, #f8f9fa, #e9ecef); 
+          border-radius: 15px; 
+          border: 3px solid #e2e8f0;
+        }
+        .nft-image { 
+          width: 200px; 
+          height: 200px; 
+          border-radius: 15px; 
+          margin: 15px auto; 
+          display: block; 
+          object-fit: cover; 
+          border: 4px solid #fff; 
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+                 .nft-placeholder {
+           width: 200px; 
+           height: 200px; 
+           border-radius: 15px; 
+           margin: 15px auto; 
+           display: flex;
+           background: linear-gradient(135deg, #667eea, #764ba2);
+           align-items: center;
+           justify-content: center;
+           color: white;
+           font-size: 16px;
+           font-weight: 600;
+           border: 4px solid #fff; 
+           box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+           text-align: center;
+           flex-direction: column;
+           gap: 8px;
+         }
+        
+        /* Event Details */
+        .event-details { 
+          background: #f7fafc; 
+          border-radius: 15px; 
+          padding: 25px; 
+          margin: 25px 0; 
+          border-left: 6px solid #FF2670; 
+        }
+        .event-name { 
+          font-size: 24px; 
+          font-weight: 600; 
+          color: #2d3748; 
+          margin-bottom: 10px; 
+        }
+        .event-date { 
+          font-size: 16px; 
+          color: #718096; 
+          margin-bottom: 15px; 
+        }
+        
+        /* Blockchain Verification */
+        .blockchain-proof { 
+          background: linear-gradient(145deg, #edf2f7, #e2e8f0); 
+          border-radius: 15px; 
+          padding: 25px; 
+          margin: 25px 0; 
+          border: 2px solid #cbd5e0;
+        }
+        .proof-title { 
+          font-size: 18px; 
+          font-weight: 600; 
+          color: #2d3748; 
+          margin-bottom: 20px; 
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .proof-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 15px;
+        }
+        .proof-item { 
+          background: white;
+          padding: 15px;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+        }
+        .proof-label { 
+          color: #718096; 
+          font-weight: 600; 
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 5px;
+        }
+        .proof-value { 
+          color: #4a5568; 
+          font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace; 
+          font-size: 13px; 
+          word-break: break-all; 
+          background: #f7fafc;
+          padding: 8px 12px;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+        
+        
+        
+        
+        
+        /* Footer */
+        .footer { 
+          background: #f8f9fa; 
+          padding: 25px 30px; 
+          text-align: center; 
+          border-top: 1px solid #e2e8f0;
+        }
+        .footer p { 
+          font-size: 12px; 
+          color: #718096; 
+          line-height: 1.5;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+          .container { margin: 10px; }
+                     .certificate-header { padding: 30px 20px; }
+           .content { padding: 30px 20px; }
+           .certificate-title { font-size: 24px; }
+           .attendee-name { font-size: 28px; }
+          .nft-image, .nft-placeholder { 
+            width: 150px; 
+            height: 150px; 
+          }
+        }
       </style>
     </head>
     <body>
       <div class="container">
-        <div class="header">
-          <h1>🎉 Your NFT is Ready!</h1>
-          <p>Your attendance at ${eventName} has been verified and your NFT has been minted on the blockchain!</p>
+        <!-- Certificate Header -->
+        <div class="certificate-header">
+          <div class="logo">🎖️</div>
+          <h1 class="certificate-title">Certificate of Attendance</h1>
+          <p class="certificate-subtitle">Blockchain-Verified Event Participation</p>
         </div>
         
+        <!-- Main Content -->
         <div class="content">
-          <p>Hello ${recipientName},</p>
+          <p class="achievement-text">This certifies that</p>
+          <h2 class="attendee-name">${recipientName}</h2>
+          <p class="achievement-text">successfully attended and participated in</p>
           
-          <p>Congratulations! Your attendance NFT for <strong>${eventName}</strong> has been successfully minted on the Aleph Zero blockchain.</p>
-          
-          <div class="nft-info">
-            <h3>NFT Details</h3>
-            <p><strong>NFT ID:</strong> #${nftId}</p>
-            <p><strong>Event:</strong> ${eventName}</p>
-            <p><strong>Transaction Hash:</strong></p>
-            <div class="hash">${transactionHash}</div>
+          <!-- Event Details -->
+          <div class="event-details">
+            <h3 class="event-name">${eventName}</h3>
+            <p class="event-date">📅 ${formattedDate}</p>
           </div>
           
-          <p>You can view your NFT on the blockchain explorer:</p>
+                     <!-- NFT Showcase -->
+           <div class="nft-showcase">
+             <h4 style="margin-bottom: 15px; color: #4a5568;">🎨 Your Exclusive NFT</h4>
+             ${this.nftImageBase64 ? 
+               `<img src="${this.nftImageBase64}" alt="Your NFT Character" class="nft-image" />` : 
+               `<div class="nft-placeholder">
+                  <div style="font-size: 48px; margin-bottom: 8px;">🎖️</div>
+                  <div style="font-size: 14px; opacity: 0.9;">NFT #${nftId}</div>
+                  <div style="font-size: 12px; opacity: 0.7;">Attendance Certificate</div>
+                </div>`
+             }
+             <p style="margin-top: 15px; color: #718096; font-size: 14px;">
+               NFT ID: <strong>#${nftId}</strong>
+             </p>
+           </div>
           
-          <p style="text-align: center;">
-            <a href="${explorerUrl}" class="button">View on Blockchain Explorer</a>
+          <!-- Blockchain Verification -->
+          <div class="blockchain-proof">
+            <h4 class="proof-title">
+              🔗 Blockchain Verification
+            </h4>
+            <div class="proof-grid">
+              <div class="proof-item">
+                <div class="proof-label">Network</div>
+                <div class="proof-value">Aleph Zero Testnet</div>
+              </div>
+              <div class="proof-item">
+                <div class="proof-label">Your Wallet Address</div>
+                <div class="proof-value">${walletAddress}</div>
+              </div>
+              <div class="proof-item">
+                <div class="proof-label">Transaction Hash</div>
+                <div class="proof-value">${transactionHash}</div>
+              </div>
+              <div class="proof-item">
+                <div class="proof-label">Block Number</div>
+                <div class="proof-value">#${blockNumber}</div>
+              </div>
+            </div>
+          </div>
+          
+          
+          
+          
+          
+          <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f0fff4; border-radius: 10px; border-left: 4px solid #38a169;">
+            <p style="margin: 0; color: #2f855a; font-weight: 600;">
+              🎉 Congratulations! This NFT serves as permanent, cryptographic proof of your attendance at ${eventName}. 
+              It's stored on the Aleph Zero blockchain and can never be altered or deleted.
+            </p>
+          </div>
+          
+          <p style="text-align: center; margin-top: 30px; color: #4a5568;">
+            Thank you for attending <strong>${eventName}</strong>!<br>
+            <br>
+            Best regards,<br>
+            <strong>${organizerName}</strong>
           </p>
-          
-          <p>This NFT serves as proof of your attendance and is permanently stored on the blockchain. You can use it to showcase your participation in ${eventName}.</p>
-          
-          <p>Thank you for attending ${eventName}!</p>
-          
-          <p>Best regards,<br>${organizerName}</p>
         </div>
         
+        <!-- Footer -->
         <div class="footer">
-          <p><small>This email was sent because you attended an event that uses Polkadot NFT attendance tracking. Your NFT is stored on the Aleph Zero blockchain.</small></p>
+          <p>This email was sent because you attended an event using Polkadot NFT attendance tracking.<br>
+          Your NFT certificate is permanently stored on the Aleph Zero blockchain.<br>
+          <br>
+          Generated on ${new Date().toLocaleString()}</p>
         </div>
       </div>
     </body>

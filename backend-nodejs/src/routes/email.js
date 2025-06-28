@@ -34,14 +34,17 @@ router.post('/test', authenticateWallet, async (req, res) => {
       return res.status(400).json({ error: 'Recipient email is required' });
     }
 
-    // Send a test NFT minted notification
+    // Send a test NFT minted notification with realistic data
     const result = await emailService.sendNFTMintedNotification({
       recipientEmail,
       recipientName: recipientName || 'Test User',
-      eventName: 'Test Event',
-      nftId: '123',
-      transactionHash: '0x1234567890abcdef',
-      organizerName: 'Test Organizer'
+      eventName: 'Polkadot Summit 2024',
+      eventDate: new Date('2024-06-27'),
+      nftId: '42',
+      transactionHash: '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890',
+      walletAddress: '14Ddt2zkptrVVFGCx69MofrWKVRsRLJPCsqUKAbDCswoTqzq',
+      blockNumber: '12345678',
+      organizerName: 'Polkadot Community'
     });
 
     if (result.success) {

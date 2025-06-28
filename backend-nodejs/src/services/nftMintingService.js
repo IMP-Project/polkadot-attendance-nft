@@ -9,7 +9,7 @@ class NFTMintingService {
   constructor() {
     this.isProcessing = false;
     this.mintInterval = null;
-    this.mintIntervalMs = 3000; // 3 seconds between mints
+    this.mintIntervalMs = 30000; // 30 seconds between mints to reduce database load
     this.maxRetries = 3;
     this.retryDelays = [5000, 15000, 30000]; // 5s, 15s, 30s
   }
@@ -29,6 +29,11 @@ class NFTMintingService {
     console.log('🎨 Minting Step 1: Initializing contract service...');
     await contractService.initialize();
     console.log('✅ Minting Step 1: Contract service initialized');
+    
+    // Initialize email service
+    console.log('🎨 Minting Step 1.5: Initializing email service...');
+    await emailService.initialize();
+    console.log('✅ Minting Step 1.5: Email service initialized');
     
     // Start processing pending mints
     console.log('🎨 Minting Step 2: Starting mint processing...');
@@ -253,11 +258,13 @@ class NFTMintingService {
       });
 
       // Send email notification if recipient email is available
+      console.log(`📧 [TRACE] About to call sendEmailNotification for NFT ${nft.id}`);
       await this.sendEmailNotification('minted', {
         nft: nft,
         result: result,
         eventName: nft.event.name
       });
+      console.log(`📧 [TRACE] Finished calling sendEmailNotification for NFT ${nft.id}`);
 
     } catch (error) {
       console.error(`❌ Failed to mint NFT ${nft.id}:`, error);
@@ -1005,25 +1012,46 @@ const nft = await prisma.nFT.create({
     try {
       const { nft, result, error, eventName, attempts } = data;
 
+      // Ensure email service is initialized
+      console.log(`📧 [TRACE] Email service initialized: ${emailService.initialized}`);
+      if (!emailService.initialized) {
+        console.log(`📧 [TRACE] Email service not initialized, initializing now...`);
+        await emailService.initialize();
+        console.log(`📧 [TRACE] Email service initialization result: ${emailService.initialized}`);
+      }
+
+      // Debug logging to understand what data we have
+      console.log(`📧 [DEBUG] sendEmailNotification for NFT ${nft.id}:`);
+      console.log(`📧 [DEBUG] nft.checkin exists: ${!!nft.checkin}`);
+      console.log(`📧 [DEBUG] nft.checkin?.attendeeEmail: ${nft.checkin?.attendeeEmail}`);
+      console.log(`📧 [DEBUG] nft.metadata: ${nft.metadata}`);
+
       // Get recipient email from check-in or metadata
       let recipientEmail = null;
       let recipientName = 'Attendee';
 
+      // Priority 1: Check-in data (most reliable)
       if (nft.checkin?.attendeeEmail) {
         recipientEmail = nft.checkin.attendeeEmail;
         recipientName = nft.checkin.attendeeName || 'Attendee';
-      } else if (nft.metadata) {
+        console.log(`📧 [DEBUG] Using checkin email: ${recipientEmail}`);
+      } 
+      // Priority 2: Metadata from NFT record
+      else if (nft.metadata) {
         try {
           const metadata = typeof nft.metadata === 'string' ? JSON.parse(nft.metadata) : nft.metadata;
           recipientEmail = metadata.attendeeEmail;
           recipientName = metadata.attendeeName || 'Attendee';
+          console.log(`📧 [DEBUG] Using metadata email: ${recipientEmail}`);
         } catch (e) {
-          console.log('Could not parse NFT metadata for email');
+          console.log(`📧 [DEBUG] Could not parse NFT metadata for email: ${e.message}`);
         }
       }
 
       if (!recipientEmail) {
-        console.log(`📧 No email available for NFT ${nft.id}, skipping email notification`);
+        console.log(`📧 [ERROR] No email available for NFT ${nft.id}, skipping email notification`);
+        console.log(`📧 [ERROR] Available data - checkin: ${JSON.stringify(nft.checkin)}`);
+        console.log(`📧 [ERROR] Available data - metadata: ${nft.metadata}`);
         return;
       }
 
@@ -1036,8 +1064,12 @@ const nft = await prisma.nFT.create({
             recipientEmail,
             recipientName,
             eventName,
+            eventDate: nft.event?.startDate || nft.createdAt,
             nftId: nft.id,
+            nftImage: nft.imageUrl || nft.event?.nftTemplate?.imageUrl,
             transactionHash: result.transactionHash,
+            walletAddress: nft.recipientAddress,
+            blockNumber: result.blockNumber,
             organizerName: nft.event?.user?.name || 'Event Organizer'
           });
           break;

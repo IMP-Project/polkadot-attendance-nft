@@ -3,6 +3,20 @@ FROM node:18-alpine
 # Install OpenSSL and other dependencies for Prisma and Polkadot
 RUN apk add --no-cache openssl python3 make g++ libc6-compat
 
+# Install Chromium dependencies for Puppeteer (let puppeteer download its own chromium)
+RUN apk add --no-cache \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    udev \
+    xvfb
+
+# Don't skip chromium download - let puppeteer handle it
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
+
 WORKDIR /app
 
 # Copy package files

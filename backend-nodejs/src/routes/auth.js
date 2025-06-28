@@ -23,6 +23,23 @@ router.post('/wallet-login', async (req, res) => {
       });
     }
     
+    // Find or create user (same logic as middleware)
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    let user = await prisma.user.findUnique({
+      where: { walletAddress }
+    });
+    
+    if (!user) {
+      // Auto-create user on first authentication
+      user = await prisma.user.create({
+        data: {
+          walletAddress
+        }
+      });
+    }
+    
     // Generate JWT token
     const token = generateToken(walletAddress);
     
@@ -30,6 +47,11 @@ router.post('/wallet-login', async (req, res) => {
       message: 'Authentication successful',
       token,
       walletAddress,
+      user: {
+        id: user.id,
+        walletAddress: user.walletAddress,
+        createdAt: user.createdAt
+      },
       expiresIn: '7 days'
     });
     

@@ -202,7 +202,7 @@ class ContractService {
     const baseMetadata = {
       name: `${event.name} - Attendance NFT`,
       description: `This NFT certifies attendance at ${event.name}`,
-      image: event.imageUrl || 'https://placeholder.com/nft-image.png',
+      image: event.imageUrl || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/images/nft-character.png`,
       attributes: [
         {
           trait_type: 'Event Name',

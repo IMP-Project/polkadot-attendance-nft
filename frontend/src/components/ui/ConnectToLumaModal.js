@@ -52,16 +52,16 @@ const ConnectToLumaModal = ({ open, onClose }) => {
       if (authToken) {
         try {
           const response = await fetch(
-            'https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key',
+            `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/users/luma/status`,
             {
               headers: { 'Authorization': `Bearer ${authToken}` },
             }
           );
           if (response.ok) {
             const data = await response.json();
-            if (data.api_key) {
-              setSavedApiKey(data.api_key);
-              setApiKey(data.api_key);
+            if (data.connected) {
+              setSavedApiKey('connected');
+              // We'll fetch events if connected
             }
           }
         } catch (error) {
@@ -80,14 +80,14 @@ const ConnectToLumaModal = ({ open, onClose }) => {
     if (authToken && apiKey) {
       try {
         const response = await fetch(
-          'https://polkadot-attendance-nft-api-bpa5.onrender.com/api/user/luma-api-key',
+          `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/users/luma/connect`,
           {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${authToken}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ api_key: apiKey }),
+            body: JSON.stringify({ lumaApiKey: apiKey }),
           }
         );
         if (response.ok) {
@@ -109,10 +109,13 @@ const ConnectToLumaModal = ({ open, onClose }) => {
     setError('');
 
     try {
-      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/list-luma-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: savedApiKey || apiKey }),
+      const authToken = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/users/luma/events`, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json' 
+        }
       });
 
       if (!response.ok) throw new Error('Failed to fetch events');
@@ -157,9 +160,10 @@ const ConnectToLumaModal = ({ open, onClose }) => {
         userId: userId
       });
 
-      const response = await fetch('https://polkadot-attendance-nft-api-bpa5.onrender.com/api/bulk-import-luma-events', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/events/bulk-import`, {
         method: 'POST',
         headers: { 
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
