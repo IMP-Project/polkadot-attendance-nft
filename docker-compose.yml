@@ -13,7 +13,7 @@ services:
       PORT: 3001
       FRONTEND_URL: http://localhost:3000,http://frontend:3000
       POLKADOT_RPC_URL: wss://ws.test.azero.dev
-      CONTRACT_ADDRESS: 5GvobTJcPvkYq8yYK66eitzt4AeLMuB85sYq8YMTwsq8KanA
+      CONTRACT_ADDRESS: 5Dhbm9WAfjxPbdcecUTYvwzPv3cp9iy6MGwjstUroKYoLkTU
       SIGNER_MNEMONIC: "denial clip diesel pool peasant garment price sick person cabin fabric million"
       RATE_LIMIT_ENABLED: false
       RATE_LIMIT_REQUESTS_PER_MINUTE: 100

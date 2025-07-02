@@ -317,9 +317,13 @@ class ContractService {
               // Clean up subscription
               if (unsub) unsub();
 
-              // Get the minted NFT ID from events or counter
-              const nftId = this.nftCounter + 1;
-              this.nftCounter = nftId;
+              // Extract the actual NFT ID from blockchain events
+              const nftId = this.extractNftIdFromEvents(events) || (this.nftCounter + 1);
+              
+              // Update our counter to stay in sync
+              if (nftId > this.nftCounter) {
+                this.nftCounter = nftId;
+              }
 
               resolve({
                 success: true,
@@ -344,6 +348,56 @@ class ContractService {
           reject(error);
         });
     });
+  }
+
+  /**
+   * Extract NFT ID from blockchain events
+   * @param {Array} events - Array of contract events
+   * @returns {number|null} - The NFT ID or null if not found
+   */
+  extractNftIdFromEvents(events) {
+    try {
+      for (const event of events) {
+        // Look for Transfer event (PSP34 standard minting event)
+        if (event.data && event.data.toString) {
+          const eventData = event.data.toString();
+          console.log('📊 Processing contract event:', eventData);
+          
+          // Try to parse PSP34 Transfer event for minting (from: null, to: address, id: nftId)
+          // The event data typically contains [from, to, tokenId]
+          if (eventData.includes('Transfer') || eventData.includes('null')) {
+            try {
+              // Extract token ID from the event data
+              // PSP34 Transfer events have the format: [null, recipient, tokenId] for mints
+              const matches = eventData.match(/U64\((\d+)\)/);
+              if (matches && matches[1]) {
+                const nftId = parseInt(matches[1]);
+                console.log(`✅ Extracted NFT ID from Transfer event: ${nftId}`);
+                return nftId;
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse Transfer event:', parseError);
+            }
+          }
+        }
+        
+        // Also check for custom NFTMinted event
+        if (event.identifier && event.identifier === 'NFTMinted') {
+          const nftId = event.data?.nft_id || event.data?.[0];
+          if (nftId) {
+            const id = parseInt(nftId.toString());
+            console.log(`✅ Extracted NFT ID from NFTMinted event: ${id}`);
+            return id;
+          }
+        }
+      }
+      
+      console.warn('⚠️ Could not extract NFT ID from events, falling back to counter');
+      return null;
+    } catch (error) {
+      console.error('❌ Error extracting NFT ID from events:', error);
+      return null;
+    }
   }
 
   /**

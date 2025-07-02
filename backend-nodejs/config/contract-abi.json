@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0xb014285dfdf8bc2e954b0de62d6f28990c753cd652acd1769cf97b108b2b5126",
+    "hash": "0x52736e5438035f1eadbb24cc3629f70afc0608842f276867c1ef124c81676e39",
     "language": "ink! 5.1.1",
     "compiler": "rustc 1.87.0",
     "build_info": {
@@ -27,7 +27,7 @@
         "args": [],
         "default": false,
         "docs": [
-          "Constructor initializes empty contract"
+          "Constructor initializes empty PSP-34 compliant contract"
         ],
         "label": "new",
         "payable": false,
@@ -36,7 +36,7 @@
             "ink_primitives",
             "ConstructorResult"
           ],
-          "type": 21
+          "type": 39
         },
         "selector": "0x9bae9d5e"
       }
@@ -47,31 +47,31 @@
         "displayName": [
           "AccountId"
         ],
-        "type": 2
+        "type": 0
       },
       "balance": {
         "displayName": [
           "Balance"
         ],
-        "type": 29
+        "type": 8
       },
       "blockNumber": {
         "displayName": [
           "BlockNumber"
         ],
-        "type": 31
+        "type": 6
       },
       "chainExtension": {
         "displayName": [
           "ChainExtension"
         ],
-        "type": 32
+        "type": 64
       },
       "hash": {
         "displayName": [
           "Hash"
         ],
-        "type": 30
+        "type": 63
       },
       "maxEventTopics": 4,
       "staticBufferSize": 16384,
@@ -79,10 +79,135 @@
         "displayName": [
           "Timestamp"
         ],
-        "type": 0
+        "type": 7
       }
     },
     "events": [
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "from",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 44
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "to",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 44
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Id"
+              ],
+              "type": 4
+            }
+          }
+        ],
+        "docs": [
+          "PSP-34 Standard Events"
+        ],
+        "label": "Transfer",
+        "module_path": "attendance_nft::attendance_nft",
+        "signature_topic": "0x90df221c7b90ec18e837e47807b0e410761cbc1b859b0eccc9affd1b51567a4f"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "approved",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 45
+            }
+          }
+        ],
+        "docs": [],
+        "label": "Approval",
+        "module_path": "attendance_nft::attendance_nft",
+        "signature_topic": "0xc35912b2d61390c240b6307af6f49af8dca7703492a0231c0420d4892c040ca8"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Id"
+              ],
+              "type": 4
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "key",
+            "type": {
+              "displayName": [
+                "Vec"
+              ],
+              "type": 9
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "data",
+            "type": {
+              "displayName": [
+                "Vec"
+              ],
+              "type": 9
+            }
+          }
+        ],
+        "docs": [],
+        "label": "AttributeSet",
+        "module_path": "attendance_nft::attendance_nft",
+        "signature_topic": "0x6452d0d8af1a4a23e1de3181b19722639a184bdad068c20302ca52b742b7d6a7"
+      },
       {
         "args": [
           {
@@ -93,7 +218,7 @@
               "displayName": [
                 "u64"
               ],
-              "type": 0
+              "type": 7
             }
           },
           {
@@ -104,7 +229,7 @@
               "displayName": [
                 "AccountId"
               ],
-              "type": 2
+              "type": 0
             }
           },
           {
@@ -115,13 +240,11 @@
               "displayName": [
                 "String"
               ],
-              "type": 1
+              "type": 25
             }
           }
         ],
-        "docs": [
-          "Events emitted by the contract"
-        ],
+        "docs": [],
         "label": "NFTMinted",
         "module_path": "attendance_nft::attendance_nft",
         "signature_topic": "0xb62e23c873b50edd1218619d247d5465283c3fd5a83225b701744b45f6954582"
@@ -132,9 +255,459 @@
         "ink",
         "LangError"
       ],
-      "type": 22
+      "type": 40
     },
     "messages": [
+      {
+        "args": [],
+        "default": false,
+        "docs": [
+          " Returns the collection id of the NFT contract"
+        ],
+        "label": "collection_id",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 41
+        },
+        "selector": "0xc10375f2"
+      },
+      {
+        "args": [
+          {
+            "label": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Returns the balance of the owner"
+        ],
+        "label": "balance_of",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 42
+        },
+        "selector": "0x0f755a56"
+      },
+      {
+        "args": [
+          {
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Id"
+              ],
+              "type": 4
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Returns the owner of the token if any"
+        ],
+        "label": "owner_of",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 43
+        },
+        "selector": "0x99720c1e"
+      },
+      {
+        "args": [
+          {
+            "label": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "operator",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 45
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Returns true if the operator is approved by the owner"
+        ],
+        "label": "allowance",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 46
+        },
+        "selector": "0x6a00165e"
+      },
+      {
+        "args": [
+          {
+            "label": "operator",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 45
+            }
+          },
+          {
+            "label": "approved",
+            "type": {
+              "displayName": [
+                "bool"
+              ],
+              "type": 14
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Approves `operator` to withdraw the `id` token from the caller's account"
+        ],
+        "label": "approve",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 47
+        },
+        "selector": "0x681266a0"
+      },
+      {
+        "args": [
+          {
+            "label": "to",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Id"
+              ],
+              "type": 4
+            }
+          },
+          {
+            "label": "data",
+            "type": {
+              "displayName": [
+                "Vec"
+              ],
+              "type": 9
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Transfer approved or owned token from `owner` to `to`"
+        ],
+        "label": "transfer",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 47
+        },
+        "selector": "0x84a15da1"
+      },
+      {
+        "args": [
+          {
+            "label": "from",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "to",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Id"
+              ],
+              "type": 4
+            }
+          },
+          {
+            "label": "data",
+            "type": {
+              "displayName": [
+                "Vec"
+              ],
+              "type": 9
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Transfer approved or owned token from `from` to `to`"
+        ],
+        "label": "transfer_from",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 47
+        },
+        "selector": "0x0b396f18"
+      },
+      {
+        "args": [],
+        "default": false,
+        "docs": [
+          " Returns the total number of tokens in existence"
+        ],
+        "label": "total_supply",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 50
+        },
+        "selector": "0xdb6375a8"
+      },
+      {
+        "args": [
+          {
+            "label": "id",
+            "type": {
+              "displayName": [
+                "Id"
+              ],
+              "type": 4
+            }
+          },
+          {
+            "label": "key",
+            "type": {
+              "displayName": [
+                "Vec"
+              ],
+              "type": 9
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Returns the attribute of `id` or the collection"
+        ],
+        "label": "get_attribute",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 51
+        },
+        "selector": "0x97f86da4"
+      },
+      {
+        "args": [
+          {
+            "label": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "index",
+            "type": {
+              "displayName": [
+                "u128"
+              ],
+              "type": 8
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Returns total number of tokens owned by the given address",
+          " This is already implemented as balance_of, but adding for clarity"
+        ],
+        "label": "owners_token_by_index",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 53
+        },
+        "selector": "0x6d8b2b4f"
+      },
+      {
+        "args": [
+          {
+            "label": "index",
+            "type": {
+              "displayName": [
+                "u128"
+              ],
+              "type": 8
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Returns a token `Id` at a given `index` of all the tokens stored by the contract"
+        ],
+        "label": "token_by_index",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 53
+        },
+        "selector": "0xcea2a4f3"
+      },
+      {
+        "args": [],
+        "default": false,
+        "docs": [
+          " Returns what PSP standards this contract supports"
+        ],
+        "label": "supported_standards",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 54
+        },
+        "selector": "0xf1a08565"
+      },
+      {
+        "args": [
+          {
+            "label": "interface_id",
+            "type": {
+              "displayName": [],
+              "type": 56
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " CRITICAL: Interface detection for wallets - MUST have this exact selector"
+        ],
+        "label": "supports_interface",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 46
+        },
+        "selector": "0x4ed3c047"
+      },
+      {
+        "args": [],
+        "default": false,
+        "docs": [
+          " CRITICAL: Standard PSP34 collection_id with exact selector for wallet detection"
+        ],
+        "label": "psp34_collection_id",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 41
+        },
+        "selector": "0x3d261bd5"
+      },
       {
         "args": [
           {
@@ -143,7 +716,7 @@
               "displayName": [
                 "String"
               ],
-              "type": 1
+              "type": 25
             }
           },
           {
@@ -152,7 +725,7 @@
               "displayName": [
                 "AccountId"
               ],
-              "type": 2
+              "type": 0
             }
           },
           {
@@ -161,13 +734,13 @@
               "displayName": [
                 "String"
               ],
-              "type": 1
+              "type": 25
             }
           }
         ],
         "default": false,
         "docs": [
-          " Mint NFT to specified recipient - backend service can mint for attendees"
+          " Mint NFT to specified recipient - PSP-34 compliant version"
         ],
         "label": "mint_nft",
         "mutates": true,
@@ -177,7 +750,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 46
         },
         "selector": "0x219a113e"
       },
@@ -189,13 +762,13 @@
               "displayName": [
                 "u64"
               ],
-              "type": 0
+              "type": 7
             }
           }
         ],
         "default": false,
         "docs": [
-          " Get NFT by ID"
+          " Get NFT by ID - updated for PSP-34 compatibility"
         ],
         "label": "get_nft",
         "mutates": false,
@@ -205,7 +778,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 24
+          "type": 57
         },
         "selector": "0x26443695"
       },
@@ -217,13 +790,13 @@
               "displayName": [
                 "AccountId"
               ],
-              "type": 2
+              "type": 0
             }
           }
         ],
         "default": false,
         "docs": [
-          " Get all NFTs owned by an account"
+          " Get all NFTs owned by an account - PSP-34 compatible"
         ],
         "label": "get_owned_nfts",
         "mutates": false,
@@ -233,7 +806,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 26
+          "type": 59
         },
         "selector": "0x683bdd8f"
       },
@@ -245,7 +818,7 @@
               "displayName": [
                 "String"
               ],
-              "type": 1
+              "type": 25
             }
           },
           {
@@ -254,7 +827,7 @@
               "displayName": [
                 "AccountId"
               ],
-              "type": 2
+              "type": 0
             }
           }
         ],
@@ -270,7 +843,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 46
         },
         "selector": "0x84773ea6"
       },
@@ -288,7 +861,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 27
+          "type": 61
         },
         "selector": "0x33de4730"
       },
@@ -306,7 +879,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 28
+          "type": 62
         },
         "selector": "0x07fcd0b1"
       }
@@ -321,13 +894,168 @@
               "layout": {
                 "root": {
                   "layout": {
+                    "leaf": {
+                      "key": "0x6b044cbe",
+                      "ty": 0
+                    }
+                  },
+                  "root_key": "0x6b044cbe",
+                  "ty": 3
+                }
+              },
+              "name": "token_owner"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "leaf": {
+                      "key": "0xa64df335",
+                      "ty": 14
+                    }
+                  },
+                  "root_key": "0xa64df335",
+                  "ty": 15
+                }
+              },
+              "name": "operator_approvals"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "leaf": {
+                      "key": "0x91d83d34",
+                      "ty": 0
+                    }
+                  },
+                  "root_key": "0x91d83d34",
+                  "ty": 19
+                }
+              },
+              "name": "token_approvals"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "leaf": {
+                      "key": "0x87419fc6",
+                      "ty": 6
+                    }
+                  },
+                  "root_key": "0x87419fc6",
+                  "ty": 22
+                }
+              },
+              "name": "owned_tokens_count"
+            },
+            {
+              "layout": {
+                "enum": {
+                  "dispatchKey": "0x00000000",
+                  "name": "Id",
+                  "variants": {
+                    "0": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 2
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "U8"
+                    },
+                    "1": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 5
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "U16"
+                    },
+                    "2": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 6
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "U32"
+                    },
+                    "3": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 7
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "U64"
+                    },
+                    "4": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 8
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "U128"
+                    },
+                    "5": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 9
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "Bytes"
+                    }
+                  }
+                }
+              },
+              "name": "collection_id"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
                     "struct": {
                       "fields": [
                         {
                           "layout": {
                             "leaf": {
                               "key": "0x75c99a3c",
-                              "ty": 0
+                              "ty": 7
                             }
                           },
                           "name": "id"
@@ -336,7 +1064,7 @@
                           "layout": {
                             "leaf": {
                               "key": "0x75c99a3c",
-                              "ty": 1
+                              "ty": 25
                             }
                           },
                           "name": "luma_event_id"
@@ -345,7 +1073,7 @@
                           "layout": {
                             "leaf": {
                               "key": "0x75c99a3c",
-                              "ty": 2
+                              "ty": 0
                             }
                           },
                           "name": "owner"
@@ -354,7 +1082,7 @@
                           "layout": {
                             "leaf": {
                               "key": "0x75c99a3c",
-                              "ty": 1
+                              "ty": 25
                             }
                           },
                           "name": "metadata"
@@ -363,7 +1091,7 @@
                           "layout": {
                             "leaf": {
                               "key": "0x75c99a3c",
-                              "ty": 0
+                              "ty": 7
                             }
                           },
                           "name": "minted_at"
@@ -373,7 +1101,7 @@
                     }
                   },
                   "root_key": "0x75c99a3c",
-                  "ty": 5
+                  "ty": 26
                 }
               },
               "name": "nfts"
@@ -384,11 +1112,11 @@
                   "layout": {
                     "leaf": {
                       "key": "0x836115ef",
-                      "ty": 11
+                      "ty": 30
                     }
                   },
                   "root_key": "0x836115ef",
-                  "ty": 12
+                  "ty": 31
                 }
               },
               "name": "owned_nfts"
@@ -399,11 +1127,11 @@
                   "layout": {
                     "leaf": {
                       "key": "0xf5487e61",
-                      "ty": 15
+                      "ty": 14
                     }
                   },
                   "root_key": "0xf5487e61",
-                  "ty": 16
+                  "ty": 34
                 }
               },
               "name": "event_attendees"
@@ -412,7 +1140,7 @@
               "layout": {
                 "leaf": {
                   "key": "0x00000000",
-                  "ty": 0
+                  "ty": 7
                 }
               },
               "name": "nft_count"
@@ -421,7 +1149,7 @@
               "layout": {
                 "leaf": {
                   "key": "0x00000000",
-                  "ty": 2
+                  "ty": 0
                 }
               },
               "name": "owner"
@@ -431,7 +1159,7 @@
         }
       },
       "root_key": "0x00000000",
-      "ty": 20
+      "ty": 38
     }
   },
   "types": [
@@ -439,26 +1167,10 @@
       "id": 0,
       "type": {
         "def": {
-          "primitive": "u64"
-        }
-      }
-    },
-    {
-      "id": 1,
-      "type": {
-        "def": {
-          "primitive": "str"
-        }
-      }
-    },
-    {
-      "id": 2,
-      "type": {
-        "def": {
           "composite": {
             "fields": [
               {
-                "type": 3,
+                "type": 1,
                 "typeName": "[u8; 32]"
               }
             ]
@@ -472,18 +1184,18 @@
       }
     },
     {
-      "id": 3,
+      "id": 1,
       "type": {
         "def": {
           "array": {
             "len": 32,
-            "type": 4
+            "type": 2
           }
         }
       }
     },
     {
-      "id": 4,
+      "id": 2,
       "type": {
         "def": {
           "primitive": "u8"
@@ -491,7 +1203,375 @@
       }
     },
     {
+      "id": 3,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 4
+          },
+          {
+            "name": "V",
+            "type": 0
+          },
+          {
+            "name": "KeyType",
+            "type": 10
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 2,
+                    "typeName": "u8"
+                  }
+                ],
+                "index": 0,
+                "name": "U8"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 5,
+                    "typeName": "u16"
+                  }
+                ],
+                "index": 1,
+                "name": "U16"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 6,
+                    "typeName": "u32"
+                  }
+                ],
+                "index": 2,
+                "name": "U32"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 7,
+                    "typeName": "u64"
+                  }
+                ],
+                "index": 3,
+                "name": "U64"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 8,
+                    "typeName": "u128"
+                  }
+                ],
+                "index": 4,
+                "name": "U128"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 9,
+                    "typeName": "Vec<u8>"
+                  }
+                ],
+                "index": 5,
+                "name": "Bytes"
+              }
+            ]
+          }
+        },
+        "path": [
+          "attendance_nft",
+          "attendance_nft",
+          "Id"
+        ]
+      }
+    },
+    {
       "id": 5,
+      "type": {
+        "def": {
+          "primitive": "u16"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": {
+        "def": {
+          "primitive": "u32"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": {
+        "def": {
+          "primitive": "u64"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": {
+        "def": {
+          "primitive": "u128"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": {
+        "def": {
+          "sequence": {
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 12
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "AutoKey"
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "type": {
+        "def": {
+          "tuple": []
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": {
+        "def": {
+          "primitive": "bool"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 16
+          },
+          {
+            "name": "V",
+            "type": 14
+          },
+          {
+            "name": "KeyType",
+            "type": 17
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "type": {
+        "def": {
+          "tuple": [
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 18
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 4
+          },
+          {
+            "name": "V",
+            "type": 0
+          },
+          {
+            "name": "KeyType",
+            "type": 20
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 21
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 22,
       "type": {
         "def": {
           "composite": {}
@@ -507,7 +1587,7 @@
           },
           {
             "name": "KeyType",
-            "type": 7
+            "type": 23
           }
         ],
         "path": [
@@ -519,34 +1599,112 @@
       }
     },
     {
-      "id": 6,
+      "id": 23,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 24
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "type": {
+        "def": {
+          "primitive": "str"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 4
+          },
+          {
+            "name": "V",
+            "type": 27
+          },
+          {
+            "name": "KeyType",
+            "type": 28
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 27,
       "type": {
         "def": {
           "composite": {
             "fields": [
               {
                 "name": "id",
-                "type": 0,
+                "type": 7,
                 "typeName": "u64"
               },
               {
                 "name": "luma_event_id",
-                "type": 1,
+                "type": 25,
                 "typeName": "String"
               },
               {
                 "name": "owner",
-                "type": 2,
+                "type": 0,
                 "typeName": "AccountId"
               },
               {
                 "name": "metadata",
-                "type": 1,
+                "type": 25,
                 "typeName": "String"
               },
               {
                 "name": "minted_at",
-                "type": 0,
+                "type": 7,
                 "typeName": "u64"
               }
             ]
@@ -560,7 +1718,7 @@
       }
     },
     {
-      "id": 7,
+      "id": 28,
       "type": {
         "def": {
           "composite": {}
@@ -568,11 +1726,11 @@
         "params": [
           {
             "name": "L",
-            "type": 8
+            "type": 11
           },
           {
             "name": "R",
-            "type": 9
+            "type": 29
           }
         ],
         "path": [
@@ -583,20 +1741,7 @@
       }
     },
     {
-      "id": 8,
-      "type": {
-        "def": {
-          "composite": {}
-        },
-        "path": [
-          "ink_storage_traits",
-          "impls",
-          "AutoKey"
-        ]
-      }
-    },
-    {
-      "id": 9,
+      "id": 29,
       "type": {
         "def": {
           "composite": {}
@@ -604,55 +1749,47 @@
         "params": [
           {
             "name": "ParentKey",
-            "type": 10
-          }
-        ],
-        "path": [
-          "ink_storage_traits",
-          "impls",
-          "ManualKey"
-        ]
-      }
-    },
-    {
-      "id": 10,
-      "type": {
-        "def": {
-          "tuple": []
-        }
-      }
-    },
-    {
-      "id": 11,
-      "type": {
-        "def": {
-          "sequence": {
-            "type": 0
-          }
-        }
-      }
-    },
-    {
-      "id": 12,
-      "type": {
-        "def": {
-          "composite": {}
-        },
-        "params": [
-          {
-            "name": "K",
-            "type": 2
-          },
-          {
-            "name": "V",
-            "type": 11
-          },
-          {
-            "name": "KeyType",
             "type": 13
           }
         ],
         "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "type": {
+        "def": {
+          "sequence": {
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 0
+          },
+          {
+            "name": "V",
+            "type": 30
+          },
+          {
+            "name": "KeyType",
+            "type": 32
+          }
+        ],
+        "path": [
           "ink_storage",
           "lazy",
           "mapping",
@@ -661,7 +1798,7 @@
       }
     },
     {
-      "id": 13,
+      "id": 32,
       "type": {
         "def": {
           "composite": {}
@@ -669,11 +1806,11 @@
         "params": [
           {
             "name": "L",
-            "type": 8
+            "type": 11
           },
           {
             "name": "R",
-            "type": 14
+            "type": 33
           }
         ],
         "path": [
@@ -684,7 +1821,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 33,
       "type": {
         "def": {
           "composite": {}
@@ -692,7 +1829,7 @@
         "params": [
           {
             "name": "ParentKey",
-            "type": 10
+            "type": 13
           }
         ],
         "path": [
@@ -703,15 +1840,7 @@
       }
     },
     {
-      "id": 15,
-      "type": {
-        "def": {
-          "primitive": "bool"
-        }
-      }
-    },
-    {
-      "id": 16,
+      "id": 34,
       "type": {
         "def": {
           "composite": {}
@@ -719,15 +1848,15 @@
         "params": [
           {
             "name": "K",
-            "type": 17
+            "type": 35
           },
           {
             "name": "V",
-            "type": 15
+            "type": 14
           },
           {
             "name": "KeyType",
-            "type": 18
+            "type": 36
           }
         ],
         "path": [
@@ -739,18 +1868,18 @@
       }
     },
     {
-      "id": 17,
+      "id": 35,
       "type": {
         "def": {
           "tuple": [
-            1,
-            2
+            25,
+            0
           ]
         }
       }
     },
     {
-      "id": 18,
+      "id": 36,
       "type": {
         "def": {
           "composite": {}
@@ -758,11 +1887,11 @@
         "params": [
           {
             "name": "L",
-            "type": 8
+            "type": 11
           },
           {
             "name": "R",
-            "type": 19
+            "type": 37
           }
         ],
         "path": [
@@ -773,7 +1902,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 37,
       "type": {
         "def": {
           "composite": {}
@@ -781,7 +1910,7 @@
         "params": [
           {
             "name": "ParentKey",
-            "type": 10
+            "type": 13
           }
         ],
         "path": [
@@ -792,34 +1921,59 @@
       }
     },
     {
-      "id": 20,
+      "id": 38,
       "type": {
         "def": {
           "composite": {
             "fields": [
               {
+                "name": "token_owner",
+                "type": 3,
+                "typeName": "<Mapping<Id, AccountId> as::ink::storage::traits::AutoStorableHint\n<::ink::storage::traits::ManualKey<3192652907u32, ()>,>>::Type"
+              },
+              {
+                "name": "operator_approvals",
+                "type": 15,
+                "typeName": "<Mapping<(AccountId, AccountId), bool> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<905137574u32, ()\n>,>>::Type"
+              },
+              {
+                "name": "token_approvals",
+                "type": 19,
+                "typeName": "<Mapping<Id, AccountId> as::ink::storage::traits::AutoStorableHint\n<::ink::storage::traits::ManualKey<876468369u32, ()>,>>::Type"
+              },
+              {
+                "name": "owned_tokens_count",
+                "type": 22,
+                "typeName": "<Mapping<AccountId, u32> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3332325767u32,\n()>,>>::Type"
+              },
+              {
+                "name": "collection_id",
+                "type": 4,
+                "typeName": "<Id as::ink::storage::traits::AutoStorableHint<::ink::storage::\ntraits::ManualKey<364316947u32, ()>,>>::Type"
+              },
+              {
                 "name": "nfts",
-                "type": 5,
-                "typeName": "<Mapping<u64, AttendanceNft> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1016777077u32,\n()>,>>::Type"
+                "type": 26,
+                "typeName": "<Mapping<Id, AttendanceNft> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1016777077u32,\n()>,>>::Type"
               },
               {
                 "name": "owned_nfts",
-                "type": 12,
-                "typeName": "<Mapping<AccountId, Vec<u64>> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<4011155843u32,\n()>,>>::Type"
+                "type": 31,
+                "typeName": "<Mapping<AccountId, Vec<Id>> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<4011155843u32,\n()>,>>::Type"
               },
               {
                 "name": "event_attendees",
-                "type": 16,
+                "type": 34,
                 "typeName": "<Mapping<(String, AccountId), bool> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1635666165u32,\n()>,>>::Type"
               },
               {
                 "name": "nft_count",
-                "type": 0,
+                "type": 7,
                 "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<3084769575u32, ()>,>>::Type"
               },
               {
                 "name": "owner",
-                "type": 2,
+                "type": 0,
                 "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1703384415u32, ()>,>>::Type"
               }
             ]
@@ -833,7 +1987,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 39,
       "type": {
         "def": {
           "variant": {
@@ -841,7 +1995,7 @@
               {
                 "fields": [
                   {
-                    "type": 10
+                    "type": 13
                   }
                 ],
                 "index": 0,
@@ -850,7 +2004,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 40
                   }
                 ],
                 "index": 1,
@@ -862,11 +2016,11 @@
         "params": [
           {
             "name": "T",
-            "type": 10
+            "type": 13
           },
           {
             "name": "E",
-            "type": 22
+            "type": 40
           }
         ],
         "path": [
@@ -875,7 +2029,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 40,
       "type": {
         "def": {
           "variant": {
@@ -894,7 +2048,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 41,
       "type": {
         "def": {
           "variant": {
@@ -902,7 +2056,7 @@
               {
                 "fields": [
                   {
-                    "type": 15
+                    "type": 4
                   }
                 ],
                 "index": 0,
@@ -911,7 +2065,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 40
                   }
                 ],
                 "index": 1,
@@ -923,11 +2077,11 @@
         "params": [
           {
             "name": "T",
-            "type": 15
+            "type": 4
           },
           {
             "name": "E",
-            "type": 22
+            "type": 40
           }
         ],
         "path": [
@@ -936,7 +2090,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 42,
       "type": {
         "def": {
           "variant": {
@@ -944,7 +2098,7 @@
               {
                 "fields": [
                   {
-                    "type": 25
+                    "type": 6
                   }
                 ],
                 "index": 0,
@@ -953,7 +2107,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 40
                   }
                 ],
                 "index": 1,
@@ -965,11 +2119,11 @@
         "params": [
           {
             "name": "T",
-            "type": 25
+            "type": 6
           },
           {
             "name": "E",
-            "type": 22
+            "type": 40
           }
         ],
         "path": [
@@ -978,7 +2132,49 @@
       }
     },
     {
-      "id": 25,
+      "id": 43,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 44
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 44
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 44,
       "type": {
         "def": {
           "variant": {
@@ -990,7 +2186,7 @@
               {
                 "fields": [
                   {
-                    "type": 6
+                    "type": 0
                   }
                 ],
                 "index": 1,
@@ -1002,7 +2198,7 @@
         "params": [
           {
             "name": "T",
-            "type": 6
+            "type": 0
           }
         ],
         "path": [
@@ -1011,7 +2207,40 @@
       }
     },
     {
-      "id": 26,
+      "id": 45,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 4
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 4
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 46,
       "type": {
         "def": {
           "variant": {
@@ -1019,7 +2248,7 @@
               {
                 "fields": [
                   {
-                    "type": 11
+                    "type": 14
                   }
                 ],
                 "index": 0,
@@ -1028,7 +2257,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 40
                   }
                 ],
                 "index": 1,
@@ -1040,11 +2269,11 @@
         "params": [
           {
             "name": "T",
-            "type": 11
+            "type": 14
           },
           {
             "name": "E",
-            "type": 22
+            "type": 40
           }
         ],
         "path": [
@@ -1053,7 +2282,534 @@
       }
     },
     {
-      "id": 27,
+      "id": 47,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 48
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 48
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 48,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 13
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 49
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 13
+          },
+          {
+            "name": "E",
+            "type": 49
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 49,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 25,
+                    "typeName": "String"
+                  }
+                ],
+                "index": 0,
+                "name": "Custom"
+              },
+              {
+                "index": 1,
+                "name": "SelfApprove"
+              },
+              {
+                "index": 2,
+                "name": "NotApproved"
+              },
+              {
+                "index": 3,
+                "name": "TokenExists"
+              },
+              {
+                "index": 4,
+                "name": "TokenNotExists"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 25,
+                    "typeName": "String"
+                  }
+                ],
+                "index": 5,
+                "name": "SafeTransferCheckFailed"
+              }
+            ]
+          }
+        },
+        "path": [
+          "attendance_nft",
+          "attendance_nft",
+          "PSP34Error"
+        ]
+      }
+    },
+    {
+      "id": 50,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 8
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 8
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 51,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 52
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 52
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 52,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 9
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 9
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 53,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 45
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 45
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 54,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 55
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 55
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 55,
+      "type": {
+        "def": {
+          "sequence": {
+            "type": 25
+          }
+        }
+      }
+    },
+    {
+      "id": 56,
+      "type": {
+        "def": {
+          "array": {
+            "len": 4,
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "id": 57,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 58
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 58
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 58,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 27
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 27
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 59,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 60
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 60
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 60,
+      "type": {
+        "def": {
+          "sequence": {
+            "type": 7
+          }
+        }
+      }
+    },
+    {
+      "id": 61,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 7
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 7
+          },
+          {
+            "name": "E",
+            "type": 40
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 62,
       "type": {
         "def": {
           "variant": {
@@ -1070,7 +2826,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 40
                   }
                 ],
                 "index": 1,
@@ -1086,7 +2842,7 @@
           },
           {
             "name": "E",
-            "type": 22
+            "type": 40
           }
         ],
         "path": [
@@ -1095,63 +2851,13 @@
       }
     },
     {
-      "id": 28,
-      "type": {
-        "def": {
-          "variant": {
-            "variants": [
-              {
-                "fields": [
-                  {
-                    "type": 2
-                  }
-                ],
-                "index": 0,
-                "name": "Ok"
-              },
-              {
-                "fields": [
-                  {
-                    "type": 22
-                  }
-                ],
-                "index": 1,
-                "name": "Err"
-              }
-            ]
-          }
-        },
-        "params": [
-          {
-            "name": "T",
-            "type": 2
-          },
-          {
-            "name": "E",
-            "type": 22
-          }
-        ],
-        "path": [
-          "Result"
-        ]
-      }
-    },
-    {
-      "id": 29,
-      "type": {
-        "def": {
-          "primitive": "u128"
-        }
-      }
-    },
-    {
-      "id": 30,
+      "id": 63,
       "type": {
         "def": {
           "composite": {
             "fields": [
               {
-                "type": 3,
+                "type": 1,
                 "typeName": "[u8; 32]"
               }
             ]
@@ -1165,15 +2871,7 @@
       }
     },
     {
-      "id": 31,
-      "type": {
-        "def": {
-          "primitive": "u32"
-        }
-      }
-    },
-    {
-      "id": 32,
+      "id": 64,
       "type": {
         "def": {
           "variant": {}

@@ -264,6 +264,78 @@ router.get('/stats/global', asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/nfts/:id/metadata
+ * Get OpenSea-compatible metadata for NFT (public endpoint for wallets)
+ */
+router.get('/:id/metadata', asyncHandler(async (req, res) => {
+  const nft = await prisma.nFT.findFirst({
+    where: {
+      OR: [
+        { id: req.params.id },
+        { contractNftId: isNaN(req.params.id) ? undefined : BigInt(req.params.id) }
+      ],
+      mintStatus: 'COMPLETED'
+    },
+    include: {
+      event: {
+        select: {
+          name: true,
+          description: true,
+          startDate: true,
+          location: true,
+          imageUrl: true
+        }
+      }
+    }
+  });
+
+  if (!nft) {
+    return res.status(404).json({
+      error: 'NFT not found or not yet minted'
+    });
+  }
+
+  // Parse stored metadata
+  const storedMetadata = JSON.parse(nft.metadata || '{}');
+  
+  // Return OpenSea-compatible metadata
+  res.json({
+    name: `Attendance Certificate #${nft.contractNftId || nft.id}`,
+    description: `Proof of attendance for ${nft.event?.name || 'Polkadot event'}`,
+    image: "https://polkadot-attendance-nft.netlify.app/images/nft-character.png",
+    external_url: `https://polkadot-attendance-nft.netlify.app/nft/${nft.id}`,
+    attributes: [
+      {
+        trait_type: "Event",
+        value: nft.event?.name || "Unknown Event"
+      },
+      {
+        trait_type: "Location", 
+        value: nft.event?.location || "Unknown Location"
+      },
+      {
+        trait_type: "Date",
+        value: nft.event?.startDate?.toISOString().split('T')[0] || "Unknown Date"
+      },
+      {
+        trait_type: "Mint Date",
+        value: nft.mintedAt?.toISOString().split('T')[0] || "Unknown"
+      },
+      {
+        trait_type: "Contract NFT ID",
+        value: nft.contractNftId?.toString() || nft.id
+      }
+    ],
+    // Additional fields for compatibility
+    animation_url: null,
+    youtube_url: null,
+    background_color: null,
+    // Include any additional metadata from the stored data
+    ...storedMetadata
+  });
+}));
+
+/**
  * GET /api/nfts/verify/:contractNftId
  * Verify NFT on blockchain (public endpoint)
  */

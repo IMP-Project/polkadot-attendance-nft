@@ -1,7 +1,7 @@
 {
   "server_address": ":8080",
   "polkadot_rpc": "wss://ws.test.azero.dev",
-  "contract_address": "5DXaRBmHtVm744MnJL6Q2xJv3r94SgEcq7oZtQHDiKYcEum4",
+  "contract_address": "5Dhbm9WAfjxPbdcecUTYvwzPv3cp9iy6MGwjstUroKYoLkTU",
   "luma_api_key": "",
   "luma_webhook_key": "",
   "admin_username": "admin",

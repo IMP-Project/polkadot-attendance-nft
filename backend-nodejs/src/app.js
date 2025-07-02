@@ -16,10 +16,27 @@ const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
   : ['http://localhost:3000'];
 
+// Public endpoints that need unrestricted CORS for wallet access
+const publicEndpoints = [
+  '/api/nfts/stats/global',
+  '/api/nfts/verify/',
+  '/health'
+];
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, curl, or wallets)
     if (!origin) return callback(null, true);
+    
+    // Check if this is a metadata endpoint request (wallets need access)
+    const isMetadataEndpoint = callback.req && callback.req.path && callback.req.path.includes('/metadata');
+    
+    // Allow all origins for public endpoints and metadata endpoints
+    if (isMetadataEndpoint || publicEndpoints.some(endpoint => 
+      callback.req && callback.req.path && callback.req.path.startsWith(endpoint)
+    )) {
+      return callback(null, true);
+    }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
